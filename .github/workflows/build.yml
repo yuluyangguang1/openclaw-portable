@@ -37,6 +37,7 @@ jobs:
           test -f app/runtime/node-mac-x64/bin/node     || { echo "MISSING: node-mac-x64"; exit 1; }
           test -f app/runtime/node-linux-x64/bin/node   || { echo "MISSING: node-linux-x64"; exit 1; }
           test -f app/runtime/node-win-x64/node.exe     || { echo "MISSING: node-win-x64"; exit 1; }
+          test -f app/runtime/node-linux-arm64/bin/node || { echo "MISSING: node-linux-arm64"; exit 1; }
           test -f app/core/node_modules/openclaw/openclaw.mjs || { echo "MISSING: openclaw.mjs"; exit 1; }
           echo "All runtimes present:"
           ls -d app/runtime/*/
@@ -170,7 +171,23 @@ jobs:
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
           fi
-
+      - name: Cleanup duplicate drafts for this tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -e
+          echo "Looking for draft releases on tag: $TAG_NAME"
+          DRAFT_IDS=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            --jq ".[] | select(.draft == true and .tag_name == \"$TAG_NAME\") | .id")
+          if [ -z "$DRAFT_IDS" ]; then
+            echo "No duplicate drafts found."
+          else
+            for rid in $DRAFT_IDS; do
+              echo "Deleting draft release id=$rid"
+              gh api -X DELETE "repos/${GITHUB_REPOSITORY}/releases/$rid"
+            done
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           files: OpenClawPortable.zip
