@@ -128,12 +128,19 @@ echo   Starting OpenClaw on port %PORT%...
 echo.
 
 REM Start Config Server in background
-echo   Starting Config Center on port 18788...
+echo   Starting Config Center...
 set "CONFIG_SERVER=%UCLAW_DIR%config-server"
 start /B "" "%NODE_BIN%" "%CONFIG_SERVER%\server.js" >nul 2>&1
 
-REM Wait for config server to start
+REM Wait for config server to start and write runtime.json
 timeout /t 2 /nobreak >nul
+
+REM Read actual config server port from runtime.json (it may have fallen back)
+set "CONFIG_PORT=18788"
+set "RUNTIME_JSON=%STATE_DIR%\runtime.json"
+if exist "%RUNTIME_JSON%" (
+    for /f "tokens=*" %%p in ('"%NODE_BIN%" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).configServerPort||18788)}catch(e){console.log(18788)}" "%RUNTIME_JSON%"') do set "CONFIG_PORT=%%p"
+)
 
 REM Open both Dashboard and Config Center
 echo   Opening Dashboard and Config Center...
@@ -142,8 +149,8 @@ timeout /t 1 /nobreak >nul
 REM Open OpenClaw Dashboard first
 start "" http://127.0.0.1:%PORT%/#token=openclaw
 
-REM Open Config Center (Node.js web UI) second
-start "" http://127.0.0.1:18788/
+REM Open Config Center (use detected port)
+start "" http://127.0.0.1:%CONFIG_PORT%/
 
 echo   Browsers opened. Starting OpenClaw Gateway on port %PORT%...
 echo   DO NOT close this window while using OpenClaw Portable!

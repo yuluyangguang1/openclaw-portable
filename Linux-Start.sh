@@ -115,11 +115,19 @@ while ss -tlnp | grep -q ":$PORT " 2>/dev/null; do
 done
 
 # ---- 8. Start Config Server in background ----
-echo -e "  ${CYAN}Starting Config Center on port 18788...${NC}"
+echo -e "  ${CYAN}Starting Config Center...${NC}"
 CONFIG_SERVER="$UCLAW_DIR/config-server"
 "$NODE_BIN" "$CONFIG_SERVER/server.js" &
 CONFIG_PID=$!
-sleep 1
+sleep 2
+
+# Read the actual port config server bound to (it writes runtime.json)
+RUNTIME_JSON="$STATE_DIR/runtime.json"
+CONFIG_PORT=18788
+if [ -f "$RUNTIME_JSON" ]; then
+    DETECTED_PORT=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync('$RUNTIME_JSON','utf8')).configServerPort||18788)}catch(e){console.log(18788)}" 2>/dev/null)
+    [ -n "$DETECTED_PORT" ] && CONFIG_PORT="$DETECTED_PORT"
+fi
 
 # ---- 9. Start gateway ----
 echo -e "  ${CYAN}Starting OpenClaw on port $PORT...${NC}"
@@ -137,13 +145,13 @@ for i in $(seq 1 30); do
         # Try common Linux browsers
         if command -v xdg-open >/dev/null 2>&1; then
             xdg-open "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null &
-            xdg-open "http://127.0.0.1:18788/" 2>/dev/null &
+            xdg-open "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null &
         elif command -v firefox >/dev/null 2>&1; then
             firefox "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null &
-            firefox "http://127.0.0.1:18788/" 2>/dev/null &
+            firefox "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null &
         elif command -v google-chrome >/dev/null 2>&1; then
             google-chrome "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null &
-            google-chrome "http://127.0.0.1:18788/" 2>/dev/null &
+            google-chrome "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null &
         fi
         break
     fi
@@ -152,7 +160,7 @@ done
 echo -e "  ${GREEN}════════════════════════════════${NC}"
 echo -e "  ${GREEN}OpenClaw Portable is running!${NC}"
 echo -e "  ${GREEN}   Dashboard:     http://127.0.0.1:$PORT/#token=openclaw${NC}"
-echo -e "  ${GREEN}   Config Center: http://127.0.0.1:18788/${NC}"
+echo -e "  ${GREEN}   Config Center: http://127.0.0.1:$CONFIG_PORT/${NC}"
 echo ""
 echo -e "  ${YELLOW}Press Ctrl+C to stop${NC}"
 echo -e "  ${GREEN}════════════════════════════════${NC}"

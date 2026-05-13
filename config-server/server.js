@@ -305,8 +305,15 @@ function handleWeChatCancel(sessionKey) {
 }
 
 const server = http.createServer((req, res) => {
-  // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS: only allow localhost origins. Wildcard '*' would let any
+  // webpage (including via DNS rebinding) call our config API and
+  // overwrite the user's openclaw.json — e.g. swap their API key
+  // for an attacker's proxy to intercept conversations.
+  const origin = req.headers.origin || '';
+  const isLocalOrigin = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
+  if (isLocalOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -354,7 +361,10 @@ const server = http.createServer((req, res) => {
   // API: WeChat cancel
   if (req.url === '/api/wechat/cancel' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 10_000) { req.destroy(); return; }
+    });
     req.on('end', () => {
       try {
         const data = body ? JSON.parse(body) : {};
@@ -396,7 +406,11 @@ const server = http.createServer((req, res) => {
   // API: Save config
   if (req.url === '/api/config' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    const MAX_BODY = 1_000_000; // 1 MB — config files are tiny
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > MAX_BODY) { req.destroy(); return; }
+    });
     req.on('end', () => {
       try {
         const config = JSON.parse(body);
@@ -425,7 +439,10 @@ const server = http.createServer((req, res) => {
   // API: Channel connectivity test (lightweight fetch-based)
   if (req.url === '/api/channel/test' && req.method === 'POST') {
     let body = '';
-    req.on('data', chunk => body += chunk);
+    req.on('data', chunk => {
+      body += chunk;
+      if (body.length > 100_000) { req.destroy(); return; }
+    });
     req.on('end', async () => {
       try {
         const data = JSON.parse(body);
@@ -494,12 +511,21 @@ const server = http.createServer((req, res) => {
   }
 
   // Serve static files
+  const publicDir = path.join(__dirname, 'public');
   const filePath = req.url === '/'
-    ? path.join(__dirname, 'public/index.html')
-    : path.join(__dirname, 'public', req.url);
+    ? path.join(publicDir, 'index.html')
+    : path.join(publicDir, req.url);
 
-  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-    const ext = path.extname(filePath);
+  // Path traversal defence: resolved path must stay inside public/
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(path.resolve(publicDir) + path.sep) && resolved !== path.resolve(publicDir)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
+
+  if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+    const ext = path.extname(resolved);
     const contentType = {
       '.html': 'text/html',
       '.css': 'text/css',
@@ -508,7 +534,7 @@ const server = http.createServer((req, res) => {
     }[ext] || 'text/plain';
 
     res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(filePath).pipe(res);
+    fs.createReadStream(resolved).pipe(res);
   } else {
     res.writeHead(404);
     res.end('Not Found');

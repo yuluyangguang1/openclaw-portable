@@ -136,11 +136,19 @@ while lsof -i :$PORT >/dev/null 2>&1; do
 done
 
 # ---- 9. Start Config Server in background ----
-echo -e "  ${CYAN}Starting Config Center on port 18788...${NC}"
+echo -e "  ${CYAN}Starting Config Center...${NC}"
 CONFIG_SERVER="$UCLAW_DIR/config-server"
 "$NODE_BIN" "$CONFIG_SERVER/server.js" &
 CONFIG_PID=$!
-sleep 1
+sleep 2
+
+# Read the actual port config server bound to (it writes runtime.json)
+RUNTIME_JSON="$STATE_DIR/runtime.json"
+CONFIG_PORT=18788
+if [ -f "$RUNTIME_JSON" ]; then
+    DETECTED_PORT=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync('$RUNTIME_JSON','utf8')).configServerPort||18788)}catch(e){console.log(18788)}" 2>/dev/null)
+    [ -n "$DETECTED_PORT" ] && CONFIG_PORT="$DETECTED_PORT"
+fi
 
 # ---- 10. Start gateway ----
 echo -e "  ${CYAN}Starting OpenClaw on port $PORT...${NC}"
@@ -157,8 +165,8 @@ for i in $(seq 1 30); do
     if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
         # Open Dashboard
         open "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null || true
-        # Open Config Center
-        open "http://127.0.0.1:18788/" 2>/dev/null || true
+        # Open Config Center (use detected port)
+        open "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null || true
         break
     fi
 done
@@ -166,7 +174,7 @@ done
 echo -e "  ${GREEN}════════════════════════════════${NC}"
 echo -e "  ${GREEN}🦞 OpenClaw Portable is running!${NC}"
 echo -e "  ${GREEN}   Dashboard:     http://127.0.0.1:$PORT/#token=openclaw${NC}"
-echo -e "  ${GREEN}   Config Center: http://127.0.0.1:18788/${NC}"
+echo -e "  ${GREEN}   Config Center: http://127.0.0.1:$CONFIG_PORT/${NC}"
 echo ""
 echo -e "  ${YELLOW}Press Ctrl+C to stop${NC}"
 echo -e "  ${GREEN}════════════════════════════════${NC}"
