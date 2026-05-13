@@ -551,7 +551,7 @@ footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--t
             <div class="form-group"><label>App ID</label><input type="text" id="ch-qqbot-appid" placeholder="应用 ID"></div>
             <div class="form-group"><label>Client Secret</label><input type="text" id="ch-qqbot-secret" placeholder="应用密钥">
             <p class="hint"><a href="https://q.qq.com" target="_blank">→ 从 QQ 开放平台获取</a></p></div>
-            <button class="btn-test btn-sm" onclick="testChannel(event,'qqbot');">▶ 测试连接</button>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'qqbot');" style="display:none;">▶ 测试连接</button>
             <div class="test-result" id="result-qqbot"></div>
           </div>
         </div>
@@ -571,7 +571,7 @@ footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--t
             <div class="form-group"><label>Bot ID</label><input type="text" id="ch-wecom-botid" placeholder="aib..."></div>
             <div class="form-group"><label>Secret</label><input type="text" id="ch-wecom-secret" placeholder="密钥">
             <p class="hint"><a href="https://work.weixin.qq.com" target="_blank">→ 从企业微信管理后台获取</a></p></div>
-            <button class="btn-test btn-sm" onclick="testChannel(event,'wecom');">▶ 测试连接</button>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'wecom');" style="display:none;">▶ 测试连接</button>
             <div class="test-result" id="result-wecom"></div>
           </div>
         </div>
@@ -1167,7 +1167,8 @@ async function findGatewayPort() {
   }
   _gatewayPort = null; return null;
 }
-function gatewayUrl() { var p=_gatewayPort||18789; return 'http://127.0.0.1:'+p+'/#token=openclaw'; }
+var _gatewayToken = 'openclaw';
+  function gatewayUrl() { var p=_gatewayPort||18789; return 'http://127.0.0.1:'+p+'/#token='+_gatewayToken; }
 
 /* ═══ Check gateway ═══ */
 async function checkGateway() {
@@ -1223,6 +1224,7 @@ async function loadConfig() {
   try {
     var res = await fetch('/api/config');
     var cfg = await res.json();
+    try { if (cfg.gateway && cfg.gateway.auth && cfg.gateway.auth.token) _gatewayToken = cfg.gateway.auth.token; } catch(e){}
     var hasExisting = false;
     if (cfg.env && cfg.env.ZAI_API_KEY) {
       var card = document.querySelector('#step1 .model-card[data-provider="zai"]');

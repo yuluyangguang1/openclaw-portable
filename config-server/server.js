@@ -256,9 +256,8 @@ async function handleWeChatStatus(sessionKey) {
 
   if (result.status === 'expired') {
     // Try to refresh QR code
-    if (!login.refreshCount) login.refreshCount = 1;
-    login.refreshCount++;
-    if (login.refreshCount > MAX_QR_REFRESH_COUNT) {
+  login.refreshCount = (login.refreshCount || 0) + 1;
+  if (login.refreshCount > MAX_QR_REFRESH_COUNT) {
       activeLogins.delete(sessionKey);
       return { status: 'expired', message: 'QR expired too many times' };
     }
@@ -444,7 +443,7 @@ const server = http.createServer((req, res) => {
   // API: Config server port info (for runtime.js)
   if (req.url === '/api/port' && req.method === 'GET') {
     res.writeHead(200, {'Content-Type':'application/json'});
-    res.end(JSON.stringify({port:PORT_RANGE_START}));
+    res.end(JSON.stringify({port: server.address() ? server.address().port : PORT_RANGE_START}));
     return;
   }
 
@@ -475,10 +474,19 @@ const server = http.createServer((req, res) => {
           const j = await r.json();
           if (j.ok) result = {ok:true,info:'@'+(j.user||'bot')};
           else result = {error:j.error||'Slack auth failed'};
+        } else if (type === 'feishu' && config.appId && config.appSecret) {
+          const r = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({app_id: config.appId, app_secret: config.appSecret})
+          });
+          const j = await r.json();
+          if (j.code === 0) result = {ok:true, info:'App ID ' + config.appId.slice(0,12) + '…'};
+          else result = {error: j.msg || 'Feishu auth failed'};
         } else if (!config || Object.keys(config).length === 0) {
           result = {error:'Missing credentials for '+type};
         } else {
-          // QQ, Feishu, Wecom — basic format validation only (no simple GET test endpoint)
+          // QQ, Wecom — no simple test API
           result = {ok:false, error:'Saved — test on restart'};
         }
         res.writeHead(200,{'Content-Type':'application/json'});

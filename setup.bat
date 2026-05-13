@@ -104,6 +104,7 @@ set "PLAT=darwin-x64" & set "DIR_NAME=node-mac-x64" & call :download_tar
 
 REM Linux
 set "PLAT=linux-x64" & set "DIR_NAME=node-linux-x64" & call :download_tar
+set "PLAT=linux-arm64" & set "DIR_NAME=node-linux-arm64" & call :download_tar
 
 :skip_all_download
 
