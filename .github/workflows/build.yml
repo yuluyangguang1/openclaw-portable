@@ -15,65 +15,66 @@ concurrency:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { os: macos-latest,     platform: darwin-arm64,  node_dir: node-mac-arm64,    artifact: macOS-arm64 }
-          - { os: macos-15-intel,   platform: darwin-x64,    node_dir: node-mac-x64,      artifact: macOS-x64 }
-          - { os: ubuntu-latest,    platform: linux-x64,     node_dir: node-linux-x64,    artifact: Linux-x64 }
-          - { os: ubuntu-24.04-arm, platform: linux-arm64,   node_dir: node-linux-arm64,  artifact: Linux-arm64 }
-          - { os: windows-latest,   platform: win-x64,       node_dir: node-win-x64,      artifact: Windows-x64 }
-    runs-on: ${{ matrix.os }}
+    # Single job builds the universal zip containing ALL platform runtimes.
+    # node_modules is pure JS (cross-platform), only the Node.js binary
+    # differs per OS/arch. setup.sh --all-platforms downloads all of them.
+    # We run on macOS (has tar + unzip + curl) which can fetch all platforms.
+    runs-on: macos-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Setup (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: bash setup.sh
+      - name: Build universal package (all platforms)
+        run: bash setup.sh --all-platforms
 
-      - name: Setup (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: .\setup.ps1
-
-      - name: Verify build
-        shell: bash
+      - name: Verify runtimes
         run: |
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            test -f "app/runtime/${{ matrix.node_dir }}/node.exe" || { echo "node.exe missing"; exit 1; }
-          else
-            test -f "app/runtime/${{ matrix.node_dir }}/bin/node" || { echo "node binary missing"; exit 1; }
-          fi
-          test -f "app/core/node_modules/openclaw/openclaw.mjs" || { echo "openclaw.mjs missing"; exit 1; }
-          echo "Build verified OK"
+          set -e
+          echo "Checking all platform runtimes..."
+          test -f app/runtime/node-mac-arm64/bin/node   || { echo "MISSING: node-mac-arm64"; exit 1; }
+          test -f app/runtime/node-mac-x64/bin/node     || { echo "MISSING: node-mac-x64"; exit 1; }
+          test -f app/runtime/node-linux-x64/bin/node   || { echo "MISSING: node-linux-x64"; exit 1; }
+          test -f app/runtime/node-win-x64/node.exe     || { echo "MISSING: node-win-x64"; exit 1; }
+          test -f app/core/node_modules/openclaw/openclaw.mjs || { echo "MISSING: openclaw.mjs"; exit 1; }
+          echo "All runtimes present:"
+          ls -d app/runtime/*/
+          echo "OpenClaw installed OK"
 
       - name: Prepare portable folder
-        shell: bash
         run: |
-          # Remove dev artifacts that shouldn't ship
-          rm -rf .git .github .gitignore setup.sh setup.bat setup.ps1
-          # Remove runtimes for OTHER platforms (keep only this one)
-          cd app/runtime
-          for d in */; do
-            dir_name="${d%/}"
-            if [ "$dir_name" != "${{ matrix.node_dir }}" ]; then
-              rm -rf "$dir_name"
-            fi
-          done
-          cd ../..
-          echo "Portable folder prepared for ${{ matrix.platform }}"
+          set -e
+          # Remove dev/build artifacts that shouldn't ship
+          rm -rf .git .github .gitignore
+          # Keep setup.sh/setup.bat/setup.ps1 for users who want to rebuild
+          echo "Portable folder ready"
           du -sh .
+          du -sh app/runtime/*/
+
+      - name: Restore exec bits
+        run: |
+          # upload-artifact loses exec bits; set them before zipping
+          chmod +x Mac-Start.command Mac-Menu.command Mac-Install.command Mac-Diagnose.command
+          chmod +x Linux-Start.sh Linux-Diagnose.sh setup.sh lib/maintain.sh
+          for bindir in app/runtime/node-mac-*/bin app/runtime/node-linux-*/bin; do
+            [ -d "$bindir" ] && find "$bindir" -type f -exec chmod +x {} +
+          done
+
+      - name: Create zip
+        run: |
+          cd ..
+          mv openclaw-portable-work OpenClawPortable
+          zip -yrq OpenClawPortable.zip OpenClawPortable/
+          mv OpenClawPortable openclaw-portable-work
+          mv OpenClawPortable.zip openclaw-portable-work/
+          ls -lh openclaw-portable-work/OpenClawPortable.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact }}
-          path: .
+          name: OpenClawPortable
+          path: OpenClawPortable.zip
           retention-days: 7
 
   release:
@@ -83,66 +84,41 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          path: artifacts/
+          name: OpenClawPortable
+          path: .
 
-      - name: Show artifacts
-        run: |
-          ls -la artifacts/
-          for d in artifacts/*/; do du -sh "$d"; done
-
-      - name: Create archives
-        run: |
-          set -e
-          cd artifacts
-          for p in macOS-arm64 macOS-x64 Linux-x64 Linux-arm64 Windows-x64; do
-            if [ -d "$p" ]; then
-              # Restore exec bits for Unix launchers
-              for f in "$p"/Mac-Start.command "$p"/Mac-Menu.command \
-                       "$p"/Mac-Install.command "$p"/Mac-Diagnose.command \
-                       "$p"/Linux-Start.sh "$p"/Linux-Diagnose.sh \
-                       "$p"/setup.sh "$p"/lib/maintain.sh; do
-                [ -f "$f" ] && chmod +x "$f"
-              done
-              # Exec bits on node binary
-              for bindir in "$p"/app/runtime/*/bin; do
-                [ -d "$bindir" ] && find "$bindir" -type f -exec chmod +x {} +
-              done
-              # Rename folder to OpenClawPortable for the zip
-              mv "$p" "OpenClawPortable"
-              zip -yrq "../OpenClawPortable-$p.zip" "OpenClawPortable"
-              mv "OpenClawPortable" "$p"
-              echo "  packed OpenClawPortable-$p.zip"
-            else
-              echo "  ! $p artifact missing"
-            fi
-          done
+      - name: Show artifact
+        run: ls -lh OpenClawPortable.zip
 
       - name: Compose release notes
         run: |
           set -e
           TAG="${GITHUB_REF#refs/tags/}"
-          VERSION=$(cat artifacts/macOS-arm64/OPENCLAW_VERSION 2>/dev/null || echo "$TAG")
           {
             echo "# OpenClaw Portable $TAG"
             echo
             echo "> 🦞 U-Claw 虾盘 — OpenClaw AI 助手离线安装 U 盘"
-            echo "> 零安装 · 零痕迹 · 多平台原生"
+            echo "> 一个压缩包，任意平台解压即用 · 零安装 · 零痕迹"
             echo
-            echo "## 下载 Downloads"
+            echo "## 下载 Download"
             echo
-            echo "| 平台 Platform | 架构 Arch | 文件 File | 启动方式 Launch |"
-            echo "|---|---|---|---|"
-            echo "| **macOS** (Apple Silicon) | arm64 | [OpenClawPortable-macOS-arm64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable-macOS-arm64.zip) | 双击 \`Mac-Start.command\` |"
-            echo "| **macOS** (Intel) | x86_64 | [OpenClawPortable-macOS-x64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable-macOS-x64.zip) | 双击 \`Mac-Start.command\` |"
-            echo "| **Linux** (glibc 2.28+) | x86_64 | [OpenClawPortable-Linux-x64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable-Linux-x64.zip) | \`bash Linux-Start.sh\` |"
-            echo "| **Linux** (glibc 2.28+) | arm64 | [OpenClawPortable-Linux-arm64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable-Linux-arm64.zip) | \`bash Linux-Start.sh\` |"
-            echo "| **Windows** 10/11 | x86_64 | [OpenClawPortable-Windows-x64.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable-Windows-x64.zip) | 双击 \`Windows-Start.bat\` |"
+            echo "| 文件 | 说明 |"
+            echo "|---|---|"
+            echo "| [OpenClawPortable.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable.zip) | 全平台通用包 (macOS arm64/x64 + Linux x64/arm64 + Windows x64) |"
             echo
-            echo "## 首次使用 Quick start"
+            echo "## 支持平台"
+            echo
+            echo "| 平台 | 启动方式 |"
+            echo "|---|---|"
+            echo "| macOS (Apple Silicon / Intel) | 双击 \`Mac-Start.command\` |"
+            echo "| Linux (x86_64 / arm64) | \`bash Linux-Start.sh\` |"
+            echo "| Windows 10/11 (x64) | 双击 \`Windows-Start.bat\` |"
+            echo
+            echo "## 首次使用"
             echo
             echo "1. 解压到 U 盘或任意目录"
             echo "2. 双击对应平台的启动器"
-            echo "3. 浏览器自动打开配置面板,选模型 → 填 API Key → 开始用"
+            echo "3. 浏览器自动打开配置面板 → 选模型 → 填 API Key → 开始用"
             echo
             echo "## macOS 首次双击提示「您没有权限」"
             echo
@@ -154,7 +130,7 @@ jobs:
             echo "## SHA-256"
             echo
             echo "\`\`\`"
-            sha256sum OpenClawPortable-*.zip 2>/dev/null || shasum -a 256 OpenClawPortable-*.zip
+            sha256sum OpenClawPortable.zip 2>/dev/null || shasum -a 256 OpenClawPortable.zip
             echo "\`\`\`"
             echo
             echo "---"
@@ -173,12 +149,7 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
-          files: |
-            OpenClawPortable-macOS-arm64.zip
-            OpenClawPortable-macOS-x64.zip
-            OpenClawPortable-Linux-x64.zip
-            OpenClawPortable-Linux-arm64.zip
-            OpenClawPortable-Windows-x64.zip
+          files: OpenClawPortable.zip
           body_path: release-notes.md
           generate_release_notes: true
           prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
