@@ -22,6 +22,10 @@ CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+# Read version from file
+OPENCLAW_VER="unknown"
+[ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+
 echo ""
 echo -e "${CYAN}"
 echo "    #     #  _       _     ######"
@@ -31,7 +35,7 @@ echo "       #    |  _| |_   _|  #  ####"
 echo "       #    | |       | |  #     |"
 echo "       #     \\_|      \\_|  ######"
 echo ""
-echo "        OpenClaw Portable 2026.4.29"
+echo "        OpenClaw Portable $OPENCLAW_VER"
 echo -e "${NC}"
 
 # ---- 1. Detect CPU & set runtime ----
@@ -108,7 +112,12 @@ if [ ! -d "$CORE_DIR/node_modules" ]; then
     echo "  Falling back to npm install (USB drives may take 20+ min)."
     echo "  TIP: re-download openclaw-portable-*.zip with bundled deps."
     cd "$CORE_DIR"
-    "$NODE_BIN" "$NODE_DIR/bin/npm" install --registry=https://registry.npmmirror.com --ignore-scripts --no-audit --no-fund --omit=dev 2>&1
+    if ! "$NODE_BIN" "$NODE_DIR/bin/npm" install --registry=https://registry.npmmirror.com --ignore-scripts --no-audit --no-fund --omit=dev 2>&1; then
+        echo -e "  ${RED}npm install failed. Check your network connection.${NC}"
+        echo "  You can also re-download the full release zip which includes deps."
+        read -p "  Press Enter to exit..."
+        exit 1
+    fi
     echo -e "  ${GREEN}Dependencies installed${NC}"
     echo ""
 fi
