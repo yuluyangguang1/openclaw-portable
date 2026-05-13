@@ -201,11 +201,12 @@ if ($AllPlatforms) {
     Install-TarNodeRuntime -Platform "darwin-arm64" -NodeDirName "node-mac-arm64"
     Install-TarNodeRuntime -Platform "darwin-x64" -NodeDirName "node-mac-x64"
     Install-TarNodeRuntime -Platform "linux-x64" -NodeDirName "node-linux-x64"
+    Install-TarNodeRuntime -Platform "linux-arm64" -NodeDirName "node-linux-arm64"
 }
 
 $packageJsonPath = Join-Path $coreDir "package.json"
 if (-not (Test-Path -Path $packageJsonPath -PathType Leaf)) {
-    $openclawVersionFile = Join-Path $PSScriptRoot "..\OPENCLAW_VERSION"
+    $openclawVersionFile = Join-Path $PSScriptRoot "OPENCLAW_VERSION"
     $openclawVersion = "2026.4.29"
     if (Test-Path -Path $openclawVersionFile -PathType Leaf) {
         $openclawVersion = (Get-Content -Path $openclawVersionFile -Raw).Trim()
