@@ -2,15 +2,18 @@
 chcp 65001 >nul 2>&1
 title OpenClaw Portable - Portable AI Agent
 
+REM Enable ANSI escape codes (Windows 10+, silent fallback on older)
+for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+
 echo.
-echo     #     #  _       _     ######
-echo      #   #  | |     | |    #     |
-echo       # #   | |_   _| |_   #
-echo        #    |  _| |_   _|  #  ####
-echo        #    | |       | |  #     |
-echo        #     \_|      \_|  ######
+echo %ESC%[93m  ██╗   ██╗██╗  ██╗   ██╗ ██████╗%ESC%[0m
+echo %ESC%[93m  ╚██╗ ██╔╝██║  ╚██╗ ██╔╝██╔════╝%ESC%[0m
+echo %ESC%[33m   ╚████╔╝ ██║   ╚████╔╝ ██║  ███╗%ESC%[0m
+echo %ESC%[33m    ╚██╔╝  ██║    ╚██╔╝  ██║   ██║%ESC%[0m
+echo %ESC%[33m     ██║   ███████╗██║   ╚██████╔╝%ESC%[0m
+echo %ESC%[33m     ╚═╝   ╚══════╝╚═╝    ╚═════╝ %ESC%[0m
 echo.
-echo         OpenClaw Portable 2026.4.29
+echo %ESC%[96m         OpenClaw Portable 2026.4.29%ESC%[0m
 echo.
 
 set "UCLAW_DIR=%~dp0"
