@@ -1,4 +1,4 @@
-# 🦞 OpenClaw Portable（虾盘）
+# 🦞 OpenClaw Portable
 
 > **OpenClaw AI 助手 — 离线 U 盘版 / Offline USB Edition**
 
