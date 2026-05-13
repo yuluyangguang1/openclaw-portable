@@ -124,16 +124,6 @@ if [ ! -d "$CORE_DIR/node_modules" ]; then
     echo ""
 fi
 
-# ---- 7b. Async update check (non-blocking, 5s timeout, silent failure) ----
-# Writes data/.openclaw/update-available.json if a newer version is on OSS.
-# Welcome.html / Config.html read this file and show a banner.
-# Version file lookup: portable/OPENCLAW_VERSION (USB) → ../OPENCLAW_VERSION (dev)
-VERSION_FILE="$UCLAW_DIR/OPENCLAW_VERSION"
-[ -f "$VERSION_FILE" ] || VERSION_FILE="$UCLAW_DIR/../OPENCLAW_VERSION"
-if [ -f "$VERSION_FILE" ]; then
-    "$NODE_BIN" "$UCLAW_DIR/lib/check-update.mjs" "$VERSION_FILE" "$STATE_DIR" >/dev/null 2>&1 &
-fi
-
 # ---- 8. Find available port ----
 PORT=18789
 while lsof -i :$PORT >/dev/null 2>&1; do

@@ -554,20 +554,25 @@ const server = http.createServer((req, res) => {
 });
 
 function listenWithFallback(port) {
-  server.once('error', (err) => {
+  const onError = (err) => {
     if (err && err.code === 'EADDRINUSE' && port < PORT_RANGE_END) {
       console.log(`   Port ${port} busy, trying ${port + 1}…`);
+      server.removeListener('error', onError);
       setImmediate(() => listenWithFallback(port + 1));
       return;
     }
     console.error(`Config server failed to bind: ${err && err.message ? err.message : err}`);
     process.exit(1);
-  });
+  };
+  server.on('error', onError);
   server.listen(port, '127.0.0.1', () => {
-    console.log(`\n🦞 OpenClaw Portable Config Center`);
+    server.removeListener('error', onError);
+    console.log(`
+🦞 OpenClaw Portable Config Center`);
     console.log(`   http://127.0.0.1:${port}`);
-    console.log(`\n   Config file: ${CONFIG_PATH}\n`);
-    // Persist the live port so Config.html / launchers can discover it after restarts.
+    console.log(`
+   Config file: ${CONFIG_PATH}
+`);
     try {
       fs.mkdirSync(path.dirname(RUNTIME_PATH), { recursive: true });
       const existing = fs.existsSync(RUNTIME_PATH) ? JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8')) : {};

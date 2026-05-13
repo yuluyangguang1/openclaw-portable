@@ -88,17 +88,6 @@ if not exist "%CORE_DIR%\node_modules" (
     echo.
 )
 
-REM Async update check (non-blocking, 5s timeout, silent failure)
-REM Writes data\.openclaw\update-available.json if a newer version is on OSS.
-REM Welcome.html / Config.html read this file and show a banner.
-REM Version file lookup order: portable/OPENCLAW_VERSION (USB), then repo-root ../OPENCLAW_VERSION (dev)
-set "VERSION_FILE=%UCLAW_DIR%OPENCLAW_VERSION"
-if not exist "%VERSION_FILE%" set "VERSION_FILE=%UCLAW_DIR%..\OPENCLAW_VERSION"
-if exist "%VERSION_FILE%" (
-    start /B "" "%NODE_BIN%" "%UCLAW_DIR%lib\check-update.mjs" "%VERSION_FILE%" "%STATE_DIR%" >nul 2>&1
-)
-
-
 REM Auto-install WeChat plugin if available (keep inside portable data/)
 set "WECHAT_PLUGIN_SRC=%APP_DIR%\extensions\openclaw-weixin"
 set "WECHAT_PLUGIN_DST=%STATE_DIR%\extensions\openclaw-weixin"
