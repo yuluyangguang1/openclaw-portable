@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw Portable 配置中心</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, 'Helvetica Neue', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #0F172A;
+  color: #F1F5F9;
+  line-height: 1.7;
+  min-height: 100vh;
+  transition: background 0.3s, color 0.3s;
+}
+a { color: #38BDF8; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ═══ Theme ═══ */
+[data-theme="dark"] {
+  --bg: #0F172A; --bg2: #1E293B; --bg3: #334155;
+  --card: #1E293B; --card-hover: #273548;
+  --border: rgba(56,189,248,0.08); --border-active: rgba(56,189,248,0.25);
+  --text: #F1F5F9; --text2: #94A3B8; --text3: #64748B;
+  --accent: #38BDF8; --accent-hover: #0EA5E9; --accent-bg: rgba(56,189,248,0.12);
+  --input-bg: rgba(30,41,59,0.8); --input-border: rgba(56,189,248,0.15);
+  --input-focus: #38BDF8; --input-focus-shadow: rgba(56,189,248,0.2);
+  --success: #34D399; --error: #F87171; --warn: #FBBF24;
+  --glass-bg: rgba(15,23,42,0.85); --glass-border: rgba(51,65,85,0.6);
+  --hero-bg1: #1E293B; --hero-bg2: #0F172A;
+  --scrollbar: rgba(255,255,255,0.12);
+  --modal-bg: rgba(0,0,0,0.5);
+}
+[data-theme="light"] {
+  --bg: #F8FAFC; --bg2: #FFFFFF; --bg3: #E2E8F0;
+  --card: #FFFFFF; --card-hover: #F1F5F9;
+  --border: rgba(0,0,0,0.06); --border-active: rgba(59,130,246,0.3);
+  --text: #1E293B; --text2: #64748B; --text3: #94A3B8;
+  --accent: #3B82F6; --accent-hover: #2563EB; --accent-bg: rgba(59,130,246,0.08);
+  --input-bg: #FFFFFF; --input-border: rgba(0,0,0,0.12);
+  --input-focus: #3B82F6; --input-focus-shadow: rgba(59,130,246,0.15);
+  --success: #22C55E; --error: #EF4444; --warn: #F59E0B;
+  --glass-bg: rgba(255,255,255,0.85); --glass-border: rgba(0,0,0,0.08);
+  --hero-bg1: #EFF6FF; --hero-bg2: #F8FAFC;
+  --scrollbar: rgba(0,0,0,0.15);
+  --modal-bg: rgba(0,0,0,0.3);
+}
+
+/* Hero */
+.hero {
+  text-align: center; padding: 60px 20px 48px;
+  background: linear-gradient(180deg, var(--hero-bg1) 0%, var(--hero-bg2) 100%);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s;
+}
+.hero .logo { width: 80px; height: 80px; margin-bottom: 16px; filter: drop-shadow(0 0 16px rgba(56,189,248,0.15)); }
+.hero h1 { font-size: 32px; font-weight: 300; letter-spacing: 4px; margin-bottom: 8px; }
+.hero .tagline { font-size: 15px; color: var(--text2); letter-spacing: 2px; }
+.hero .version {
+  display: inline-block; margin-top: 16px; padding: 4px 16px;
+  border: 1px solid var(--border-active); border-radius: 20px;
+  font-size: 12px; color: var(--accent); letter-spacing: 2px;
+}
+
+/* Container */
+.container { max-width: 860px; margin: 0 auto; padding: 0 24px 60px; }
+
+/* Status bar */
+.status-bar {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 18px; margin: 24px 0 0;
+  display: flex; align-items: center; gap: 10px;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot.on { background: var(--success); animation: pulse 2s infinite; }
+.dot.off { background: var(--error); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+.status-text { flex: 1; font-size: 0.9em; color: var(--text2); }
+.status-text a { color: var(--accent); text-decoration: none; }
+.status-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 20px;
+  background: transparent; color: var(--text3); cursor: pointer;
+  font-size: 0.82em; transition: all 0.2s; font-family: inherit;
+}
+.status-btn:hover { border-color: var(--border-active); color: var(--text); }
+
+/* Steps - vertical accordion */
+.steps {
+  display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px;
+}
+.step {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 18px; font-size: 0.9em;
+  color: var(--text3); cursor: default; transition: all 0.2s;
+  display: flex; align-items: center; gap: 10px;
+}
+.step.active { color: var(--accent); font-weight: 600; background: var(--accent-bg); border-color: var(--border-active); cursor: pointer; }
+.step.done { color: var(--success); background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.15); cursor: pointer; }
+.step.pending { cursor: pointer; }
+.step .num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-bg); border: 1px solid var(--border);
+  color: var(--text3); font-size: 0.85em; font-weight: 600; transition: all 0.2s;
+}
+.step.active .num { background: var(--accent); color: #fff; border-color: var(--accent); }
+.step.done .num { background: var(--success); color: #fff; border-color: var(--success); }
+
+/* Sections */
+.step-section {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden; transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
+}
+.step-section.active { max-height: 2000px; opacity: 1; margin-bottom: 16px; }
+.step-section.collapsed { max-height: 0; opacity: 0; margin-bottom: 0; border: 1px solid transparent; }
+.step-section h2 { color: var(--text); font-size: 1.15em; margin-bottom: 6px; }
+.step-section .desc { color: var(--text2); font-size: 0.88em; margin-bottom: 16px; }
+
+/* Model cards */
+.model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.model-card {
+  background: var(--bg2); border: 2px solid var(--border);
+  border-radius: 10px; padding: 14px; cursor: pointer; transition: all 0.15s; position: relative;
+}
+.model-card:hover { border-color: var(--border-active); }
+.model-card.selected { border-color: var(--accent); background: var(--accent-bg); }
+.model-card h4 { color: var(--text); font-size: 0.95em; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.model-card p { color: var(--text2); font-size: 0.78em; line-height: 1.4; }
+.tag { font-size: 0.68em; padding: 2px 7px; border-radius: 10px; font-weight: 500; }
+.tag.hot { background: rgba(56,189,248,0.15); color: var(--accent); }
+.tag.free { background: rgba(52,211,153,0.15); color: var(--success); }
+.tag.cn { background: rgba(100,116,139,0.2); color: var(--text2); }
+.tag.fast { background: rgba(139,92,246,0.12); color: #A78BFA; }
+.tag.cheap { background: rgba(251,191,36,0.1); color: #FBBF24; }
+.check { position: absolute; top: 8px; right: 10px; color: var(--accent); font-size: 1.2em; display: none; }
+.model-card.selected .check { display: block; }
+
+.buy-link { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); text-decoration: none; font-size: 0.82em; margin-top: 6px; }
+.buy-link:hover { text-decoration: underline; }
+
+/* Forms */
+.form-group { display: block; margin-bottom: 16px; clear: both; }
+.form-group label { display: block; color: var(--text2); margin-bottom: 8px; font-size: 0.9em; }
+.form-group input {
+  display: block; width: 100%; min-height: 46px; padding: 11px 14px;
+  background: var(--input-bg); border: 1px solid var(--input-border);
+  border-radius: 8px; color: var(--text); font-size: 0.95em; line-height: 1.3;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus { border-color: var(--input-focus); box-shadow: 0 0 0 3px var(--input-focus-shadow); }
+.input-wrap { position: relative; display: block; width: 100%; }
+.input-wrap input { padding-right: 90px; }
+.toggle-pw {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  min-width: 44px; height: 30px; background: var(--accent-bg);
+  border: 1px solid var(--input-border); border-radius: 6px;
+  color: var(--text2); cursor: pointer; font-size: 0.82em;
+  line-height: 28px; text-align: center; transition: all 0.2s;
+}
+.toggle-pw:hover { color: var(--text); border-color: var(--border-active); }
+.val-indicator {
+  position: absolute; right: 48px; top: 50%; transform: translateY(-50%);
+  font-size: 0.95em; pointer-events: none; transition: all 0.2s;
+}
+.val-ok { color: var(--success); }
+.val-fail { color: var(--error); }
+.hint { color: var(--text3); font-size: 0.8em; margin-top: 6px; line-height: 1.5; }
+.hint a { color: var(--accent); text-decoration: none; }
+.hint a:hover { text-decoration: underline; }
+
+/* Tooltip */
+.field-help {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent-bg); color: var(--text3);
+  font-size: 0.7em; cursor: help; margin-left: 4px; position: relative;
+  vertical-align: middle; font-weight: 700; font-style: normal;
+}
+.field-help:hover::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 8px);
+  left: 50%; transform: translateX(-50%) translateZ(0);
+  background: var(--bg2); color: var(--text); padding: 10px 14px;
+  border-radius: 8px; font-size: 0.8em; font-weight: 400; font-style: normal;
+  white-space: normal; width: 260px; z-index: 200; line-height: 1.5;
+  border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  pointer-events: none;
+}
+.field-help:hover::before {
+  content: ''; position: absolute; bottom: calc(100% + 4px);
+  left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--border);
+  z-index: 200; pointer-events: none;
+}
+
+/* API Info box */
+.api-info {
+  background: var(--accent-bg); border: 1px solid var(--border-active);
+  border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+  padding: 14px; margin-bottom: 16px;
+}
+.api-info h4 { color: var(--accent); font-size: 0.9em; margin-bottom: 8px; }
+.api-info a { color: var(--text2); text-decoration: none; font-size: 0.85em; display: flex; align-items: center; gap: 6px; }
+.api-info a:hover { color: var(--accent); }
+
+/* Buttons */
+.btn {
+  display: inline-block; padding: 12px 28px; border: none;
+  border-radius: 8px; font-size: 0.95em; cursor: pointer;
+  transition: all 0.15s; font-weight: 500;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-primary:disabled { background: var(--accent-bg); color: var(--text3); cursor: not-allowed; }
+.btn-secondary { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--card); color: var(--text); }
+.btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+.btn-sm { padding: 7px 18px; font-size: 0.84em; }
+.btn-test {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(52,211,153,0.08); color: var(--success);
+  border: 1px solid rgba(52,211,153,0.2);
+  padding: 6px 14px; border-radius: 20px; font-size: 0.8em;
+  cursor: pointer; font-weight: 500; transition: all 0.2s; font-family: inherit;
+}
+.btn-test:hover { background: rgba(52,211,153,0.16); border-color: var(--success); }
+.btn-test.testing { background: var(--accent-bg); color: var(--accent); border-color: var(--border-active); cursor: wait; }
+.btn-test.pass { background: rgba(52,211,153,0.16); color: #16A34A; border-color: var(--success); }
+.btn-test.fail { background: rgba(248,113,113,0.08); color: var(--error); border-color: rgba(248,113,113,0.2); }
+
+/* IO buttons */
+.io-bar { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.io-btn {
+  padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px;
+  background: transparent; color: var(--text3); cursor: pointer;
+  font-size: 0.82em; transition: all 0.2s; font-family: inherit;
+}
+.io-btn:hover { border-color: var(--border-active); color: var(--text); }
+#importFileInput { display: none; }
+
+/* Result */
+.result { text-align: center; padding: 24px 20px; }
+.result .icon { font-size: 2.8em; margin-bottom: 12px; }
+.result h2 { color: var(--accent); margin-bottom: 8px; justify-content: center; font-size: 1.3em; }
+.result p { color: var(--text2); font-size: 0.92em; line-height: 1.6; }
+.result .url { color: var(--accent); font-size: 1.1em; font-weight: 600; margin: 12px 0; }
+
+/* Config summary card */
+.config-summary {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin: 20px auto; max-width: 400px; text-align: left;
+  display: flex; gap: 12px; align-items: center;
+}
+.config-summary .cs-icon { font-size: 1.8em; flex-shrink: 0; }
+.config-summary .cs-model { color: var(--text); font-weight: 600; font-size: 0.95em; }
+.config-summary .cs-detail { color: var(--text2); font-size: 0.82em; margin-top: 2px; }
+
+/* Toast container */
+.toast-container {
+  position: fixed; top: 20px; right: 20px; z-index: 999;
+  display: flex; flex-direction: column; gap: 8px;
+  pointer-events: none; max-width: 360px;
+}
+.toast-item {
+  background: var(--bg2); color: var(--text);
+  padding: 12px 18px; border-radius: 8px; font-size: 0.88em;
+  opacity: 0; transform: translateX(20px); transition: all 0.3s;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2); font-weight: 500;
+  pointer-events: auto; border: 1px solid var(--border);
+}
+.toast-item.show { opacity: 1; transform: translateX(0); }
+.toast-item.success { border-color: rgba(52,211,153,0.3); background: rgba(52,211,153,0.1); color: var(--success); }
+.toast-item.error { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.1); color: var(--error); }
+.toast-item.info { border-color: rgba(56,189,248,0.3); background: rgba(56,189,248,0.1); color: var(--accent); }
+
+/* Channel form */
+.channel-card { transition: all 0.2s; }
+.channel-card.selected { border-color: var(--accent); background: var(--accent-bg); }
+.channel-form {
+  padding-top: 0; max-height: 0; overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+.channel-form.open { max-height: 300px; padding-top: 12px; }
+.channel-form .form-group { margin-bottom: 10px; }
+.channel-form label { font-size: 0.82em; color: var(--text2); margin-bottom: 4px; }
+.channel-form input { font-size: 0.88em; padding: 9px 12px; }
+.channel-form .hint { font-size: 0.75em; margin-top: 4px; }
+.test-result { font-size: 0.78em; margin-top: 4px; line-height: 1.5; min-height: 16px; }
+.test-result.pass { color: var(--success); }
+.test-result.fail { color: var(--error); }
+
+/* WeChat */
+#form-wechat { max-height: none !important; overflow: visible !important; }
+
+/* Log panel */
+.log-panel { margin-top: 20px; }
+.log-panel h3 { color: var(--text); font-size: 0.95em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.log-content {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+  font-size: 0.78em; line-height: 1.7; max-height: 280px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-all;
+}
+.log-empty { color: var(--text3); text-align: center; padding: 20px; font-style: italic; }
+.log-toolbar { display: flex; gap: 6px; margin-top: 6px; }
+.log-toolbar button { font-size: 0.78em; padding: 4px 12px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--modal-bg); z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s;
+}
+.modal-overlay.show { opacity: 1; pointer-events: auto; }
+.modal-box {
+  background: var(--card); border-radius: 12px; padding: 28px 32px;
+  max-width: 440px; width: 90%; border: 1px solid var(--border);
+}
+.modal-box h3 { margin: 0 0 12px; font-size: 1.05em; }
+.modal-box p { color: var(--text2); font-size: 0.88em; line-height: 1.6; margin: 0 0 20px; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-btns button { padding: 8px 22px; border-radius: 8px; border: none; cursor: pointer; font-size: 0.88em; font-family: inherit; font-weight: 500; }
+.modal-btn-cancel { background: var(--bg3); color: var(--text); }
+.modal-btn-ok { background: var(--accent); color: #fff; }
+
+/* Footer */
+footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--text3); letter-spacing: 2px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 3px; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .model-grid { grid-template-columns: 1fr; }
+  .container { padding: 0 16px 40px; }
+  .step-section { padding: 18px; }
+  .hero h1 { font-size: 24px; }
+  .status-bar { flex-wrap: wrap; gap: 6px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Hero ═══ -->
+<div class="hero">
+  <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" rx="16" fill="var(--card)"/>
+    <g fill="var(--text)">
+      <ellipse cx="50" cy="46" rx="24" ry="26"/>
+      <path d="M 28 32 L 20 14 L 38 26" fill="var(--bg2)"/>
+      <path d="M 72 32 L 80 14 L 62 26" fill="var(--bg2)"/>
+      <path d="M 30 28 L 24 18 L 36 26" fill="var(--accent)"/>
+      <path d="M 70 28 L 76 18 L 64 26" fill="var(--accent)"/>
+      <ellipse cx="40" cy="42" rx="6" ry="7" fill="var(--bg2)"/>
+      <circle cx="41" cy="41" r="3.5" fill="var(--text)"/>
+      <circle cx="42" cy="40" r="1.3" fill="var(--accent)"/>
+      <ellipse cx="60" cy="42" rx="6" ry="7" fill="var(--bg2)"/>
+      <circle cx="59" cy="41" r="3.5" fill="var(--text)"/>
+      <circle cx="60" cy="40" r="1.3" fill="var(--accent)"/>
+      <path d="M 32 34 Q 40 30, 48 34" fill="none" stroke="var(--bg2)" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M 52 34 Q 60 30, 68 34" fill="none" stroke="var(--bg2)" stroke-width="1.8" stroke-linecap="round"/>
+      <path d="M 50 48 L 48 53" fill="none" stroke="var(--bg2)" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+      <path d="M 43 58 Q 50 63, 57 58" fill="none" stroke="var(--bg2)" stroke-width="1.8" stroke-linecap="round"/>
+      <line x1="72" y1="80" x2="76" y2="84" stroke="var(--text)" stroke-width="2"/>
+      <rect x="72" y="84" width="8" height="10" rx="1.5" fill="var(--accent)"/>
+      <rect x="74" y="78" width="4" height="8" rx="1"/>
+    </g>
+  </svg>
+  <h1>OpenClaw Portable</h1>
+  <p class="tagline">选择模型，填入 API Key，一键启动</p>
+  <span class="version">2026.4.29 · 零安装 · 跨平台</span>
+</div>
+
+<div class="container">
+
+<!-- ═══ Status bar ═══ -->
+<div class="status-bar">
+  <div class="dot" id="statusDot"></div>
+  <div class="status-text" id="statusText">检测中...</div>
+  <button class="status-btn" id="themeBtn" onclick="toggleTheme()">🌙 深色</button>
+</div>
+
+<!-- ═══ Steps ═══ -->
+<div class="steps">
+  <div class="step active" id="stepIndicator1" onclick="goStep(1)" style="cursor:pointer"><span class="num">1</span>选模型 <span style="margin-left:auto;font-size:0.78em;opacity:0.6" id="s1label">待填写</span></div>
+  <div class="step" id="stepIndicator2" onclick="goStep(2)" style="cursor:pointer"><span class="num">2</span>填 Key <span style="margin-left:auto;font-size:0.78em;opacity:0.6" id="s2label">待填写</span></div>
+  <div class="step" id="stepIndicator3" onclick="goStep(3)" style="cursor:pointer"><span class="num">3</span>启动 <span style="margin-left:auto;font-size:0.78em;opacity:0.6" id="s3label">等待中</span></div>
+</div>
+
+<!-- ═══ Step 1: Select Model ═══ -->
+<div class="step-section active" id="step1"><div style="padding:24px;">
+  <h2>选择 AI 模型</h2>
+  <p class="desc">推荐国内用户用 MiniMax / Kimi / DeepSeek</p>
+
+  <div class="model-grid">
+    <div class="model-card" data-provider="minimax" data-base="https://api.minimax.chat/v1" data-model="MiniMax-Text-01">
+      <span class="check">✓</span>
+      <h4>MiniMax <span class="tag hot">推荐</span><span class="tag cn">国内</span></h4>
+      <p>MiniMax-Text-01，速度快，性价比高</p>
+      <a class="buy-link" href="https://platform.minimaxi.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="kimi" data-base="https://api.moonshot.cn/v1" data-model="moonshot-v1-auto">
+      <span class="check">✓</span>
+      <h4>Kimi (月之暗面) <span class="tag cn">国内</span><span class="tag fast">快</span></h4>
+      <p>moonshot-v1-auto，智能选模型</p>
+      <a class="buy-link" href="https://platform.moonshot.cn/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="deepseek" data-base="https://api.deepseek.com/v1" data-model="deepseek-chat">
+      <span class="check">✓</span>
+      <h4>DeepSeek <span class="tag cn">国内</span><span class="tag cheap">便宜</span></h4>
+      <p>deepseek-chat，超低价格</p>
+      <a class="buy-link" href="https://platform.deepseek.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="zai" data-base="" data-model="glm-5">
+      <span class="check">✓</span>
+      <h4>智谱 GLM <span class="tag cn">国内</span><span class="tag free">有免费</span></h4>
+      <p>glm-5，免费额度可用</p>
+      <a class="buy-link" href="https://open.bigmodel.cn/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="qwen" data-base="https://dashscope.aliyuncs.com/compatible-mode/v1" data-model="qwen-turbo">
+      <span class="check">✓</span>
+      <h4>通义千问 <span class="tag cn">国内</span><span class="tag free">有免费</span></h4>
+      <p>qwen-turbo，阿里云出品</p>
+      <a class="buy-link" href="https://dashscope.console.aliyun.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="doubao" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-1.5-pro-32k">
+      <span class="check">✓</span>
+      <h4>豆包 (字节) <span class="tag cn">国内</span><span class="tag fast">快</span></h4>
+      <p>doubao-1.5-pro，字节跳动</p>
+      <a class="buy-link" href="https://console.volcengine.com/ark" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="siliconflow" data-base="https://api.siliconflow.cn/v1" data-model="Qwen/Qwen2.5-72B-Instruct">
+      <span class="check">✓</span>
+      <h4>硅基流动 <span class="tag cn">国内</span><span class="tag cheap">便宜</span></h4>
+      <p>多模型聚合，价格低</p>
+      <a class="buy-link" href="https://cloud.siliconflow.cn/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="openai" data-base="https://api.openai.com/v1" data-model="gpt-4o">
+      <span class="check">✓</span>
+      <h4>OpenAI</h4>
+      <p>GPT-4o，需翻墙或中转</p>
+      <a class="buy-link" href="https://platform.openai.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="anthropic" data-base="https://api.anthropic.com/v1" data-model="claude-sonnet-4-20250514">
+      <span class="check">✓</span>
+      <h4>Claude</h4>
+      <p>Claude Sonnet 4，需翻墙或中转</p>
+      <a class="buy-link" href="https://console.anthropic.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="groq" data-base="https://api.groq.com/openai/v1" data-model="llama-3.3-70b-versatile">
+      <span class="check">✓</span>
+      <h4>Groq <span class="tag fast">极快</span><span class="tag free">免费</span></h4>
+      <p>Llama 3.3 70B，超高速推理</p>
+      <a class="buy-link" href="https://console.groq.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="custom" data-base="" data-model="" style="grid-column:1/-1;border-style:dashed;">
+      <span class="check">✓</span>
+      <h4>自定义 API <span class="tag">OpenAI 兼容</span></h4>
+      <p>填写任意 OpenAI 兼容 API（OpenRouter、API2D、OneAPI 等）</p>
+    </div>
+    <div class="model-card" data-provider="lmstudio" data-base="http://127.0.0.1:1234/v1" data-model="" style="grid-column:1/-1;border-color:rgba(139,92,246,0.3);">
+      <span class="check">✓</span>
+      <h4>LM Studio <span class="tag" style="background:rgba(139,92,246,0.15);color:#A78BFA;">本地</span></h4>
+      <p>本地 LM Studio 服务，无需 API Key，离线运行</p>
+      <p class="hint" style="color:var(--text3);font-size:0.75em;margin-top:4px;">启动 LM Studio → 下载模型 → 点击 Server 按钮启动服务 → 返回本页面选择此项</p>
+    </div>
+    <div class="model-card" data-provider="ollama" data-base="http://127.0.0.1:11434/v1" data-model="" style="grid-column:1/-1;border-color:rgba(139,92,246,0.3);">
+      <span class="check">✓</span>
+      <h4>Ollama <span class="tag" style="background:rgba(139,92,246,0.15);color:#A78BFA;">本地</span></h4>
+      <p>本地 Ollama 服务，无需 API Key，离线运行</p>
+      <p class="hint" style="color:var(--text3);font-size:0.75em;margin-top:4px;">安装 Ollama → <code>ollama pull</code> 下载模型 → 返回本页面选择此项</p>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" id="nextStep1" disabled>下一步 →</button>
+  </div>
+</div></div>
+
+<!-- ═══ Step 2: API Key ═══ -->
+<div class="step-section collapsed" id="step2"><div style="padding:24px;">
+  <h2>填写 API Key</h2>
+  <p class="desc" id="step2desc">请填写对应模型的 API Key</p>
+
+  <div id="customFields" style="display:none;">
+    <div class="form-group" id="customBaseGroup">
+      <label id="customBaseLabel">API 地址 (Base URL) <i class="field-help" data-tip="OpenAI 兼容接口的根地址，末尾需带 /v1 或无 /v1，例：https://api.example.com/v1">?</i></label>
+      <input type="text" id="customBase" placeholder="https://api.example.com/v1">
+    </div>
+    <div class="form-group">
+      <label id="customModelLabel">模型名称 <i class="field-help" data-tip="要使用的模型 ID，可从提供商文档中找到">?</i></label>
+      <input type="text" id="customModel" placeholder="gpt-4o">
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>API Key <i class="field-help" data-tip="从模型提供商官网注册获取。格式通常为 sk-xxx 或其他前缀">?</i></label>
+    <div class="input-wrap">
+      <input type="password" id="apiKey" placeholder="sk-" oninput="onApiKeyInput()" autocomplete="off">
+      <span class="val-indicator" id="valIndicator" style="display:none"></span>
+      <button class="toggle-pw" onclick="togglePw('apiKey')">显示</button>
+    </div>
+    <p class="hint">你的 Key 仅保存在本地 U 盘，不会上传到任何服务器</p>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="goStep(1)">← 返回上一步</button>
+    <button class="btn btn-secondary" onclick="testLocalService()" id="testLocalBtn" style="display:none;">检测服务</button>
+    <button class="btn btn-primary" onclick="saveConfig()">保存并继续 →</button>
+  </div>
+</div></div>
+
+<!-- ═══ Step 3: Done ═══ -->
+<div class="step-section collapsed" id="step3"><div style="padding:20px 24px 24px;">
+  <div class="result">
+    <div class="icon">✓</div>
+    <h2 id="step3-title">配置完成！</h2>
+    <p id="step3-subtitle">模型和 API Key 已保存到本地</p>
+
+    <!-- Import/Export -->
+    <div class="io-bar" style="justify-content:center;margin-top:20px;">
+      <button class="io-btn" onclick="exportConfig()">📤 导出配置</button>
+      <button class="io-btn" onclick="startImport()">📥 导入配置</button>
+      <button class="io-btn" onclick="viewConfig()">👁 查看 JSON</button>
+    </div>
+    <input type="file" id="importFileInput" accept=".json" onchange="doImport(event)">
+
+    <div style="margin-top: 24px; text-align: left;">
+      <h3 style="color: var(--accent); font-size: 0.95em; margin-bottom: 12px;">接入聊天平台（可选）</h3>
+      <p style="color: var(--text2); font-size: 0.82em; margin-bottom: 12px;">点击卡片展开填写，不填可跳过。填写后点测试验证连接：</p>
+      <div class="model-grid">
+        <div class="model-card channel-card" id="ch-telegram" onclick="toggleChannel(this,'telegram')">
+          <h4>Telegram</h4><p>接入 Telegram Bot</p>
+          <div class="channel-form" id="form-telegram" onclick="event.stopPropagation();">
+            <div class="form-group">
+              <label>Bot Token</label>
+              <input type="text" id="ch-telegram-token" placeholder="123456:ABC-DEF...">
+              <p class="hint"><a href="https://t.me/BotFather" target="_blank">→ 从 @BotFather 获取</a></p>
+            </div>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'telegram');">▶ 测试连接</button>
+            <div class="test-result" id="result-telegram"></div>
+          </div>
+        </div>
+        <div class="model-card channel-card" id="ch-qqbot" onclick="toggleChannel(this,'qqbot')">
+          <h4>QQ Bot</h4><p>接入 QQ 群/私聊机器人</p>
+          <div class="channel-form" id="form-qqbot" onclick="event.stopPropagation();">
+            <div class="form-group"><label>App ID</label><input type="text" id="ch-qqbot-appid" placeholder="应用 ID"></div>
+            <div class="form-group"><label>Client Secret</label><input type="text" id="ch-qqbot-secret" placeholder="应用密钥">
+            <p class="hint"><a href="https://q.qq.com" target="_blank">→ 从 QQ 开放平台获取</a></p></div>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'qqbot');">▶ 测试连接</button>
+            <div class="test-result" id="result-qqbot"></div>
+          </div>
+        </div>
+        <div class="model-card channel-card" id="ch-feishu" onclick="toggleChannel(this,'feishu')">
+          <h4>飞书</h4><p>接入飞书机器人</p>
+          <div class="channel-form" id="form-feishu" onclick="event.stopPropagation();">
+            <div class="form-group"><label>App ID</label><input type="text" id="ch-feishu-appid" placeholder="cli_xxx..."></div>
+            <div class="form-group"><label>App Secret</label><input type="text" id="ch-feishu-secret" placeholder="应用密钥">
+            <p class="hint"><a href="https://open.feishu.cn/app" target="_blank">→ 从飞书开放平台获取</a></p></div>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'feishu');">▶ 测试连接</button>
+            <div class="test-result" id="result-feishu"></div>
+          </div>
+        </div>
+        <div class="model-card channel-card" id="ch-wecom" onclick="toggleChannel(this,'wecom')">
+          <h4>企业微信</h4><p>接入企业微信</p>
+          <div class="channel-form" id="form-wecom" onclick="event.stopPropagation();">
+            <div class="form-group"><label>Bot ID</label><input type="text" id="ch-wecom-botid" placeholder="aib..."></div>
+            <div class="form-group"><label>Secret</label><input type="text" id="ch-wecom-secret" placeholder="密钥">
+            <p class="hint"><a href="https://work.weixin.qq.com" target="_blank">→ 从企业微信管理后台获取</a></p></div>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'wecom');">▶ 测试连接</button>
+            <div class="test-result" id="result-wecom"></div>
+          </div>
+        </div>
+        <div class="model-card channel-card" id="ch-discord" onclick="toggleChannel(this,'discord')">
+          <h4>Discord</h4><p>接入 Discord Bot</p>
+          <div class="channel-form" id="form-discord" onclick="event.stopPropagation();">
+            <div class="form-group"><label>Bot Token</label><input type="text" id="ch-discord-token" placeholder="Nz...">
+            <p class="hint"><a href="https://discord.com/developers/applications" target="_blank">→ 在 Discord Developer Portal 创建</a></p></div>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'discord');">▶ 测试连接</button>
+            <div class="test-result" id="result-discord"></div>
+          </div>
+        </div>
+        <div class="model-card channel-card" id="ch-slack" onclick="toggleChannel(this,'slack')">
+          <h4>Slack</h4><p>接入 Slack Bot</p>
+          <div class="channel-form" id="form-slack" onclick="event.stopPropagation();">
+            <div class="form-group"><label>Bot Token</label><input type="text" id="ch-slack-token" placeholder="xoxb-...">
+            <p class="hint"><a href="https://api.slack.com/apps" target="_blank">→ 在 Slack API 创建 App</a></p></div>
+            <button class="btn-test btn-sm" onclick="testChannel(event,'slack');">▶ 测试连接</button>
+            <div class="test-result" id="result-slack"></div>
+          </div>
+        </div>
+        <div class="model-card channel-card" style="grid-column:1/-1;border-color:#07c160;" onclick="startWeChatLogin(event)" id="ch-wechat">
+          <h4>微信 <span class="tag" style="background:rgba(7,193,96,0.15);color:#07c160;">个人微信</span></h4>
+          <p>扫码接入个人微信</p>
+          <div class="channel-form" id="form-wechat" onclick="event.stopPropagation();" style="max-height:none;overflow:visible;">
+            <div id="wechat-qr" style="text-align:center;padding:16px;"><p style="color:var(--text2);font-size:0.85em;">点击此卡片开始扫码</p></div>
+            <div id="wechat-status" style="text-align:center;color:var(--text2);font-size:0.85em;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 28px; text-align: center;">
+      <button class="btn btn-primary" onclick="saveChannelsAndOpen()" style="font-size:1.15em;padding:16px 48px;">打开 OpenClaw 聊天</button>
+      <p style="color: var(--text3); font-size:0.8em; margin-top:10px;">渠道配置自动保存，Gateway 需重启生效</p>
+    </div>
+
+    <div class="btn-row" style="justify-content:center;margin-top:16px;">
+      <button class="btn btn-secondary" onclick="resetConfig()">重新配置</button>
+    </div>
+
+    <!-- Log panel -->
+    <div class="log-panel">
+      <h3>📜 Gateway 运行日志 <span class="tag" id="logBadge" style="background:var(--accent-bg);color:var(--accent);">等待</span></h3>
+      <div class="log-content" id="logContent"><div class="log-empty">暂无日志</div></div>
+      <div class="log-toolbar">
+        <button class="io-btn" onclick="refreshLogs()">刷新</button>
+        <button class="io-btn" onclick="clearLog()">清空</button>
+      </div>
+    </div>
+  </div>
+</div></div>
+
+<!-- ═══ Directory info ═══ -->
+<section style="padding:40px 0;border-top:1px solid var(--border);">
+  <h2 style="color:var(--text);font-size:20px;font-weight:600;margin-bottom:16px;">📁 目录说明</h2>
+  <p style="color:var(--text2);font-size:0.88em;margin-bottom:12px;">U 盘内的文件结构</p>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div><strong style="color:var(--text);font-size:0.9em;">skills-cn/</strong><p style="color:var(--text2);font-size:0.78em;">中文技能，OpenClaw 自动加载</p></div>
+      <span style="font-size:0.8em;color:var(--text3);">📁</span>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div><strong style="color:var(--text);font-size:0.9em;">app/</strong><p style="color:var(--text2);font-size:0.78em;">Node.js 运行时、OpenClaw 核心</p></div>
+      <span style="font-size:0.8em;color:var(--text3);">⚙️</span>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div><strong style="color:var(--text);font-size:0.9em;">data/</strong><p style="color:var(--text2);font-size:0.78em;">API Key、聊天历史（仅本地）</p></div>
+      <span style="font-size:0.8em;color:var(--text3);">🔒</span>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<footer>OPENCLAW PORTABLE · 2026.4.29 · 插上就能用的 AI Agent</footer>
+
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation();">
+    <h3 id="modalTitle">确认</h3>
+    <p id="modalBody"></p>
+    <div class="modal-btns" id="modalBtns"></div>
+  </div>
+</div>
+
+<script>
+/* ═══ State ═══ */
+var selectedProvider = null;
+var selectedBase = '';
+var selectedModel = '';
+var logLines = [];
+var logAutoScroll = true;
+
+/* ═══ Theme ═══ */
+function toggleTheme() {
+  var html = document.documentElement;
+  var isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  var btn = document.getElementById('themeBtn');
+  btn.textContent = isDark ? '☀️ 浅色' : '🌙 深色';
+  try { localStorage.setItem('oc-theme', isDark ? 'light' : 'dark'); } catch(e) {}
+}
+(function(){
+  try {
+    var saved = localStorage.getItem('oc-theme');
+    if (saved === 'light') { document.documentElement.setAttribute('data-theme','light'); document.getElementById('themeBtn').textContent='☀️ 浅色'; }
+  } catch(e) {}
+})();
+
+/* ═══ Toast (multi-queue) ═══ */
+var _toastId = 0;
+function showToast(msg, type) {
+  var container = document.getElementById('toastContainer');
+  var id = 'toast-' + (++_toastId);
+  var el = document.createElement('div');
+  el.className = 'toast-item ' + (type || 'info');
+  el.id = id;
+  var icons = {success:'✓ ',error:'✕ ',info:'ℹ '};
+  el.innerHTML = (icons[type]||'') + msg;
+  container.appendChild(el);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.classList.add('show'); }); });
+  setTimeout(function(){
+    el.classList.remove('show');
+    setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 300);
+  }, 3500);
+}
+/* keep old showToast wrapper for backward compat (used by existing code) */
+function _showToast(msg, isError) {
+  showToast(msg, isError ? 'error' : 'info');
+}
+
+/* ═══ Modal ═══ */
+function showModal(title, body, btns) {
+  var overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  var btnDiv = document.getElementById('modalBtns');
+  btnDiv.innerHTML = '';
+  btns.forEach(function(b){
+    var btn = document.createElement('button');
+    btn.className = b.cls || 'modal-btn-cancel';
+    btn.textContent = b.text;
+    btn.onclick = function(){ b.fn(); if(!b.keepOpen) closeModal(); };
+    btnDiv.appendChild(btn);
+  });
+  overlay.classList.add('show');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('show'); }
+
+/* ═══ Model cards ═══ */
+document.querySelectorAll('#step1 .model-card').forEach(function(card){
+  card.addEventListener('click', function(e){
+    if (e.target.closest('.buy-link')) return;
+    document.querySelectorAll('#step1 .model-card').forEach(function(c){c.classList.remove('selected');});
+    card.classList.add('selected');
+    selectedProvider = card.dataset.provider;
+    selectedBase = card.dataset.base;
+    selectedModel = card.dataset.model;
+    document.getElementById('nextStep1').disabled = false;
+    document.getElementById('s1label').textContent = selectedModel || '';
+
+    // For local models (empty model name from card), show model input field hint
+    var isLocal = selectedProvider === 'lmstudio' || selectedProvider === 'ollama';
+    if (isLocal) {
+      document.getElementById('apiKey').placeholder = '无需填写，跳过即可';
+      document.getElementById('apiKey').value = '';
+      // Pre-fill base URL
+      document.getElementById('customBase').value = selectedBase;
+    }
+  });
+});
+document.getElementById('nextStep1').addEventListener('click', function(){ setupStep2(); goStep(2); });
+
+// Update validation when customModel changes (for local providers)
+document.getElementById('customModel').addEventListener('input', function() {
+  if (selectedProvider==='lmstudio'||selectedProvider==='ollama') onApiKeyInput();
+});
+document.getElementById('customBase').addEventListener('input', function() {
+  if (selectedProvider==='lmstudio'||selectedProvider==='ollama') onApiKeyInput();
+});
+
+/* ═══ Steps - vertical accordion ═══ */
+var currentStep = 1;
+var hasConfig = false;
+
+function goStep(n) {
+  currentStep = n;
+  // Collapse all, expand target
+  for (var i = 1; i <= 3; i++) {
+    var sec = document.getElementById('step' + i);
+    if (i < n) {
+      sec.classList.remove('active'); sec.classList.add('collapsed');
+      sec.querySelector('div[style*="padding"]').style.pointerEvents = 'none';
+    } else if (i === n) {
+      sec.classList.remove('collapsed'); sec.classList.add('active');
+      sec.querySelector('div[style*="padding"]').style.pointerEvents = '';
+      // Scroll into view
+      sec.scrollIntoView({behavior:'smooth', block:'nearest'});
+    } else {
+      sec.classList.remove('active'); sec.classList.add('collapsed');
+      sec.querySelector('div[style*="padding"]').style.pointerEvents = 'none';
+    }
+  }
+  // Update indicators
+  for (var j = 1; j <= 3; j++) {
+    var ind = document.getElementById('stepIndicator' + j);
+    ind.classList.remove('active', 'done');
+    if (j < n) ind.classList.add('done');
+    if (j === n) ind.classList.add('active');
+  }
+  // Update labels
+  if (selectedModel) document.getElementById('s1label').textContent = selectedModel;
+  if (n === 2) setupStep2();
+}
+
+var PROVIDER_NAMES = {
+  minimax:'MiniMax', kimi:'Kimi (月之暗面)', deepseek:'DeepSeek',
+  zai:'智谱 GLM', qwen:'通义千问', doubao:'豆包',
+  siliconflow:'硅基流动', openai:'OpenAI', anthropic:'Anthropic Claude',
+  groq:'Groq', custom:'自定义',
+  lmstudio:'LM Studio (本地)', ollama:'Ollama (本地)'
+};
+
+function setupStep2() {
+  var isCustom = selectedProvider === 'custom';
+  var isLocal = selectedProvider === 'lmstudio' || selectedProvider === 'ollama';
+  document.getElementById('customFields').style.display = (isCustom || isLocal) ? 'block' : 'none';
+  var name = PROVIDER_NAMES[selectedProvider] || selectedProvider;
+  if (isLocal) {
+    document.getElementById('step2desc').textContent = '请填写模型名称（在服务中看到的名字，如 Qwen2.5-72B-Instruct）';
+    document.getElementById('customBaseLabel').innerHTML = 'API 端口地址 <i class="field-help" data-tip="本地服务的 API 地址">?</i>';
+    document.getElementById('customBase').placeholder = selectedProvider === 'lmstudio' ? 'http://127.0.0.1:1234/v1' : 'http://127.0.0.1:11434/v1';
+    document.getElementById('customModelLabel').innerHTML = '模型名称 <i class="field-help" data-tip="在 LM Studio 或 Ollama 中看到的模型 ID">?</i>';
+    document.getElementById('customModel').placeholder = selectedProvider === 'lmstudio' ? 'Qwen2.5-72B-Instruct' : 'qwen2.5:72b';
+    document.getElementById('testLocalBtn').style.display = '';
+    // Also show the test button for local
+  } else {
+    document.getElementById('step2desc').textContent = '请填写 ' + name + ' 的 API Key';
+    document.getElementById('customBaseLabel').innerHTML = 'API 地址 (Base URL) <i class="field-help" data-tip="OpenAI 兼容接口的根地址">?</i>';
+    document.getElementById('customBase').placeholder = 'https://api.example.com/v1';
+    document.getElementById('customModelLabel').innerHTML = '模型名称 <i class="field-help" data-tip="要使用的模型 ID">?</i>';
+    document.getElementById('customModel').placeholder = 'gpt-4o';
+    document.getElementById('testLocalBtn').style.display = 'none';
+  }
+  var card = document.querySelector('#step1 .model-card[data-provider="'+selectedProvider+'"]');
+  var link = document.getElementById('primaryLink');
+  if (card && card.querySelector('.buy-link')) { link.href = card.querySelector('.buy-link').href; link.style.display=''; }
+  else { link.style.display='none'; }
+}
+
+/* ═══ Form validation ═══ */
+function onApiKeyInput() {
+  var val = document.getElementById('apiKey').value;
+  var ind = document.getElementById('valIndicator');
+  if (!val) { ind.style.display='none'; return; }
+  ind.style.display='';
+  var isLocal = selectedProvider==='lmstudio'||selectedProvider==='ollama';
+  if (isLocal) {
+    // For local models, validate model name field instead
+    var mval = document.getElementById('customModel').value.trim();
+    ind.className = mval.length >= 2 ? 'val-indicator val-ok' : 'val-indicator val-fail';
+    ind.textContent = mval.length >= 2 ? '✓' : '✕';
+  } else if (selectedProvider === 'custom') {
+    ind.className = val.length >= 4 ? 'val-indicator val-ok' : 'val-indicator val-fail';
+    ind.textContent = val.length >= 4 ? '✓' : '✕';
+  } else if (val.length >= 5 && val.indexOf('sk-') === 0) {
+    ind.className = 'val-indicator val-ok'; ind.textContent = '✓';
+  } else if (val.length >= 6) {
+    ind.className = 'val-indicator val-ok'; ind.textContent = '✓';
+  } else {
+    ind.className = 'val-indicator val-fail'; ind.textContent = '✕';
+  }
+}
+
+/* ═══ Toggle password ═══ */
+function togglePw(id) {
+  var inp = document.getElementById(id);
+  var btn = inp.parentElement.querySelector('.toggle-pw');
+  if (inp.type==='password') { inp.type='text'; btn.textContent='隐藏'; }
+  else { inp.type='password'; btn.textContent='显示'; }
+}
+
+/* ═══ Build config ═══ */
+function buildConfig(provider, base, model, apiKey) {
+  var bc = {
+    gateway:{auth:{mode:'token',token:'openclaw'}},
+    commands:{native:'auto',nativeSkills:'auto',restart:true,ownerDisplay:'raw'},
+    meta:{lastTouchedVersion:'2026.4.29',lastTouchedAt:new Date().toISOString()}
+  };
+  if (provider==='zai') {
+    return Object.assign({}, bc, {env:{ZAI_API_KEY:apiKey}, agents:{defaults:{model:{primary:'zai/'+model}}}});
+  }
+  var pn = provider || 'myProvider';
+  // LM Studio uses Responses API, everything else uses Completions
+  var apiType = provider === 'lmstudio' ? 'openai-responses' : 'openai-completions';
+  var provs = {}; provs[pn] = {
+    baseUrl:base, apiKey:apiKey, api:apiType,
+    models:[{id:model,name:model,reasoning:false,input:['text'],
+    cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:196608,maxTokens:8192}]
+  };
+  return Object.assign({}, bc, {models:{mode:'merge',providers:provs}, agents:{defaults:{model:{primary:pn+'/'+model}}}});
+}
+
+/* ═══ Reset config ═══ */
+function resetConfig() {
+  hasConfig = false;
+  // Reset all to step 1
+  for (var i = 1; i <= 3; i++) {
+    var sec = document.getElementById('step' + i);
+    sec.classList.remove('collapsed', 'active');
+    sec.querySelector('div[style*="padding"]').style.pointerEvents = '';
+  }
+  document.getElementById('step1').classList.add('active');
+  document.getElementById('step2').classList.add('collapsed');
+  document.getElementById('step3').classList.add('collapsed');
+  document.getElementById('stepIndicator1').className = 'step active';
+  document.getElementById('stepIndicator2').className = 'step';
+  document.getElementById('stepIndicator3').className = 'step';
+  // Reset selections
+  document.querySelectorAll('#step1 .model-card').forEach(function(c){c.classList.remove('selected');});
+  selectedProvider = null; selectedBase = ''; selectedModel = '';
+  document.getElementById('nextStep1').disabled = true;
+  document.getElementById('apiKey').value = '';
+  onApiKeyInput();
+}
+
+/* ═══ Save config ═══ */
+async function saveConfig() {
+  var apiKey = document.getElementById('apiKey').value.trim();
+  var base = selectedBase, model = selectedModel;
+  var isLocal = selectedProvider==='lmstudio'||selectedProvider==='ollama';
+
+  if (isLocal) {
+    // Local model: validate model name and base URL
+    base = document.getElementById('customBase').value.trim();
+    model = document.getElementById('customModel').value.trim();
+    if (!base || !model) { showToast('请填写 API 端口和模型名称','error'); return; }
+    apiKey = selectedProvider === 'lmstudio' ? 'lmstudio' : 'ollama';
+  } else if (selectedProvider==='custom') {
+    if (!apiKey) { showToast('请填写 API Key','error'); return; }
+    base = document.getElementById('customBase').value.trim();
+    model = document.getElementById('customModel').value.trim();
+    if (!base || !model) { showToast('请填写 API 地址和模型名称','error'); return; }
+  } else {
+    if (!apiKey) { showToast('请填写 API Key','error'); return; }
+  }
+  var config = buildConfig(selectedProvider, base, model, apiKey);
+  try {
+    var res = await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config)});
+    if (!res.ok) throw new Error('保存失败');
+    showToast('配置已保存！','success');
+    // Auto-collapse steps 1 and 2, expand step 3
+    document.getElementById('step1').classList.remove('active'); document.getElementById('step1').classList.add('collapsed');
+    document.getElementById('step1').querySelector('div[style*="padding"]').style.pointerEvents = 'none';
+    document.getElementById('step2').classList.remove('active'); document.getElementById('step2').classList.add('collapsed');
+    document.getElementById('step2').querySelector('div[style*="padding"]').style.pointerEvents = 'none';
+    document.getElementById('step3').classList.remove('collapsed'); document.getElementById('step3').classList.add('active');
+    document.getElementById('step3').querySelector('div[style*="padding"]').style.pointerEvents = '';
+    document.getElementById('step3').scrollIntoView({behavior:'smooth', block:'nearest'});
+    // Update indicators: step 1 done, step 2 done, step 3 active
+    document.getElementById('stepIndicator1').className = 'step done';
+    document.getElementById('stepIndicator2').className = 'step done';
+    document.getElementById('stepIndicator3').className = 'step active';
+    // Labels
+    document.getElementById('s1label').textContent = '✓';
+    document.getElementById('s2label').textContent = '✓';
+    document.getElementById('s3label').textContent = '';
+    hasConfig = true;
+  } catch(e) { showToast('保存失败: '+e.message,'error'); }
+}
+
+/* ═══ Test local model service ═══ */
+async function testLocalService() {
+  var base = document.getElementById('customBase').value.trim();
+  if (!base) { showToast('请先填写 API 端口地址','error'); return; }
+  var btn = document.getElementById('testLocalBtn');
+  btn.textContent = '检测中...';
+  btn.disabled = true;
+  try {
+    var res = await fetch(base + '/models');
+    if (res.ok) {
+      var data = await res.json();
+      var models = data.data || [];
+      if (models.length > 0) {
+        var modelNames = models.map(function(m) { return m.id; }).join(', ');
+        showToast('✓ 服务已就绪，可用模型: ' + modelNames, 'success');
+        // Auto-fill model name if empty
+        var modelInput = document.getElementById('customModel');
+        if (!modelInput.value.trim() && models[0].id) {
+          modelInput.value = models[0].id;
+          onApiKeyInput(); // trigger validation update
+        }
+      } else {
+        showToast('服务已连接，但未加载模型', 'error');
+      }
+    } else {
+      showToast('服务返回错误: HTTP ' + res.status, 'error');
+    }
+  } catch(e) {
+    showToast('无法连接到服务，请确认 ' + base + ' 是否运行中', 'error');
+  }
+  btn.textContent = '检测服务';
+  btn.disabled = false;
+}
+
+/* ═══ Channel toggle ═══ */
+function toggleChannel(card, type) {
+  var form = document.getElementById('form-'+type);
+  if (!form) return;
+  var isOpen = form.classList.contains('open');
+  document.querySelectorAll('.channel-form').forEach(function(f){
+    f.classList.remove('open'); f.closest('.channel-card').classList.remove('selected');
+  });
+  if (!isOpen) {
+    form.classList.add('open'); card.classList.add('selected');
+    var fi = form.querySelector('input');
+    if (fi) setTimeout(function(){fi.focus();},100);
+  }
+}
+
+/* ═══ Channel test ═══ */
+async function testChannel(e, type) {
+  e.stopPropagation();
+  var btn = e.target;
+  var resultEl = document.getElementById('result-'+type);
+  btn.classList.add('testing'); btn.textContent='⏳ 测试中...'; resultEl.textContent='';
+
+  var endpoint = '/api/channel/test';
+  var payload = {};
+  if (type==='telegram') { payload.token = document.getElementById('ch-telegram-token').value.trim(); }
+  if (type==='qqbot') { payload.appId = document.getElementById('ch-qqbot-appid').value.trim(); payload.clientSecret = document.getElementById('ch-qqbot-secret').value.trim(); }
+  if (type==='feishu') { payload.appId = document.getElementById('ch-feishu-appid').value.trim(); payload.appSecret = document.getElementById('ch-feishu-secret').value.trim(); }
+  if (type==='wecom') { payload.botId = document.getElementById('ch-wecom-botid').value.trim(); payload.secret = document.getElementById('ch-wecom-secret').value.trim(); }
+  if (type==='discord') { payload.token = document.getElementById('ch-discord-token').value.trim(); }
+  if (type==='slack') { payload.token = document.getElementById('ch-slack-token').value.trim(); }
+
+  try {
+    var res = await fetch(endpoint, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,config:payload})});
+    var data = await res.json();
+    if (data.ok) {
+      resultEl.className='test-result pass'; resultEl.textContent='✓ 连接成功';
+      btn.classList.remove('testing'); btn.classList.add('pass'); btn.textContent='✓ 已验证';
+    } else {
+      resultEl.className='test-result fail'; resultEl.textContent='✕ '+(data.error||'连接失败');
+      btn.classList.remove('testing'); btn.classList.add('fail'); btn.textContent='✕ 失败';
+    }
+  } catch(err) {
+    resultEl.className='test-result fail'; resultEl.textContent='✕ 无法连接到 Gateway';
+    btn.classList.remove('testing'); btn.classList.add('fail'); btn.textContent='✕ 失败';
+  }
+}
+
+/* ═══ WeChat login ═══ */
+var wechatSession = null, wechatPolling = false;
+async function startWeChatLogin(e) {
+  var form = document.getElementById('form-wechat');
+  if (form.classList.contains('open') && wechatPolling) return;
+  var card = form.closest('.channel-card');
+  if (!form.classList.contains('open')) { form.classList.add('open'); card.classList.add('selected'); }
+  var qrDiv = document.getElementById('wechat-qr');
+  var statusDiv = document.getElementById('wechat-status');
+  qrDiv.innerHTML = '<p style="color:var(--text2);">正在获取二维码...</p>';
+  statusDiv.textContent = '';
+  try {
+    var res = await fetch('/api/wechat/start',{method:'POST'});
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    wechatSession = data.sessionKey;
+    qrDiv.innerHTML = '<img src="'+data.qrcodeUrl+'" style="width:200px;height:200px;border-radius:8px;">';
+    statusDiv.innerHTML = '<span style="color:var(--success);">请用微信扫描上方二维码</span>';
+    wechatPolling = true; pollWeChatStatus();
+  } catch(err) {
+    qrDiv.innerHTML = '<p style="color:var(--error);">获取二维码失败</p>';
+    statusDiv.textContent = err.message;
+  }
+}
+async function pollWeChatStatus() {
+  if (!wechatSession||!wechatPolling) return;
+  try {
+    var res = await fetch('/api/wechat/status?session='+encodeURIComponent(wechatSession));
+    var data = await res.json();
+    var qrDiv = document.getElementById('wechat-qr');
+    var statusDiv = document.getElementById('wechat-status');
+    if (data.status==='confirmed') {
+      wechatPolling=false;
+      qrDiv.innerHTML='<div style="font-size:3em;color:var(--accent);">✓</div>';
+      statusDiv.innerHTML='<span style="color:var(--success);font-weight:600;">微信连接成功！</span><br><span style="font-size:0.8em;color:var(--text2);">需重启 Gateway 生效</span>';
+      showToast('微信连接成功！','success');
+      return;
+    }
+    if (data.status==='refreshed') {
+      qrDiv.innerHTML='<img src="'+data.qrcodeUrl+'" style="width:200px;height:200px;border-radius:8px;">';
+      statusDiv.textContent='二维码已刷新，请重新扫码';
+    } else if (data.status==='scaned') {
+      statusDiv.textContent='已扫码，请在手机上确认...';
+    } else if (data.status==='expired'||data.status==='error') {
+      wechatPolling=false;
+      qrDiv.innerHTML='<p style="color:var(--text2);">二维码已过期，<a href="#" onclick="startWeChatLogin(event);return false;">重新获取</a></p>';
+      return;
+    }
+    setTimeout(pollWeChatStatus,1500);
+  } catch(err) { setTimeout(pollWeChatStatus,3000); }
+}
+
+/* ═══ Save channels & open ═══ */
+async function saveChannelsAndOpen() {
+  var channels={};
+  var t=document.getElementById('ch-telegram-token').value.trim(); if(t) channels.telegram={enabled:true,token:t,dmPolicy:'pairing'};
+  var a=document.getElementById('ch-qqbot-appid').value.trim(),s=document.getElementById('ch-qqbot-secret').value.trim(); if(a&&s) channels.qqbot={enabled:true,appId:a,clientSecret:s};
+  var fa=document.getElementById('ch-feishu-appid').value.trim(),fs=document.getElementById('ch-feishu-secret').value.trim(); if(fa&&fs) channels.feishu={enabled:true,appId:fa,appSecret:fs};
+  var wb=document.getElementById('ch-wecom-botid').value.trim(),ws=document.getElementById('ch-wecom-secret').value.trim(); if(wb&&ws) channels.wecom={enabled:true,botId:wb,secret:ws};
+  var dt=document.getElementById('ch-discord-token').value.trim(); if(dt) channels.discord={enabled:true,token:dt};
+  var st=document.getElementById('ch-slack-token').value.trim(); if(st) channels.slack={enabled:true,token:st};
+
+  if (Object.keys(channels).length>0) {
+    try {
+      var res=await fetch('/api/config'); var existing=res.ok?await res.json():{};
+      delete existing.agent; existing.channels=Object.assign(existing.channels||{},channels);
+      await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(existing)});
+      showToast('渠道配置已保存','success');
+    } catch(e){}
+  }
+  window.open(gatewayUrl(),'_blank');
+}
+
+/* ═══ Export config ═══ */
+async function exportConfig() {
+  try {
+    var res = await fetch('/api/config');
+    var cfg = await res.json();
+    var json = JSON.stringify(cfg, null, 2);
+    var blob = new Blob([json], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'openclaw-config-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+    showToast('配置已导出','success');
+  } catch(e) { showToast('导出失败: '+e.message,'error'); }
+}
+
+/* ═══ Import config ═══ */
+function startImport() {
+  showModal('导入配置', '选择之前导出的 JSON 配置文件，将覆盖当前配置。建议先导出备份。', [
+    {text:'取消', cls:'modal-btn-cancel', fn:function(){}, keepOpen:true},
+    {text:'选择文件', cls:'modal-btn-ok', fn:function(){document.getElementById('importFileInput').click();}}
+  ]);
+}
+function doImport(event) {
+  var file = event.target.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var cfg = JSON.parse(e.target.result);
+      fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)})
+      .then(function(res){
+        if(!res.ok) throw new Error('导入失败');
+        showToast('配置已导入，刷新页面生效','success');
+        showModal('导入成功', '配置已保存。请刷新页面以重新加载。', [
+          {text:'刷新页面', cls:'modal-btn-ok', fn:function(){location.reload();}}
+        ]);
+      }).catch(function(err){showToast(err.message,'error');});
+    } catch(err) { showToast('JSON 解析失败','error'); }
+  };
+  reader.readAsText(file);
+  closeModal();
+  event.target.value = '';
+}
+
+/* ═══ View config ═══ */
+async function viewConfig() {
+  try {
+    var res = await fetch('/api/config');
+    var cfg = await res.json();
+    var text = JSON.stringify(cfg, null, 2);
+    var w = window.open('','_blank');
+    w.document.write('<pre style="background:'+getComputedStyle(document.body).background+';color:var(--text);padding:20px;font-size:14px;">'+text.replace(/</g,'&lt;')+'</pre>');
+  } catch(e) { showToast('读取配置失败','error'); }
+}
+
+/* ═══ Gateway port ═══ */
+var _gatewayPort = null;
+async function findGatewayPort() {
+  for (var p=18789;p<=18799;p++) {
+    try { await fetch('http://127.0.0.1:'+p+'/',{mode:'no-cors'}); _gatewayPort=p; return p; } catch(e) {}
+  }
+  _gatewayPort = null; return null;
+}
+function gatewayUrl() { var p=_gatewayPort||18789; return 'http://127.0.0.1:'+p+'/#token=openclaw'; }
+
+/* ═══ Check gateway ═══ */
+async function checkGateway() {
+  var dot = document.getElementById('statusDot');
+  var text = document.getElementById('statusText');
+  var port = await findGatewayPort();
+  if (port) {
+    dot.className='dot on';
+    text.innerHTML = 'Gateway 运行中 (端口 '+port+') · <a href="'+gatewayUrl()+'" target="_blank">打开聊天窗口 →</a>';
+  } else {
+    dot.className='dot off';
+    text.innerHTML = 'Gateway 未启动 · 请先运行启动脚本';
+  }
+}
+
+/* ═══ Log viewer ═══ */
+function addLog(line) {
+  logLines.push(line);
+  if (logLines.length > 500) logLines = logLines.slice(-400);
+  renderLog();
+}
+function renderLog() {
+  var el = document.getElementById('logContent');
+  if (!logLines.length) { el.innerHTML = '<div class="log-empty">暂无日志</div>'; return; }
+  var html = '';
+  for (var i=0;i<logLines.length;i++) { html += '<div class="log-line">'+escapeHtml(logLines[i])+'</div>'; }
+  el.innerHTML = html;
+  if (logAutoScroll) el.scrollTop = el.scrollHeight;
+}
+function escapeHtml(t) { return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+async function refreshLogs() {
+  try {
+    var res = await fetch('/api/logs');
+    if (!res.ok) return;
+    var data = await res.json();
+    if (data.lines && data.lines.length) {
+      data.lines.forEach(function(l){addLog(l);});
+      document.getElementById('logBadge').textContent = '运行中';
+    }
+  } catch(e) {
+    document.getElementById('logBadge').textContent = '等待';
+  }
+}
+function clearLog() { logLines=[]; renderLog(); }
+// Auto-refresh logs every 8s
+setInterval(refreshLogs, 8000);
+
+/* ═══ Init ═══ */
+checkGateway();
+setInterval(checkGateway,10000);
+
+async function loadConfig() {
+  try {
+    var res = await fetch('/api/config');
+    var cfg = await res.json();
+    var hasExisting = false;
+    if (cfg.env && cfg.env.ZAI_API_KEY) {
+      var card = document.querySelector('#step1 .model-card[data-provider="zai"]');
+      if (card) {
+        // simulate selection visual
+        card.classList.add('selected');
+        selectedProvider = card.dataset.provider;
+        selectedBase = card.dataset.base;
+        selectedModel = card.dataset.model;
+      }
+      document.getElementById('apiKey').value = cfg.env.ZAI_API_KEY;
+      onApiKeyInput();
+      hasExisting = true;
+    }
+    if (cfg.models && cfg.models.providers) {
+      var pn = Object.keys(cfg.models.providers)[0];
+      if (pn) {
+        var p = cfg.models.providers[pn];
+        var card = document.querySelector('#step1 .model-card[data-provider="'+pn+'"]');
+        if (card) {
+          card.classList.add('selected');
+          selectedProvider = pn;
+          selectedBase = p.baseUrl || '';
+          selectedModel = p.models && p.models[0] ? p.models[0].id : '';
+        }
+        if (p.apiKey) { document.getElementById('apiKey').value = p.apiKey; onApiKeyInput(); }
+        hasExisting = true;
+      }
+    }
+    if (hasExisting) {
+      // Auto-advance: mark steps 1 and 2 done, show step 3 directly
+      hasConfig = true;
+      document.getElementById('stepIndicator1').className = 'step done';
+      document.getElementById('stepIndicator2').className = 'step done';
+      document.getElementById('stepIndicator3').className = 'step active';
+      document.getElementById('s1label').textContent = '✓';
+      document.getElementById('s2label').textContent = '✓';
+      document.getElementById('s3label').textContent = '';
+      // Collapse 1 & 2, expand 3
+      document.getElementById('step1').classList.remove('active'); document.getElementById('step1').classList.add('collapsed');
+      document.getElementById('step1').querySelector('div[style*="padding"]').style.pointerEvents = 'none';
+      document.getElementById('step2').classList.remove('active'); document.getElementById('step2').classList.add('collapsed');
+      document.getElementById('step2').querySelector('div[style*="padding"]').style.pointerEvents = 'none';
+      document.getElementById('step3').classList.remove('collapsed'); document.getElementById('step3').classList.add('active');
+      document.getElementById('step3').querySelector('div[style*="padding"]').style.pointerEvents = '';
+      // Update summary - no longer needed (removed config summary card)
+    }
+  } catch(e) {}
+}
+</script>
+</body>
+</html>

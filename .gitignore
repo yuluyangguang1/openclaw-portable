@@ -1,0 +1,22 @@
+# Large dependencies - downloaded by setup scripts
+app/core/node_modules/
+app/runtime/
+app/core/package-lock.json
+
+# User data
+data/
+
+# OS files
+.DS_Store
+.DS_Store
+.localized
+
+# Build artifacts
+*.zip
+*.tar.gz
+*.dmg
+*.exe
+
+# IDE
+.vscode/
+.idea/

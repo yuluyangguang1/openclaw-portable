@@ -1,0 +1,6 @@
+{
+  "gateway": {
+    "mode": "local",
+    "auth": { "token": "openclaw" }
+  }
+}
