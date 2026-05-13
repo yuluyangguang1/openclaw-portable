@@ -75,12 +75,24 @@ jobs:
 
       - name: Create zip
         run: |
-          cd ..
-          mv openclaw-portable-work OpenClawPortable
+          set -e
+          # We're currently cwd=$GITHUB_WORKSPACE; the dir name depends
+          # on the repo name casing (Openclaw-portable) and isn't stable
+          # across forks. Copy the tree into a fresh sibling dir named
+          # OpenClawPortable/ (the name we want users to see after
+          # unzip) and zip from there.
+          WORK_PARENT="$(dirname "$GITHUB_WORKSPACE")"
+          STAGE="$WORK_PARENT/OpenClawPortable"
+          rm -rf "$STAGE"
+          # -a preserves exec bits set in the previous step
+          cp -a "$GITHUB_WORKSPACE"/. "$STAGE"/
+          # Don't ship the .git we removed earlier back via cp -a if
+          # someone re-adds it; defensive remove inside the stage dir.
+          rm -rf "$STAGE/.git" "$STAGE/.github"
+          cd "$WORK_PARENT"
           zip -yrq OpenClawPortable.zip OpenClawPortable/
-          mv OpenClawPortable openclaw-portable-work
-          mv OpenClawPortable.zip openclaw-portable-work/
-          ls -lh openclaw-portable-work/OpenClawPortable.zip
+          mv OpenClawPortable.zip "$GITHUB_WORKSPACE/"
+          ls -lh "$GITHUB_WORKSPACE/OpenClawPortable.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
