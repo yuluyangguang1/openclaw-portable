@@ -45,18 +45,30 @@ jobs:
       - name: Prepare portable folder
         run: |
           set -e
-          # Remove dev/build artifacts that shouldn't ship
+          # Remove dev/build artifacts that users don't need. The zip
+          # should contain ONLY what the launchers need to run directly
+          # on any supported platform. setup.* scripts and CI config
+          # are kept in the repo (for rebuilding) but stripped from the
+          # user-facing zip.
           rm -rf .git .github .gitignore
-          # Keep setup.sh/setup.bat/setup.ps1 for users who want to rebuild
-          echo "Portable folder ready"
+          # Build-only tooling: users don't rebuild from the zip —
+          # they run the launcher directly. setup.* would only confuse
+          # them, and Install scripts violate the zero-trace promise by
+          # copying to ~/.openclaw-portable/.
+          rm -f setup.sh setup.bat setup.ps1
+          # skills-cn has already been copied into app/core/node_modules/
+          # openclaw/skills/ by setup. Keeping the source dir wastes
+          # ~1 MB and duplicates skills in two places.
+          rm -rf skills-cn
+          echo "Portable folder ready for end users"
           du -sh .
           du -sh app/runtime/*/
 
       - name: Restore exec bits
         run: |
           # upload-artifact loses exec bits; set them before zipping
-          chmod +x Mac-Start.command Mac-Menu.command Mac-Install.command Mac-Diagnose.command
-          chmod +x Linux-Start.sh Linux-Diagnose.sh setup.sh lib/maintain.sh
+          chmod +x Mac-Start.command Mac-Menu.command Mac-Diagnose.command
+          chmod +x Linux-Start.sh Linux-Diagnose.sh lib/maintain.sh
           for bindir in app/runtime/node-mac-*/bin app/runtime/node-linux-*/bin; do
             [ -d "$bindir" ] && find "$bindir" -type f -exec chmod +x {} +
           done
