@@ -1151,8 +1151,11 @@ async function viewConfig() {
     var res = await fetch('/api/config');
     var cfg = await res.json();
     var text = JSON.stringify(cfg, null, 2);
+    var escaped = text.replace(/[&<>]/g, function(c) {
+      return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];
+    });
     var w = window.open('','_blank');
-    w.document.write('<pre style="background:'+getComputedStyle(document.body).background+';color:var(--text);padding:20px;font-size:14px;">'+text.replace(/</g,'&lt;')+'</pre>');
+    w.document.write('<pre style="background:'+getComputedStyle(document.body).background+';color:var(--text);padding:20px;font-size:14px;">'+escaped+'</pre>');
   } catch(e) { showToast('读取配置失败','error'); }
 }
 

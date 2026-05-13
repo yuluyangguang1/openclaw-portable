@@ -177,8 +177,8 @@ if !ERROR_COUNT!==0 (
     echo   1. 查看 diagnostic-log.txt 了解详细错误
     echo   2. 尝试重新运行 Windows-Start.bat
     echo      （会自动安装缺失的依赖）
-    echo   3. 如问题仍然存在，访问:
-    echo      #removed
+    echo   3. 如问题仍然存在，访问 GitHub Issues 反馈:
+    echo      https://github.com/yuluyangguang1/openclaw-portable/issues
 )
 echo.
 echo   诊断日志已保存: diagnostic-log.txt
