@@ -20,6 +20,9 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 YELLOW='\033[1;33m'
+GOLD='\033[38;5;220m'
+AMBER='\033[38;5;214m'
+BRONZE='\033[38;5;166m'
 NC='\033[0m'
 
 # Read version from file
@@ -27,16 +30,15 @@ OPENCLAW_VER="unknown"
 [ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
 
 echo ""
-echo -e "${CYAN}"
-echo "    #     #  _       _     ######"
-echo "     #   #  | |     | |    #     |"
-echo "      # #   | |_   _| |_   #"
-echo "       #    |  _| |_   _|  #  ####"
-echo "       #    | |       | |  #     |"
-echo "       #     \\_|      \\_|  ######"
+echo -e "${GOLD}  ██╗   ██╗██╗  ██╗   ██╗ ██████╗${NC}"
+echo -e "${GOLD}  ╚██╗ ██╔╝██║  ╚██╗ ██╔╝██╔════╝${NC}"
+echo -e "${AMBER}   ╚████╔╝ ██║   ╚████╔╝ ██║  ███╗${NC}"
+echo -e "${AMBER}    ╚██╔╝  ██║    ╚██╔╝  ██║   ██║${NC}"
+echo -e "${BRONZE}     ██║   ███████╗██║   ╚██████╔╝${NC}"
+echo -e "${BRONZE}     ╚═╝   ╚══════╝╚═╝    ╚═════╝${NC}"
 echo ""
-echo "        OpenClaw Portable $OPENCLAW_VER"
-echo -e "${NC}"
+echo -e "        OpenClaw Portable $OPENCLAW_VER"
+echo ""
 
 # ---- 1. Detect CPU & set runtime ----
 ARCH=$(uname -m)
