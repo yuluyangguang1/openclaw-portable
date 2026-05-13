@@ -116,7 +116,7 @@ echo   [INSTALL] Installing OpenClaw...
 if not exist "%CORE_DIR%" mkdir "%CORE_DIR%" 2>nul
 
 REM Read pinned OpenClaw version from repo root
-set "OPENCLAW_VERSION_FILE=%~dp0..\OPENCLAW_VERSION"
+set "OPENCLAW_VERSION_FILE=%~dp0OPENCLAW_VERSION"
 set "OPENCLAW_VERSION=2026.4.29"
 if exist "%OPENCLAW_VERSION_FILE%" (
     for /f "usebackq delims=" %%v in ("%OPENCLAW_VERSION_FILE%") do set "OPENCLAW_VERSION=%%v"
