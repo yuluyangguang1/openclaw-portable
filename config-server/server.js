@@ -30,6 +30,18 @@ const INSTALLED_PLUGIN_DIR = path.join(OPENCLAW_DIR, 'extensions', 'openclaw-wei
 
 const activeLogins = new Map();
 
+// Periodic cleanup of expired login sessions to prevent memory leaks.
+// Without this, a user who starts a WeChat login but never completes it
+// (closes the browser tab) would leave the session in memory forever.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, login] of activeLogins) {
+    if (now - login.startedAt > ACTIVE_LOGIN_TTL_MS) {
+      activeLogins.delete(key);
+    }
+  }
+}, 60_000);
+
 // ── QR Code PNG Renderer (pure Node.js, no external deps) ───────────────────
 
 function getQrRenderDeps() {
