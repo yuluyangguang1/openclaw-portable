@@ -40,8 +40,16 @@ if [ "$OS" = "Darwin" ]; then
         PLATFORM="darwin-x64"
         NODE_DIR_NAME="node-mac-x64"
     fi
+elif [ "$OS" = "Linux" ]; then
+    if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then
+        PLATFORM="linux-arm64"
+        NODE_DIR_NAME="node-linux-arm64"
+    else
+        PLATFORM="linux-x64"
+        NODE_DIR_NAME="node-linux-x64"
+    fi
 else
-    echo -e "${RED}请在 Mac 上运行此脚本。Windows 请用 setup.bat${NC}"
+    echo -e "${RED}Unsupported OS: $OS. Use setup.bat on Windows.${NC}"
     exit 1
 fi
 
@@ -134,8 +142,9 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
     # Windows
     download_zip_runtime "win-x64" "node-win-x64"
 
-    # Linux
+    # Linux (both archs)
     download_tar_runtime "linux-x64" "node-linux-x64"
+    download_tar_runtime "linux-arm64" "node-linux-arm64"
 fi
 
 # ---- 2. Install OpenClaw ----
