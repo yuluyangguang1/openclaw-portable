@@ -64,7 +64,7 @@ if not exist "!NODE_BIN!" (
     exit /b 1
 )
 
-for /f "tokens=*" %%v in ('"!NODE_BIN!" --version') do set NODE_VER=%%v
+for /f "usebackq tokens=*" %%v in (`"!NODE_BIN!" --version`) do set NODE_VER=%%v
 echo   Node.js: !NODE_VER!
 echo.
 
@@ -164,7 +164,7 @@ echo.
 REM Start Config Server in background and record its PID for cleanup
 echo   Starting Config Center...
 set "CONFIG_SERVER=!UCLAW_DIR!config-server"
-start /B "" "!NODE_BIN!" "!CONFIG_SERVER!\server.js" >nul 2>&1
+start /B "" cmd /c ""!NODE_BIN!" "!CONFIG_SERVER!\server.js"" >nul 2>&1
 
 REM Wait for config server to write runtime.json (poll up to 15s for slow USB)
 set "RUNTIME_JSON=!STATE_DIR!\runtime.json"
@@ -180,7 +180,7 @@ REM delayed expansion. Write a tiny .js helper to a temp file and run it.
 set "CONFIG_PORT=18788"
 set "_JS=%TEMP%\oc-read-port-%RANDOM%.js"
 >>"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[1],'utf8');console.log(JSON.parse(d).configServerPort||18788)}catch(e){console.log(18788)}
-for /f "tokens=*" %%p in ('"!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!"') do set "CONFIG_PORT=%%p"
+for /f "usebackq tokens=*" %%p in (`"!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!"`) do set "CONFIG_PORT=%%p"
 del "!_JS!" 2>nul
 
 REM Open both Dashboard and Config Center
@@ -193,7 +193,7 @@ REM separators even inside >> redirection. Use nested ternary instead.
 set "TOKEN=openclaw"
 set "_JS=%TEMP%\oc-read-token-%RANDOM%.js"
 >>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
-for /f "tokens=*" %%t in ('"!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json"') do set "TOKEN=%%t"
+for /f "usebackq tokens=*" %%t in (`"!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json"`) do set "TOKEN=%%t"
 del "!_JS!" 2>nul
 start "" "http://127.0.0.1:!PORT!/#token=!TOKEN!"
 start "" "http://127.0.0.1:!CONFIG_PORT!/"
