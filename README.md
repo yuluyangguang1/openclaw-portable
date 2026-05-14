@@ -22,6 +22,23 @@ OpenClaw Portable 是一个可制作成 U 盘版本的 AI 助手。将 OpenClaw�
 
 Telegram · Discord · Slack · QQ · 飞书 · 企业微信 · WhatsApp
 
+## 支持平台
+
+| 平台 | 状态 |
+|------|------|
+| Mac (Apple Silicon) | ✅ |
+| Mac (Intel) | ✅ |
+| Windows x64 | 🚧 |
+| Linux x64 | ✅ |
+
+## 启动方式
+
+| 平台 | 命令 |
+|------|------|
+| Mac | `open Mac-Start.command` |
+| Windows | 双击 `Windows-Start.bat` |
+| Linux | `bash Linux-Start.sh` |
+
 ## 快速开始
 
 ```bash
@@ -39,6 +56,9 @@ openclaw-portable/
 ├── Mac-Start.command           Mac 启动
 ├── Mac-Menu.command            Mac 菜单
 ├── Windows-Start.bat           Windows 启动
+├── Linux-Start.sh              Linux 启动
+├── Linux-Menu.sh               Linux 菜单
+├── Linux-Diagnose.sh           Linux 诊断
 ├── config-server/              配置中心服务
 │   ├── server.js               后端 API
 │   └── public/index.html       配置页面

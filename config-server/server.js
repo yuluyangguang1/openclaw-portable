@@ -511,6 +511,7 @@ const server = http.createServer((req, res) => {
     };
     // Probe common log locations
     const logFiles = [
+      path.join(__dirname, '../data/logs/gateway.log'),
       path.join(__dirname, '../data/.openclaw/logs/openclaw.log'),
       path.join(OPENCLAW_DIR, 'openclaw.log'),
       path.join(__dirname, '../app/core/gateway.log'),

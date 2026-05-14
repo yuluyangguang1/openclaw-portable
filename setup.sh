@@ -183,13 +183,19 @@ fi
 
 # ---- 3. Install QQ Plugin ----
 if [ -d "$CORE_DIR/node_modules/@sliverp/qqbot" ]; then
-    echo -e "  ${GREEN}✓${NC} QQ 插件已安装，跳过"
+    echo -e "  ${GREEN}✓${NC} QQ 插件已安装，跳过安装"
 else
     echo -e "  ${CYAN}↓${NC} 安装 QQ 插件..."
     NODE_BIN="$NODE_TARGET/bin/node"
     NPM_BIN="$NODE_TARGET/bin/npm"
     "$NODE_BIN" "$NPM_BIN" install @sliverp/qqbot@latest --prefix "$CORE_DIR" --registry="$MIRROR" 2>/dev/null || true
     echo -e "  ${GREEN}✓${NC} QQ 插件安装完成"
+fi
+# Ensure @sliverp/qqbot has built dist (some versions ship src only)
+if [ -d "$CORE_DIR/node_modules/@sliverp/qqbot" ] && [ ! -d "$CORE_DIR/node_modules/@sliverp/qqbot/dist" ]; then
+    echo -e "  ${CYAN}↓${NC} 构建 QQ 插件..."
+    (cd "$CORE_DIR/node_modules/@sliverp/qqbot" && "$NODE_TARGET/bin/npm" run build 2>/dev/null || true)
+    echo -e "  ${GREEN}✓${NC} QQ 插件构建完成"
 fi
 
 # ---- 4. Install China-optimized skills ----
@@ -215,8 +221,9 @@ echo -e "${GREEN}═════════════════════
 echo -e "${GREEN}  ✅ 搭建完成！${NC}"
 echo ""
 echo -e "  启动方式:"
-echo -e "    Mac:     ${CYAN}bash Mac-Start.command${NC}"
-echo -e "    Windows: 双击 ${CYAN}Windows-Start.bat${NC}"
+echo -e "    Mac:     bash Mac-Start.command"
+echo -e "    Windows: 双击 Windows-Start.bat"
+echo -e "    Linux:   bash Linux-Start.sh"
 echo ""
 echo -e "  目录结构:"
 echo -e "    app/core/       ← OpenClaw + 依赖"

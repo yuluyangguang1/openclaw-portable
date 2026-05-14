@@ -8,7 +8,6 @@ data/
 
 # OS files
 .DS_Store
-.DS_Store
 .localized
 
 # Build artifacts
