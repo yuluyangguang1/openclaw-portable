@@ -188,10 +188,11 @@ echo   Opening Dashboard and Config Center...
 timeout /t 1 /nobreak >nul
 
 REM Read gateway token from config
-REM Same temp-file approach to handle paths with spaces.
+REM The JS must NOT contain & or && — cmd interprets them as command
+REM separators even inside >> redirection. Use nested ternary instead.
 set "TOKEN=openclaw"
 set "_JS=%TEMP%\oc-read-token-%RANDOM%.js"
->>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway^&^&c.gateway.auth^&^&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}
+>>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
 for /f "tokens=*" %%t in ('"!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json"') do set "TOKEN=%%t"
 del "!_JS!" 2>nul
 start "" "http://127.0.0.1:!PORT!/#token=!TOKEN!"
