@@ -400,8 +400,21 @@ footer { text-align: center; padding: 40px 20px; font-size: 11px; color: #4a7a6a
     <button class="io-btn" onclick="startImport()">导入配置</button>
     <button class="io-btn" onclick="viewConfig()">查看 JSON</button>
     <button class="io-btn" onclick="resetConfig()">重新配置</button>
+    <button class="io-btn" onclick="toggleLogs()">查看日志</button>
   </div>
   <input type="file" id="importFileInput" accept=".json" onchange="doImport(event)" style="display:none;">
+
+  <!-- 日志面板 -->
+  <div id="logPanel" style="display:none;margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <h3 style="color:#ffe6cb;font-size:0.9em;font-weight:600;">Gateway 日志</h3>
+      <div style="display:flex;gap:6px;">
+        <button class="io-btn" onclick="refreshLogs()">刷新</button>
+        <button class="io-btn" onclick="document.getElementById('logPanel').style.display='none'">关闭</button>
+      </div>
+    </div>
+    <pre id="logContent" style="background:#041c1c;color:#ffe6cb;padding:14px;border-radius:8px;font-family:'SF Mono','Menlo',monospace;font-size:11px;line-height:1.6;max-height:300px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(0,255,200,0.08);">点击「刷新」加载最近日志</pre>
+  </div>
 </div></div>
 
 </div>
@@ -1039,8 +1052,45 @@ function viewConfig() {
   }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
+// ===== LOGS =====
+function toggleLogs() {
+  var panel = document.getElementById('logPanel');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    refreshLogs();
+  } else {
+    panel.style.display = 'none';
+  }
+}
+
+function refreshLogs() {
+  var el = document.getElementById('logContent');
+  el.textContent = '加载中...';
+  fetch('/api/logs').then(function(r){return r.json();}).then(function(data){
+    if (data.lines && data.lines.length) {
+      el.textContent = data.lines.join('\n');
+      el.scrollTop = el.scrollHeight;
+    } else {
+      el.textContent = '暂无日志';
+    }
+  }).catch(function(){ el.textContent = '加载失败'; });
+}
+
+// ===== VERSION =====
+function loadVersion() {
+  fetch('/api/version').then(function(r){return r.json();}).then(function(data){
+    if (data.portable) {
+      var verEl = document.querySelector('.hero .version');
+      if (verEl) verEl.textContent = 'v' + data.portable + ' · 零安装 · 跨平台';
+      var footEl = document.querySelector('footer');
+      if (footEl) footEl.textContent = 'OpenClaw Portable · v' + data.portable + ' · OpenClaw 核心 ' + (data.openclaw || '?');
+    }
+  }).catch(function(){});
+}
+
 // ===== INIT =====
 (function init() {
+  loadVersion();
   // Check gateway
   checkGateway();
   setInterval(checkGateway, 15000);

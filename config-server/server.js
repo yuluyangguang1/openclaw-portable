@@ -447,7 +447,23 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: Heartbeat — frontend polls this to detect backend disconnect
+  // API: Get current portable version (for dynamic display)
+  if (req.url === '/api/version' && req.method === 'GET') {
+    let portable = 'unknown', openclaw = 'unknown';
+    try {
+      const pf = path.join(__dirname, '../PORTABLE_VERSION');
+      if (fs.existsSync(pf)) portable = fs.readFileSync(pf, 'utf8').trim();
+    } catch(e) {}
+    try {
+      const of = path.join(__dirname, '../OPENCLAW_VERSION');
+      if (fs.existsSync(of)) openclaw = fs.readFileSync(of, 'utf8').trim();
+    } catch(e) {}
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({portable, openclaw}));
+    return;
+  }
+
+    // API: Heartbeat — frontend polls this to detect backend disconnect
   if (req.url === '/api/heartbeat' && req.method === 'GET') {
     res.writeHead(200, {'Content-Type':'application/json'});
     res.end(JSON.stringify({alive: true, ts: Date.now()}));
