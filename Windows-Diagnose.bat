@@ -22,8 +22,9 @@ echo. >> "%LOG_FILE%"
 
 REM System info
 echo System Info: >> "%LOG_FILE%"
-for /f "tokens=2 delims==" %%v in ('wmic os get Version /format:list 2^>nul ^| findstr "="') do echo   Windows Version: %%v >> "%LOG_FILE%"
-for /f "tokens=2 delims==" %%v in ('wmic os get OSArchitecture /format:list 2^>nul ^| findstr "="') do echo   Architecture: %%v >> "%LOG_FILE%"
+REM wmic is removed in Windows 11 24H2; use PowerShell instead
+for /f "tokens=*" %%v in ('powershell -command "[System.Environment]::OSVersion.Version.ToString()" 2^>nul') do echo   Windows Version: %%v >> "%LOG_FILE%"
+for /f "tokens=*" %%v in ('powershell -command "(Get-CimInstance Win32_OperatingSystem).OSArchitecture" 2^>nul') do echo   Architecture: %%v >> "%LOG_FILE%"
 echo. >> "%LOG_FILE%"
 
 REM 1. Check Node.js
