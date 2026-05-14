@@ -114,8 +114,24 @@ if [ ! -d "$CORE_DIR/node_modules" ]; then
 fi
 
 # ---- 7. Find available port ----
+# Use lsof if available (more portable: works on Linux + macOS),
+# fall back to ss (iproute2) on Linux. Alpine, busybox, and minimal
+# Docker images often lack ss too, so we try netstat as the last resort.
+port_in_use() {
+    local p=$1
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -i ":$p" >/dev/null 2>&1
+    elif command -v ss >/dev/null 2>&1; then
+        ss -tlnp 2>/dev/null | grep -q ":$p "
+    elif command -v netstat >/dev/null 2>&1; then
+        netstat -tln 2>/dev/null | grep -q ":$p "
+    else
+        # No tool available — assume free, let bind() fail loudly
+        return 1
+    fi
+}
 PORT=18789
-while ss -tlnp | grep -q ":$PORT " 2>/dev/null; do
+while port_in_use $PORT; do
     echo -e "  ${YELLOW}Port $PORT in use, trying next...${NC}"
     PORT=$((PORT + 1))
     if [ $PORT -gt 18799 ]; then
@@ -149,15 +165,19 @@ OPENCLAW_MJS="$CORE_DIR/node_modules/openclaw/openclaw.mjs"
 "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
 GW_PID=$!
 
+# Read gateway token from config (fallback: openclaw). Detected before
+# the readiness loop so the post-loop banner always prints the right
+# URL even if the gateway never came up within 15s.
+TOKEN="openclaw"
+if [ -f "$CONFIG_FILE" ]; then
+    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
+    [ -n "$DETECTED_TOKEN" ] && TOKEN="$DETECTED_TOKEN"
+fi
+
 # ---- 10. Wait for gateway, then open browser ----
 for i in $(seq 1 30); do
     sleep 0.5
     if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
-        # Read gateway token from config (fallback: openclaw)
-        TOKEN="openclaw"
-        if [ -f "$CONFIG_FILE" ]; then
-            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null || echo "openclaw")
-        fi
         # Try common Linux browsers
         if command -v xdg-open >/dev/null 2>&1; then
             xdg-open "http://127.0.0.1:$PORT/#token=$TOKEN" 2>/dev/null &

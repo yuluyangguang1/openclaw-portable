@@ -58,9 +58,11 @@ show_menu() {
     local CFG_STATUS="${RED}未配置${NC}"
     [ -f "$CONFIG_PATH" ] && CFG_STATUS="${GREEN}已配置${NC}"
 
+    local OPENCLAW_VER="unknown"
+    [ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
     echo ""
     echo -e "  ${CYAN}${BOLD}╔══════════════════════════════════════╗"
-    echo -e "  ║   OpenClaw Portable 2026.4.29              ║"
+    echo -e "  ║   OpenClaw Portable $OPENCLAW_VER"
     echo -e "  ║   Portable AI Agent                   ║"
     echo -e "  ╚══════════════════════════════════════╝${NC}"
     echo ""
@@ -118,10 +120,21 @@ do_dashboard() {
     echo ""
     cd "$CORE_DIR"
 
-    # Find free port — try lsof first, fall back to ss (Linux)
+    # Find free port — lsof first (portable), ss next, netstat last
+    port_in_use() {
+        local p=$1
+        if command -v lsof >/dev/null 2>&1; then
+            lsof -i ":$p" >/dev/null 2>&1
+        elif command -v ss >/dev/null 2>&1; then
+            ss -tlnp 2>/dev/null | grep -q ":$p "
+        elif command -v netstat >/dev/null 2>&1; then
+            netstat -tln 2>/dev/null | grep -q ":$p "
+        else
+            return 1
+        fi
+    }
     local PORT=18789
-    while command -v lsof >/dev/null 2>&1 && lsof -i :$PORT >/dev/null 2>&1 || \
-          ( ! command -v lsof >/dev/null 2>&1 && ss -tlnp | grep -q ":$PORT " 2>/dev/null ); do
+    while port_in_use $PORT; do
         PORT=$((PORT + 1))
         if [ $PORT -gt 18799 ]; then
             echo -e "  ${RED}端口 18789-18799 全被占用${NC}"
@@ -129,7 +142,16 @@ do_dashboard() {
         fi
     done
 
-    local TOKEN=$(python3 -c "import json,os; p='$CONFIG_PATH'; d=json.load(open(p)) if os.path.exists(p) else {}; print(d.get('gateway',{}).get('auth',{}).get('token','openclaw'))" 2>/dev/null || echo "openclaw")
+    # Read token from config — prefer node (always present in portable),
+    # fall back to python3 (system Python may not exist on Alpine etc.)
+    local TOKEN="openclaw"
+    if [ -f "$CONFIG_PATH" ]; then
+        if [ -x "$NODE_BIN" ]; then
+            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_PATH" 2>/dev/null || echo "openclaw")
+        elif command -v python3 >/dev/null 2>&1; then
+            TOKEN=$(python3 -c "import json,os; p='$CONFIG_PATH'; d=json.load(open(p)) if os.path.exists(p) else {}; print(d.get('gateway',{}).get('auth',{}).get('token','openclaw'))" 2>/dev/null || echo "openclaw")
+        fi
+    fi
 
     "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
     local PID=$!

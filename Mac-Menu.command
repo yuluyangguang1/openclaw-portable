@@ -43,8 +43,8 @@ mkdir -p "$STATE_DIR" "$DATA_DIR/memory" "$DATA_DIR/backups" "$DATA_DIR/logs"
 # Load maintenance functions
 source "$UCLAW_DIR/lib/maintain.sh"
 
-# Remove macOS quarantine
-if xattr -l "$NODE_BIN" 2>/dev/null | grep -q "com.apple.quarantine"; then
+# Remove macOS quarantine (check any file, not just NODE_BIN)
+if xattr -lr "$UCLAW_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then
     xattr -rd com.apple.quarantine "$UCLAW_DIR" 2>/dev/null || true
 fi
 
@@ -135,7 +135,16 @@ do_dashboard() {
         fi
     done
 
-    local TOKEN=$(python3 -c "import json,os; p='$CONFIG_PATH'; d=json.load(open(p)) if os.path.exists(p) else {}; print(d.get('gateway',{}).get('auth',{}).get('token','openclaw'))" 2>/dev/null || echo "openclaw")
+    # Read token from config — prefer node (always present in portable),
+    # fall back to python3 only as a defensive last resort.
+    local TOKEN="openclaw"
+    if [ -f "$CONFIG_PATH" ]; then
+        if [ -x "$NODE_BIN" ]; then
+            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_PATH" 2>/dev/null || echo "openclaw")
+        elif command -v python3 >/dev/null 2>&1; then
+            TOKEN=$(python3 -c "import json,os; p='$CONFIG_PATH'; d=json.load(open(p)) if os.path.exists(p) else {}; print(d.get('gateway',{}).get('auth',{}).get('token','openclaw'))" 2>/dev/null || echo "openclaw")
+        fi
+    fi
 
     "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
     local PID=$!

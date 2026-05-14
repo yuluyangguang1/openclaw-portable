@@ -23,8 +23,11 @@ echo "  Checking system... 正在检查系统..."
 echo ""
 
 # Clear old log
+OPENCLAW_VER="unknown"
+[ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
 cat > "$LOG_FILE" << EOF
 OpenClaw Portable Diagnostic Report
+Version: $OPENCLAW_VER
 Generated: $(date)
 ========================================
 

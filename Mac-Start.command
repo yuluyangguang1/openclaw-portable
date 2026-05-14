@@ -59,7 +59,10 @@ NODE_BIN="$NODE_DIR/bin/node"
 export PATH="$NODE_DIR/bin:$PATH"
 
 # ---- 2. Remove macOS quarantine ----
-if xattr -l "$NODE_BIN" 2>/dev/null | grep -q "com.apple.quarantine"; then
+# Check any file in the bundle for quarantine (not just NODE_BIN —
+# if the user re-downloaded a single launcher, NODE_BIN might be clean
+# while other files still have the xattr). Recursive clear is cheap.
+if xattr -lr "$UCLAW_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then
     echo -e "  ${YELLOW}Removing macOS security restriction...${NC}"
     xattr -rd com.apple.quarantine "$UCLAW_DIR" 2>/dev/null || true
     echo -e "  ${GREEN}Done${NC}"
@@ -160,15 +163,20 @@ OPENCLAW_MJS="$CORE_DIR/node_modules/openclaw/openclaw.mjs"
 "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
 GW_PID=$!
 
+# Read gateway token from config (fallback: openclaw). Reading it
+# BEFORE the gateway-ready loop so the post-loop banner always prints
+# the right URL — previously TOKEN was set inside the loop and stayed
+# unset if the gateway never came up within 15s.
+TOKEN="openclaw"
+if [ -f "$CONFIG_FILE" ]; then
+    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
+    [ -n "$DETECTED_TOKEN" ] && TOKEN="$DETECTED_TOKEN"
+fi
+
 # ---- 11. Wait for gateway, then open browser ----
 for i in $(seq 1 30); do
     sleep 0.5
     if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
-        # Read gateway token from config (fallback: openclaw)
-        TOKEN="openclaw"
-        if [ -f "$CONFIG_FILE" ]; then
-            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null || echo "openclaw")
-        fi
         # Open Dashboard
         open "http://127.0.0.1:$PORT/#token=$TOKEN" 2>/dev/null || true
         # Open Config Center (use detected port)
