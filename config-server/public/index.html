@@ -18,7 +18,7 @@ a:hover { text-decoration: underline; }
 .hero {
   text-align: center; padding: 56px 20px 44px;
   background: linear-gradient(180deg, #0a3030 0%, #041c1c 100%);
-  border-bottom: 1px solid rgba(0,255,200,0.08);
+  
 }
 .hero .logo { width: 72px; height: 72px; margin-bottom: 14px; filter: drop-shadow(0 0 16px rgba(255,230,203,0.12)); }
 .hero h1 { font-size: 32px; font-weight: 300; letter-spacing: 5px; margin-bottom: 8px; }
@@ -238,6 +238,65 @@ input:focus { border-color: rgba(0,255,200,0.4); box-shadow: 0 0 0 3px rgba(0,25
   pointer-events: none;
 }
 
+
+
+/* Provider card inner elements */
+.provider-card .provider-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+.provider-card .provider-name { color: #ffe6cb; font-size: 0.9em; font-weight: 600; }
+.provider-card .provider-desc { color: #8aaa9a; font-size: 0.78em; }
+.provider-card .input-group { position: relative; display: flex; align-items: center; gap: 0; }
+.provider-card .input-group input { flex: 1; padding-right: 44px; }
+.provider-card .btn-icon {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #6a8a7a; cursor: pointer;
+  font-size: 1em; padding: 4px;
+}
+.provider-card .btn-icon:hover { color: #00ffc8; }
+.provider-card .input {
+  display: block; width: 100%; min-height: 40px; padding: 9px 12px;
+  background: #041c1c; border: 1px solid rgba(0,255,200,0.1);
+  border-radius: 8px; color: #ffe6cb; font-size: 0.88em;
+  outline: none; transition: border-color 0.2s; margin-bottom: 10px;
+}
+.provider-card .input:focus { border-color: rgba(0,255,200,0.4); box-shadow: 0 0 0 3px rgba(0,255,200,0.08); }
+.provider-card select.input { appearance: none; -webkit-appearance: none; cursor: pointer; }
+.provider-card select.input option { background: #062424; color: #ffe6cb; }
+.provider-card .btn-sm {
+  padding: 7px 14px; font-size: 0.82em;
+  background: rgba(0,255,200,0.06); color: #6ccfb0;
+  border: 1px solid rgba(0,255,200,0.12); border-radius: 6px;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.provider-card .btn-sm:hover { border-color: rgba(0,255,200,0.3); color: #00ffc8; }
+
+/* Channel cards */
+.channel-card {
+  background: #0a2e2e; border: 1px solid rgba(0,255,200,0.06);
+  border-radius: 10px; padding: 14px 16px; cursor: pointer;
+  transition: all 0.15s;
+}
+.channel-card:hover { border-color: rgba(0,255,200,0.2); }
+.channel-card.selected { border-color: rgba(0,255,200,0.4); background: rgba(0,255,200,0.04); }
+.channel-card .channel-name { color: #ffe6cb; font-size: 0.9em; font-weight: 600; }
+
+
+.channel-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
+.channel-card .input-group input { flex: 1; padding-right: 44px; }
+.channel-card .input {
+  display: block; width: 100%; min-height: 38px; padding: 8px 12px;
+  background: #041c1c; border: 1px solid rgba(0,255,200,0.1);
+  border-radius: 8px; color: #ffe6cb; font-size: 0.85em;
+  outline: none; margin-bottom: 8px;
+}
+.channel-card .input:focus { border-color: rgba(0,255,200,0.4); }
+.channel-card .btn-sm {
+  padding: 6px 12px; font-size: 0.8em;
+  background: rgba(0,255,200,0.06); color: #6ccfb0;
+  border: 1px solid rgba(0,255,200,0.12); border-radius: 6px;
+  cursor: pointer; font-family: inherit; margin-top: 4px;
+}
+.channel-card .btn-sm:hover { border-color: rgba(0,255,200,0.3); color: #00ffc8; }
+
 /* Test result */
 .test-result { font-size: 0.78em; margin-top: 6px; min-height: 16px; }
 
@@ -426,7 +485,7 @@ let configData = null;
   const grid = document.getElementById('providerGrid');
   if (!grid) return;
   grid.innerHTML = PROVIDERS.map(p => {
-    const tagsHtml = p.tags.map(t => '<span class="tag tag-' + t + '">' + t + '</span>').join('');
+    const tagsHtml = p.tags.map(t => '<span class="tag ' + t + '">' + ({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t) + '</span>').join('');
     let formHtml = '';
     if (p.isCustom) {
       formHtml = '<div class="provider-expand">' +
@@ -438,7 +497,7 @@ let configData = null;
       formHtml = '<div class="provider-expand">' +
         '<input type="text" class="input" placeholder="Port (default: ' + (p.base.match(/:(\d+)/)||[])[1] + ')" data-field="port" value="' + (p.base.match(/:(\d+)/)||[])[1] + '">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
-        '<button class="btn btn-sm" onclick="testLocal(\'' + p.id + '\')">\ud83d\udd0c Test Connection</button></div>';
+        '<button class="btn btn-sm" onclick="testLocal(\'' + p.id + '\')">Test Connection</button></div>';
     } else {
       const opts = p.models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
       formHtml = '<div class="provider-expand">' +
@@ -475,22 +534,21 @@ let configData = null;
       formHtml = '<div class="provider-expand channel-form">' +
         '<p>\u626b\u7801\u767b\u5f55\u4e2a\u4eba\u5fae\u4fe1</p>' +
         '<div id="wechat-qr"></div>' +
-        '<button class="btn btn-primary" onclick="startWeChatLogin(event)">\ud83d\udcf1 Start QR Login</button>' +
+        '<button class="btn btn-primary" onclick="startWeChatLogin(event)">Start QR Login</button>' +
         '<p class="hint" id="wechat-status"></p></div>';
     } else if (ch.hint) {
       formHtml = '<div class="provider-expand channel-form">' +
-        '<p class="hint">\ud83d\udcbb Run: <code>' + ch.hint + '</code></p>' +
-        '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">\ud83d\udd0c Test</button></div>';
+        '<p class="hint">Run: <code>' + ch.hint + '</code></p>' +
+        '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
     } else {
       const inputs = ch.fields.map(f =>
         '<div class="input-group"><input type="' + f.type + '" class="input" placeholder="' + f.label + '" data-channel="' + ch.id + '" data-key="' + f.key + '" id="ch-' + ch.id + '-' + f.key + '">' +
         (f.type === 'password' ? '<button class="btn-icon" onclick="togglePw(\'' + ch.id + '-' + f.key + '\')">\ud83d\udc41</button>' : '') + '</div>'
       ).join('');
       formHtml = '<div class="provider-expand channel-form">' + inputs +
-        '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">\ud83d\udd0c Test</button></div>';
+        '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
     }
     return '<div class="channel-card" data-type="' + ch.id + '" onclick="toggleChannel(this,\'' + ch.id + '\')">' +
-      '<div class="channel-icon">' + ch.icon + '</div>' +
       '<div class="channel-name">' + ch.name + '</div>' + formHtml + '</div>';
   }).join('');
 })();
