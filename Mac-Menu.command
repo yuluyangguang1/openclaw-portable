@@ -63,9 +63,11 @@ show_menu() {
     local CFG_STATUS="${RED}未配置${NC}"
     [ -f "$CONFIG_PATH" ] && CFG_STATUS="${GREEN}已配置${NC}"
 
+    local OPENCLAW_VER="unknown"
+    [ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
     echo ""
     echo -e "  ${CYAN}${BOLD}╔══════════════════════════════════════╗"
-    echo -e "  ║   OpenClaw Portable 2026.4.29              ║"
+    echo -e "  ║   OpenClaw Portable $OPENCLAW_VER"
     echo -e "  ║   Portable AI Agent                   ║"
     echo -e "  ╚══════════════════════════════════════╝${NC}"
     echo ""

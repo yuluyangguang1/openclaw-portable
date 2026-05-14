@@ -1,9 +1,15 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul 2>&1
 title OpenClaw Portable - Portable AI Agent
 
 REM Enable ANSI escape codes (Windows 10+, silent fallback on older)
 for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
+
+REM Read version from OPENCLAW_VERSION file (fallback: unknown)
+set "OPENCLAW_VER=unknown"
+if exist "%~dp0OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("%~dp0OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+)
 
 echo.
 echo %ESC%[93m  ██╗   ██╗██╗  ██╗   ██╗ ██████╗%ESC%[0m
@@ -13,7 +19,7 @@ echo %ESC%[33m    ╚██╔╝  ██║    ╚██╔╝  ██║   █
 echo %ESC%[33m     ██║   ███████╗██║   ╚██████╔╝%ESC%[0m
 echo %ESC%[33m     ╚═╝   ╚══════╝╚═╝    ╚═════╝ %ESC%[0m
 echo.
-echo %ESC%[96m         OpenClaw Portable 2026.4.29%ESC%[0m
+echo %ESC%[96m         OpenClaw Portable %OPENCLAW_VER%%ESC%[0m
 echo.
 
 set "UCLAW_DIR=%~dp0"
@@ -138,8 +144,12 @@ REM Open both Dashboard and Config Center
 echo   Opening Dashboard and Config Center...
 timeout /t 1 /nobreak >nul
 
-REM Open OpenClaw Dashboard first
-start "" http://127.0.0.1:%PORT%/#token=openclaw
+REM Open OpenClaw Dashboard first (read token from config)
+set "TOKEN=openclaw"
+if exist "%STATE_DIR%\openclaw.json" (
+    for /f "tokens=*" %%t in ('"%NODE_BIN%" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "%STATE_DIR%\openclaw.json"') do set "TOKEN=%%t"
+)
+start "" http://127.0.0.1:%PORT%/#token=%TOKEN%
 
 REM Open Config Center (use detected port)
 start "" http://127.0.0.1:%CONFIG_PORT%/
