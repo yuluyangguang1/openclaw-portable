@@ -465,8 +465,8 @@ const server = http.createServer((req, res) => {
         if (!r.ok) throw new Error('GitHub API error: ' + r.status);
         const release = await r.json();
         const latestTag = release.tag_name || '';
-        const currentVer = fs.existsSync(path.join(__dirname, '../OPENCLAW_VERSION'))
-          ? fs.readFileSync(path.join(__dirname, '../OPENCLAW_VERSION'), 'utf8').trim()
+        const currentVer = fs.existsSync(path.join(__dirname, '../PORTABLE_VERSION'))
+          ? fs.readFileSync(path.join(__dirname, '../PORTABLE_VERSION'), 'utf8').trim()
           : 'unknown';
         const isNewer = latestTag.replace(/^v/, '') !== currentVer;
         res.writeHead(200, {'Content-Type':'application/json'});
@@ -561,7 +561,7 @@ const server = http.createServer((req, res) => {
         fs.rmSync(extractDir, { recursive: true, force: true });
 
         // 6. Update OPENCLAW_VERSION if present in new release
-        const newVerFile = path.join(baseDir, 'OPENCLAW_VERSION');
+        const newVerFile = path.join(baseDir, 'PORTABLE_VERSION');
         if (fs.existsSync(newVerFile)) {
           console.log('Update: new version = ' + fs.readFileSync(newVerFile, 'utf8').trim());
         }
