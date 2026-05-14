@@ -457,6 +457,45 @@ footer { text-align: center; padding: 40px 20px; font-size: 11px; color: var(--t
           <div class="test-result" id="result-slack"></div>
         </div>
       </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'whatsapp')">
+        <h4>WhatsApp <span class="tag hot">热门</span></h4><p>QR 扫码接入 WhatsApp</p>
+        <div class="provider-expand channel-form" id="form-whatsapp" onclick="event.stopPropagation();">
+          <p style="color:var(--text2);font-size:0.82em;padding:8px 0;">WhatsApp 通过 QR 码配对，需在启动后运行：</p>
+          <code style="display:block;background:var(--bg);padding:10px 14px;border-radius:8px;font-size:0.82em;color:var(--text);border:1px solid var(--border);">openclaw channels login whatsapp</code>
+          <p class="hint" style="margin-top:8px;">扫码后自动连接，无需填写 Token</p>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'signal')">
+        <h4>Signal</h4><p>隐私优先，QR 扫码</p>
+        <div class="provider-expand channel-form" id="form-signal" onclick="event.stopPropagation();">
+          <p style="color:var(--text2);font-size:0.82em;padding:8px 0;">Signal 通过 signal-cli 连接，需在启动后运行：</p>
+          <code style="display:block;background:var(--bg);padding:10px 14px;border-radius:8px;font-size:0.82em;color:var(--text);border:1px solid var(--border);">openclaw channels login signal</code>
+          <p class="hint" style="margin-top:8px;">需要先安装 signal-cli</p>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'line')">
+        <h4>LINE</h4><p>LINE Messaging API</p>
+        <div class="provider-expand channel-form" id="form-line" onclick="event.stopPropagation();">
+          <div class="form-group"><label>Channel Access Token</label><input type="text" id="ch-line-token" placeholder="LINE Channel Access Token"></div>
+          <div class="form-group"><label>Channel Secret</label><input type="text" id="ch-line-secret" placeholder="Channel Secret"></div>
+          <p class="hint"><a href="https://developers.line.biz/console/" target="_blank">从 LINE Developers Console 获取</a></p>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'googlechat')">
+        <h4>Google Chat</h4><p>Google Workspace</p>
+        <div class="provider-expand channel-form" id="form-googlechat" onclick="event.stopPropagation();">
+          <div class="form-group"><label>Service Account JSON 路径</label><input type="text" id="ch-gchat-sa" placeholder="~/.openclaw/googlechat-service-account.json"></div>
+          <p class="hint"><a href="https://console.cloud.google.com/apis/credentials" target="_blank">在 Google Cloud Console 创建 Service Account</a></p>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'msteams')">
+        <h4>Microsoft Teams</h4><p>企业协作平台</p>
+        <div class="provider-expand channel-form" id="form-msteams" onclick="event.stopPropagation();">
+          <div class="form-group"><label>App ID</label><input type="text" id="ch-teams-appid" placeholder="Azure Bot App ID"></div>
+          <div class="form-group"><label>App Password</label><input type="text" id="ch-teams-password" placeholder="Azure Bot Password"></div>
+          <p class="hint"><a href="https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps" target="_blank">在 Azure Portal 注册 Bot</a></p>
+        </div>
+      </div>
       <div class="provider-card channel-card" style="grid-column:1/-1;border-color:rgba(7,193,96,0.3);" onclick="startWeChatLogin(event)">
         <h4>微信 <span class="tag" style="background:rgba(7,193,96,0.12);color:#07c160;">个人微信</span></h4>
         <p>扫码接入个人微信</p>
@@ -794,6 +833,15 @@ async function saveChannelsAndOpen() {
   var wb=(document.getElementById('ch-wecom-botid')||{}).value||'',ws=(document.getElementById('ch-wecom-secret')||{}).value||''; if(wb.trim()&&ws.trim()) channels.wecom={enabled:true,botId:wb.trim(),secret:ws.trim()};
   var dt=(document.getElementById('ch-discord-token')||{}).value||''; if(dt.trim()) channels.discord={enabled:true,token:dt.trim()};
   var st=(document.getElementById('ch-slack-token')||{}).value||''; if(st.trim()) channels.slack={enabled:true,token:st.trim()};
+    // LINE
+  var lt=(document.getElementById('ch-line-token')||{}).value||'',ls=(document.getElementById('ch-line-secret')||{}).value||'';
+  if(lt.trim()&&ls.trim()) channels.line={enabled:true,channelAccessToken:lt.trim(),channelSecret:ls.trim()};
+  // Google Chat
+  var gsa=(document.getElementById('ch-gchat-sa')||{}).value||'';
+  if(gsa.trim()) channels.googlechat={enabled:true,serviceAccountPath:gsa.trim()};
+  // MS Teams
+  var ta=(document.getElementById('ch-teams-appid')||{}).value||'',tp=(document.getElementById('ch-teams-password')||{}).value||'';
+  if(ta.trim()&&tp.trim()) channels.msteams={enabled:true,appId:ta.trim(),appPassword:tp.trim()};
   if(Object.keys(channels).length>0){
     try{var res=await fetch('/api/config');var existing=res.ok?await res.json():{};delete existing.agent;existing.channels=Object.assign(existing.channels||{},channels);await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(existing)});showToast('渠道配置已保存','success');}catch(e){}
   }
