@@ -113,10 +113,9 @@ if [ ! -d "$CORE_DIR/node_modules" ]; then
     echo ""
 fi
 
-# ---- 7. Find available port ----
-# Use lsof if available (more portable: works on Linux + macOS),
-# fall back to ss (iproute2) on Linux. Alpine, busybox, and minimal
-# Docker images often lack ss too, so we try netstat as the last resort.
+# ---- 7. Find available port (kill stale gateway first) ----
+# If a previous session's gateway is still running, kill it so we
+# can reuse port 18789 instead of bumping to the next port.
 port_in_use() {
     local p=$1
     if command -v lsof >/dev/null 2>&1; then
@@ -126,10 +125,25 @@ port_in_use() {
     elif command -v netstat >/dev/null 2>&1; then
         netstat -tln 2>/dev/null | grep -q ":$p "
     else
-        # No tool available — assume free, let bind() fail loudly
         return 1
     fi
 }
+# Kill stale processes from previous sessions
+for stale_port in $(seq 18789 18799); do
+    if port_in_use $stale_port; then
+        stale_pid=""
+        if command -v lsof >/dev/null 2>&1; then
+            stale_pid=$(lsof -ti ":$stale_port" 2>/dev/null)
+        elif command -v ss >/dev/null 2>&1; then
+            stale_pid=$(ss -tlnp 2>/dev/null | grep ":$stale_port " | sed -n 's/.*pid=\([0-9]*\).*/\1/p')
+        fi
+        if [ -n "$stale_pid" ]; then
+            echo -e "  ${YELLOW}Killing stale process on port $stale_port (PID $stale_pid)...${NC}"
+            kill "$stale_pid" 2>/dev/null || true
+            sleep 1
+        fi
+    fi
+done
 PORT=18789
 while port_in_use $PORT; do
     echo -e "  ${YELLOW}Port $PORT in use, trying next...${NC}"

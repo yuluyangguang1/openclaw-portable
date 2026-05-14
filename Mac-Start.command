@@ -127,7 +127,19 @@ if [ ! -d "$CORE_DIR/node_modules" ]; then
     echo ""
 fi
 
-# ---- 8. Find available port ----
+# ---- 8. Find available port (kill stale gateway first) ----
+# If a previous session's gateway is still running (user closed the
+# terminal without Ctrl+C, or the EXIT trap didn't fire), kill it
+# so we can reuse port 18789 instead of bumping to 18790+.
+for stale_port in $(seq 18789 18799); do
+    stale_pid=$(lsof -ti ":$stale_port" 2>/dev/null)
+    if [ -n "$stale_pid" ]; then
+        echo -e "  ${YELLOW}Killing stale process on port $stale_port (PID $stale_pid)...${NC}"
+        kill "$stale_pid" 2>/dev/null || true
+        sleep 1
+    fi
+done
+
 PORT=18789
 while lsof -i :$PORT >/dev/null 2>&1; do
     echo -e "  ${YELLOW}Port $PORT in use, trying next...${NC}"

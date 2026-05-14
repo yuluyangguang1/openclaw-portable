@@ -447,6 +447,67 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // API: Heartbeat — frontend polls this to detect backend disconnect
+  if (req.url === '/api/heartbeat' && req.method === 'GET') {
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({alive: true, ts: Date.now()}));
+    return;
+  }
+
+  // API: Restart gateway — kills the gateway process and re-launches it.
+  // The config-server itself stays alive; only the gateway (openclaw.mjs)
+  // is restarted so the new config takes effect without the user having
+  // to close the terminal and double-click again.
+  if (req.url === '/api/restart' && req.method === 'POST') {
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({ok: true, message: 'Restarting gateway...'}));
+
+    // Find and kill gateway processes on ports 18789-18799
+    const { execSync } = require('child_process');
+    const isWin = process.platform === 'win32';
+    try {
+      for (let p = 18789; p <= 18799; p++) {
+        if (isWin) {
+          // netstat + taskkill
+          const out = execSync(`netstat -ano | findstr ":${p} " | findstr "LISTENING"`, {encoding:'utf8', timeout:5000}).trim();
+          const lines = out.split('\n').filter(Boolean);
+          for (const line of lines) {
+            const pid = line.trim().split(/\s+/).pop();
+            if (pid && /^\d+$/.test(pid) && pid !== '0') {
+              try { execSync(`taskkill /PID ${pid} /F`, {timeout:5000}); } catch(e) {}
+            }
+          }
+        } else {
+          // lsof or ss
+          try {
+            const pids = execSync(`lsof -ti :${p} 2>/dev/null || ss -tlnp 2>/dev/null | grep ":${p} " | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p'`, {encoding:'utf8', timeout:5000}).trim();
+            for (const pid of pids.split('\n').filter(Boolean)) {
+              try { process.kill(parseInt(pid), 'SIGTERM'); } catch(e) {}
+            }
+          } catch(e) {}
+        }
+      }
+    } catch(e) { /* best effort */ }
+
+    // Re-launch gateway after a short delay (let ports release)
+    setTimeout(() => {
+      const { spawn } = require('child_process');
+      const coreDir = path.join(__dirname, '../app/core');
+      const openclawMjs = path.join(coreDir, 'node_modules/openclaw/openclaw.mjs');
+      const nodeBin = process.execPath; // same node that's running us
+      if (fs.existsSync(openclawMjs)) {
+        const child = spawn(nodeBin, [openclawMjs, 'gateway', 'run', '--allow-unconfigured', '--force', '--port', '18789'], {
+          cwd: coreDir,
+          env: { ...process.env, OPENCLAW_HOME: path.join(__dirname, '../data'), OPENCLAW_STATE_DIR: OPENCLAW_DIR, OPENCLAW_CONFIG_PATH: CONFIG_PATH },
+          detached: true,
+          stdio: 'ignore',
+        });
+        child.unref();
+      }
+    }, 2000);
+    return;
+  }
+
   // API: Channel connectivity test (lightweight fetch-based)
   if (req.url === '/api/channel/test' && req.method === 'POST') {
     let body = '';
