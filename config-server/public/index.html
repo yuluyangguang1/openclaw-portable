@@ -1275,5 +1275,74 @@ async function loadConfig() {
   } catch(e) {}
 }
 </script>
+<!-- Restart banner + heartbeat disconnect overlay -->
+<div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:var(--accent-bg);border-top:2px solid var(--accent);padding:14px 24px;z-index:500;text-align:center;">
+  <span style="color:var(--accent);font-weight:600;font-size:0.92em;">✅ 配置已保存。需要重启 Gateway 才能生效。</span>
+  <button onclick="doRestart()" style="margin-left:16px;padding:8px 20px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.88em;font-weight:600;">🔄 立即重启 Gateway</button>
+  <span id="restartStatus" style="margin-left:12px;font-size:0.82em;color:var(--text2);"></span>
+</div>
+<div id="disconnectOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:600;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="background:var(--card);padding:32px 40px;border-radius:12px;text-align:center;border:1px solid var(--border);">
+    <div style="font-size:2em;margin-bottom:12px;">⚠️</div>
+    <h3 style="color:var(--text);margin-bottom:8px;">Config Center 已断开</h3>
+    <p style="color:var(--text2);font-size:0.88em;line-height:1.6;">后端进程已停止。请重新双击启动器启动。</p>
+  </div>
+</div>
+<script>
+// Show restart banner after config save
+(function() {
+  var origSave = window.saveConfig;
+  if (!origSave) return;
+  window.saveConfig = async function() {
+    await origSave.apply(this, arguments);
+    // Show banner if save succeeded (step3 became active)
+    if (document.getElementById('step3').classList.contains('active')) {
+      document.getElementById('restartBanner').style.display = 'block';
+    }
+  };
+})();
+
+async function doRestart() {
+  var status = document.getElementById('restartStatus');
+  status.textContent = '正在重启...';
+  try {
+    await fetch('/api/restart', {method:'POST'});
+    status.textContent = '已发送重启指令，等待 Gateway 启动...';
+    // Poll gateway readiness
+    var ready = false;
+    for (var i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      try {
+        var r = await fetch('http://127.0.0.1:18789/', {mode:'no-cors'});
+        ready = true; break;
+      } catch(e) {}
+    }
+    if (ready) {
+      status.textContent = '✅ Gateway 已重启！';
+      document.getElementById('restartBanner').style.display = 'none';
+      showToast('Gateway 重启成功！', 'success');
+    } else {
+      status.textContent = '⚠️ Gateway 未响应，请手动重启启动器';
+    }
+  } catch(e) {
+    status.textContent = '重启失败: ' + e.message;
+  }
+}
+
+// Heartbeat: detect backend disconnect
+(function() {
+  var failures = 0;
+  setInterval(async function() {
+    try {
+      var r = await fetch('/api/heartbeat');
+      if (r.ok) { failures = 0; return; }
+    } catch(e) {}
+    failures++;
+    if (failures >= 3) {
+      document.getElementById('disconnectOverlay').style.display = 'flex';
+    }
+  }, 5000);
+})();
+</script>
 </body>
 </html>

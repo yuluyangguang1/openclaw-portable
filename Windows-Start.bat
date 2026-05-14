@@ -131,7 +131,19 @@ if exist "!WECHAT_PLUGIN_SRC!\openclaw.plugin.json" (
     )
 )
 
-REM Find available port (delayed expansion makes this straightforward)
+REM Find available port (kill stale gateway processes first)
+REM If a previous session's gateway is still running (user closed the
+REM terminal without waiting), kill it so we reuse port 18789.
+for /l %%p in (18789,1,18799) do (
+    for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":%%p " ^| findstr "LISTENING"') do (
+        if not "%%a"=="0" (
+            echo   Killing stale process on port %%p (PID %%a^)...
+            taskkill /PID %%a /F >nul 2>&1
+        )
+    )
+)
+timeout /t 1 /nobreak >nul
+
 set PORT=18789
 :check_port
 netstat -an | findstr ":!PORT! " | findstr "LISTENING" >nul 2>&1
