@@ -576,12 +576,9 @@ function listenWithFallback(port) {
   server.on('error', onError);
   server.listen(port, '127.0.0.1', () => {
     server.removeListener('error', onError);
-    console.log(`
-🦞 OpenClaw Portable Config Center`);
+    console.log(`\n🦞 OpenClaw Portable Config Center`);
     console.log(`   http://127.0.0.1:${port}`);
-    console.log(`
-   Config file: ${CONFIG_PATH}
-`);
+    console.log(`   Config file: ${CONFIG_PATH}\n`);
     try {
       fs.mkdirSync(path.dirname(RUNTIME_PATH), { recursive: true });
       const existing = fs.existsSync(RUNTIME_PATH) ? JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8')) : {};

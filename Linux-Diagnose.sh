@@ -20,8 +20,11 @@ echo "  ========================================"
 echo ""
 
 # Clear old log
+OPENCLAW_VER="unknown"
+[ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
 cat > "$LOG_FILE" << EOF
 OpenClaw Portable Diagnostic Report (Linux)
+Version: $OPENCLAW_VER
 Generated: $(date)
 ========================================
 
@@ -89,13 +92,35 @@ fi
 
 # 5. Check port availability
 echo "[5/6] Checking port 18789..."
-if ss -tlnp | grep -q ":18789 " 2>/dev/null; then
-    echo "  [WARNING] Port 18789 is in use" >> "$LOG_FILE"
-    ss -tlnp | grep ":18789 " >> "$LOG_FILE" 2>&1
-    echo -e "  ${YELLOW}⚠${NC} Port 18789: IN USE"
+if command -v lsof >/dev/null 2>&1; then
+    if lsof -i:18789 >/dev/null 2>&1; then
+        echo "  [WARNING] Port 18789 is in use" >> "$LOG_FILE"
+        lsof -i:18789 >> "$LOG_FILE" 2>&1
+        echo -e "  ${YELLOW}⚠${NC} Port 18789: IN USE"
+    else
+        echo "  [OK] Port 18789 is available" >> "$LOG_FILE"
+        echo -e "  ${GREEN}✓${NC} Port 18789: Available"
+    fi
+elif command -v ss >/dev/null 2>&1; then
+    if ss -tlnp | grep -q ":18789 " 2>/dev/null; then
+        echo "  [WARNING] Port 18789 is in use" >> "$LOG_FILE"
+        ss -tlnp | grep ":18789 " >> "$LOG_FILE" 2>&1
+        echo -e "  ${YELLOW}⚠${NC} Port 18789: IN USE"
+    else
+        echo "  [OK] Port 18789 is available" >> "$LOG_FILE"
+        echo -e "  ${GREEN}✓${NC} Port 18789: Available"
+    fi
+elif command -v netstat >/dev/null 2>&1; then
+    if netstat -tln 2>/dev/null | grep -q ":18789 "; then
+        echo "  [WARNING] Port 18789 is in use" >> "$LOG_FILE"
+        echo -e "  ${YELLOW}⚠${NC} Port 18789: IN USE"
+    else
+        echo "  [OK] Port 18789 is available" >> "$LOG_FILE"
+        echo -e "  ${GREEN}✓${NC} Port 18789: Available"
+    fi
 else
-    echo "  [OK] Port 18789 is available" >> "$LOG_FILE"
-    echo -e "  ${GREEN}✓${NC} Port 18789: Available"
+    echo "  [SKIP] No port-check tool (lsof/ss/netstat)" >> "$LOG_FILE"
+    echo -e "  ${YELLOW}⚠${NC} Port 18789: Cannot check (no lsof/ss/netstat)"
 fi
 
 # 6. Test OpenClaw startup
