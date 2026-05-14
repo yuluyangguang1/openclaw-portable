@@ -32,9 +32,16 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
 :menu
 cls
+
+REM Read version
+set "OPENCLAW_VER=unknown"
+if exist "%UCLAW_DIR%OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("%UCLAW_DIR%OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+)
+
 echo.
 echo   ========================================
-echo     OpenClaw Portable 2026.4.29 - Menu
+echo     OpenClaw Portable !OPENCLAW_VER! - Menu
 echo     Portable AI Agent
 echo   ========================================
 echo.
@@ -281,13 +288,9 @@ echo.
 echo   === System Info ===
 echo.
 echo   OS:     Windows
-for /f "tokens=2 delims==" %%v in ('wmic os get Version /format:list 2^>nul ^| findstr "="') do echo   Ver:    %%v
-for /f "tokens=2 delims==" %%v in ('wmic os get OSArchitecture /format:list 2^>nul ^| findstr "="') do echo   Arch:   %%v
-for /f "tokens=2 delims==" %%v in ('wmic computersystem get TotalPhysicalMemory /format:list 2^>nul ^| findstr "="') do (
-    set "MEM=%%v"
-    set /a "MEM_GB=!MEM:~0,-9!"
-    echo   Memory: !MEM_GB! GB
-)
+for /f "tokens=*" %%v in ('powershell -command "[System.Environment]::OSVersion.Version.ToString()" 2^>nul') do echo   Ver:    %%v
+for /f "tokens=*" %%v in ('powershell -command "(Get-CimInstance Win32_OperatingSystem).OSArchitecture" 2^>nul') do echo   Arch:   %%v
+for /f "tokens=*" %%v in ('powershell -command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB)" 2^>nul') do echo   Memory: %%v GB
 if exist "%NODE_BIN%" (
     for /f "tokens=*" %%v in ('"%NODE_BIN%" --version') do echo   Node:   %%v
 )
