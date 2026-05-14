@@ -734,7 +734,7 @@ function buildConfig(provider, base, model, apiKey) {
   var bc = {
     gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
     commands:{native:'auto',nativeSkills:'auto',restart:true,ownerDisplay:'raw'},
-    meta:{lastTouchedVersion:'2026.5.14',lastTouchedAt:new Date().toISOString()}
+    meta:{lastTouchedAt:new Date().toISOString()}
   };
   if (provider==='zai') {
     return Object.assign({}, bc, {env:{ZAI_API_KEY:apiKey}, agents:{defaults:{model:{primary:'zai/'+model}}}});
