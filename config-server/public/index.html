@@ -732,7 +732,7 @@ function pollWeChatStatus() {
 // ===== BUILD CONFIG =====
 function buildConfig(provider, base, model, apiKey) {
   var bc = {
-    gateway:{auth:{mode:'token',token:'openclaw'}},
+    gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
     commands:{native:'auto',nativeSkills:'auto',restart:true,ownerDisplay:'raw'},
     meta:{lastTouchedVersion:'2026.4.29',lastTouchedAt:new Date().toISOString()}
   };
