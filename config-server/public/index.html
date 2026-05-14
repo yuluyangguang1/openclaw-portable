@@ -297,6 +297,9 @@ input:focus { border-color: var(--input-focus); box-shadow: 0 0 0 3px var(--inpu
 }
 
 /* ── Footer ── */
+
+.test-result { font-size: 0.78em; margin-top: 6px; min-height: 16px; }
+
 footer { text-align: center; padding: 40px 20px; font-size: 11px; color: var(--text3); letter-spacing: 1.5px; }
 
 /* ── Scrollbar ── */
@@ -370,7 +373,7 @@ footer { text-align: center; padding: 40px 20px; font-size: 11px; color: var(--t
     <p class="desc" style="margin-bottom:0;">密钥已保存到本地，不会上传</p>
   </div>
 
-  <button class="btn-launch" onclick="openGateway()">打开聊天界面</button>
+  <button class="btn-launch" onclick="saveChannelsAndOpen()">打开聊天界面</button>
 
   <div class="cmd-grid">
     <div class="cmd-card" onclick="runCmd('update')">
@@ -392,6 +395,76 @@ footer { text-align: center; padding: 40px 20px; font-size: 11px; color: var(--t
       <div class="cmd-icon">⟳</div>
       <div class="cmd-name">重启</div>
       <div class="cmd-desc">使配置生效</div>
+    </div>
+  </div>
+
+
+  <!-- 渠道配置 -->
+  <div style="margin-top:28px;text-align:left;">
+    <h3 style="color:var(--text);font-size:0.95em;margin-bottom:10px;">接入聊天平台（可选）</h3>
+    <p style="color:var(--text2);font-size:0.8em;margin-bottom:12px;">点击卡片展开填写，不填可跳过</p>
+    <div class="model-grid" id="channelGrid">
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'telegram')">
+        <h4>Telegram</h4><p>接入 Telegram Bot</p>
+        <div class="provider-expand channel-form" id="form-telegram" onclick="event.stopPropagation();">
+          <div class="form-group"><label>Bot Token</label><input type="text" id="ch-telegram-token" placeholder="123456:ABC-DEF..."></div>
+          <p class="hint"><a href="https://t.me/BotFather" target="_blank">从 @BotFather 获取</a></p>
+          <button class="btn btn-secondary" style="font-size:0.8em;padding:6px 12px;margin-top:8px;" onclick="testChannel(event,'telegram')">测试连接</button>
+          <div class="test-result" id="result-telegram"></div>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'qqbot')">
+        <h4>QQ Bot</h4><p>QQ 群/私聊机器人</p>
+        <div class="provider-expand channel-form" id="form-qqbot" onclick="event.stopPropagation();">
+          <div class="form-group"><label>App ID</label><input type="text" id="ch-qqbot-appid" placeholder="应用 ID"></div>
+          <div class="form-group"><label>Client Secret</label><input type="text" id="ch-qqbot-secret" placeholder="应用密钥"></div>
+          <p class="hint"><a href="https://q.qq.com" target="_blank">从 QQ 开放平台获取</a></p>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'feishu')">
+        <h4>飞书</h4><p>接入飞书机器人</p>
+        <div class="provider-expand channel-form" id="form-feishu" onclick="event.stopPropagation();">
+          <div class="form-group"><label>App ID</label><input type="text" id="ch-feishu-appid" placeholder="cli_xxx..."></div>
+          <div class="form-group"><label>App Secret</label><input type="text" id="ch-feishu-secret" placeholder="应用密钥"></div>
+          <p class="hint"><a href="https://open.feishu.cn/app" target="_blank">从飞书开放平台获取</a></p>
+          <button class="btn btn-secondary" style="font-size:0.8em;padding:6px 12px;margin-top:8px;" onclick="testChannel(event,'feishu')">测试连接</button>
+          <div class="test-result" id="result-feishu"></div>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'wecom')">
+        <h4>企业微信</h4><p>接入企业微信</p>
+        <div class="provider-expand channel-form" id="form-wecom" onclick="event.stopPropagation();">
+          <div class="form-group"><label>Bot ID</label><input type="text" id="ch-wecom-botid" placeholder="aib..."></div>
+          <div class="form-group"><label>Secret</label><input type="text" id="ch-wecom-secret" placeholder="密钥"></div>
+          <p class="hint"><a href="https://work.weixin.qq.com" target="_blank">从企业微信管理后台获取</a></p>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'discord')">
+        <h4>Discord</h4><p>接入 Discord Bot</p>
+        <div class="provider-expand channel-form" id="form-discord" onclick="event.stopPropagation();">
+          <div class="form-group"><label>Bot Token</label><input type="text" id="ch-discord-token" placeholder="Nz..."></div>
+          <p class="hint"><a href="https://discord.com/developers/applications" target="_blank">在 Developer Portal 创建</a></p>
+          <button class="btn btn-secondary" style="font-size:0.8em;padding:6px 12px;margin-top:8px;" onclick="testChannel(event,'discord')">测试连接</button>
+          <div class="test-result" id="result-discord"></div>
+        </div>
+      </div>
+      <div class="provider-card channel-card" onclick="toggleChannel(this,'slack')">
+        <h4>Slack</h4><p>接入 Slack Bot</p>
+        <div class="provider-expand channel-form" id="form-slack" onclick="event.stopPropagation();">
+          <div class="form-group"><label>Bot Token</label><input type="text" id="ch-slack-token" placeholder="xoxb-..."></div>
+          <p class="hint"><a href="https://api.slack.com/apps" target="_blank">在 Slack API 创建 App</a></p>
+          <button class="btn btn-secondary" style="font-size:0.8em;padding:6px 12px;margin-top:8px;" onclick="testChannel(event,'slack')">测试连接</button>
+          <div class="test-result" id="result-slack"></div>
+        </div>
+      </div>
+      <div class="provider-card channel-card" style="grid-column:1/-1;border-color:rgba(7,193,96,0.3);" onclick="startWeChatLogin(event)">
+        <h4>微信 <span class="tag" style="background:rgba(7,193,96,0.12);color:#07c160;">个人微信</span></h4>
+        <p>扫码接入个人微信</p>
+        <div class="provider-expand channel-form" id="form-wechat" onclick="event.stopPropagation();" style="max-height:none;overflow:visible;">
+          <div id="wechat-qr" style="text-align:center;padding:16px;"><p style="color:var(--text2);font-size:0.82em;">点击卡片开始扫码</p></div>
+          <div id="wechat-status" style="text-align:center;color:var(--text2);font-size:0.82em;"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -647,6 +720,86 @@ async function viewConfig(){try{var r=await fetch('/api/config');var c=await r.j
 checkGateway();setInterval(checkGateway,10000);
 (async function(){try{var r=await fetch('/api/config');var c=await r.json();if(c.gateway&&c.gateway.auth&&c.gateway.auth.token)_gatewayToken=c.gateway.auth.token;var has=false;if(c.env&&c.env.ZAI_API_KEY)has=true;if(c.models&&c.models.providers&&Object.keys(c.models.providers).length>0)has=true;if(has)goStep(2);}catch(e){}})();
 (function(){var f=0;setInterval(async function(){try{var r=await fetch('/api/heartbeat');if(r.ok){f=0;return;}}catch(e){}f++;if(f>=3)document.getElementById('disconnectOverlay').style.display='flex';},5000);})();
+
+/* === Channel toggle === */
+function toggleChannel(card, type) {
+  var form = document.getElementById('form-'+type);
+  if (!form) return;
+  var isOpen = form.classList.contains('open');
+  document.querySelectorAll('#channelGrid .channel-form').forEach(function(f){ f.classList.remove('open'); f.closest('.channel-card').classList.remove('selected'); });
+  if (!isOpen) { form.classList.add('open'); card.classList.add('selected'); var fi=form.querySelector('input'); if(fi) setTimeout(function(){fi.focus();},100); }
+}
+
+/* === Channel test === */
+async function testChannel(e, type) {
+  e.stopPropagation();
+  var btn = e.target;
+  var resultEl = document.getElementById('result-'+type);
+  btn.textContent='测试中...'; btn.disabled=true; if(resultEl) resultEl.textContent='';
+  var payload = {};
+  if (type==='telegram') payload.token = (document.getElementById('ch-telegram-token')||{}).value||'';
+  if (type==='discord') payload.token = (document.getElementById('ch-discord-token')||{}).value||'';
+  if (type==='slack') payload.token = (document.getElementById('ch-slack-token')||{}).value||'';
+  if (type==='feishu') { payload.appId=(document.getElementById('ch-feishu-appid')||{}).value||''; payload.appSecret=(document.getElementById('ch-feishu-secret')||{}).value||''; }
+  if (type==='wecom') { payload.botId=(document.getElementById('ch-wecom-botid')||{}).value||''; payload.secret=(document.getElementById('ch-wecom-secret')||{}).value||''; }
+  if (type==='qqbot') { payload.appId=(document.getElementById('ch-qqbot-appid')||{}).value||''; payload.clientSecret=(document.getElementById('ch-qqbot-secret')||{}).value||''; }
+  try {
+    var res = await fetch('/api/channel/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:type,config:payload})});
+    var data = await res.json();
+    if (data.ok) { if(resultEl){resultEl.style.color='var(--success)';resultEl.textContent='连接成功';} btn.textContent='已验证'; }
+    else { if(resultEl){resultEl.style.color='var(--error)';resultEl.textContent=data.error||'连接失败';} btn.textContent='失败'; }
+  } catch(err) { if(resultEl){resultEl.style.color='var(--error)';resultEl.textContent='网络错误';} btn.textContent='失败'; }
+  btn.disabled=false;
+  setTimeout(function(){ btn.textContent='测试连接'; },3000);
+}
+
+/* === WeChat login === */
+var wechatSession=null, wechatPolling=false;
+async function startWeChatLogin(e) {
+  var form=document.getElementById('form-wechat');
+  var card=form.closest('.channel-card');
+  if(!form.classList.contains('open')){form.classList.add('open');card.classList.add('selected');}
+  if(wechatPolling) return;
+  var qrDiv=document.getElementById('wechat-qr');
+  var statusDiv=document.getElementById('wechat-status');
+  qrDiv.innerHTML='<p style="color:var(--text2);">获取二维码中...</p>';statusDiv.textContent='';
+  try{
+    var res=await fetch('/api/wechat/start',{method:'POST'});var data=await res.json();
+    if(data.error) throw new Error(data.error);
+    wechatSession=data.sessionKey;
+    qrDiv.innerHTML='<img src="'+data.qrcodeUrl+'" style="width:180px;height:180px;border-radius:8px;">';
+    statusDiv.innerHTML='<span style="color:var(--success);">请用微信扫描上方二维码</span>';
+    wechatPolling=true; pollWeChatStatus();
+  }catch(err){qrDiv.innerHTML='<p style="color:var(--error);">获取失败</p>';statusDiv.textContent=err.message;}
+}
+async function pollWeChatStatus(){
+  if(!wechatSession||!wechatPolling)return;
+  try{
+    var res=await fetch('/api/wechat/status?session='+encodeURIComponent(wechatSession));var data=await res.json();
+    var qrDiv=document.getElementById('wechat-qr');var statusDiv=document.getElementById('wechat-status');
+    if(data.status==='confirmed'){wechatPolling=false;qrDiv.innerHTML='<div style="font-size:2.5em;color:var(--success);">✓</div>';statusDiv.innerHTML='<span style="color:var(--success);font-weight:600;">微信连接成功</span><br><span style="font-size:0.78em;color:var(--text2);">重启 Gateway 生效</span>';showToast('微信连接成功','success');return;}
+    if(data.status==='refreshed'){qrDiv.innerHTML='<img src="'+data.qrcodeUrl+'" style="width:180px;height:180px;border-radius:8px;">';statusDiv.textContent='二维码已刷新';}
+    else if(data.status==='scaned'){statusDiv.textContent='已扫码，请在手机确认...';}
+    else if(data.status==='expired'||data.status==='error'){wechatPolling=false;qrDiv.innerHTML='<p style="color:var(--text2);">已过期，<a href="#" onclick="startWeChatLogin(event);return false;">重新获取</a></p>';return;}
+    setTimeout(pollWeChatStatus,1500);
+  }catch(err){setTimeout(pollWeChatStatus,3000);}
+}
+
+/* === Save channels === */
+async function saveChannelsAndOpen() {
+  var channels={};
+  var t=(document.getElementById('ch-telegram-token')||{}).value||''; if(t.trim()) channels.telegram={enabled:true,token:t.trim(),dmPolicy:'pairing'};
+  var a=(document.getElementById('ch-qqbot-appid')||{}).value||'',s=(document.getElementById('ch-qqbot-secret')||{}).value||''; if(a.trim()&&s.trim()) channels.qqbot={enabled:true,appId:a.trim(),clientSecret:s.trim()};
+  var fa=(document.getElementById('ch-feishu-appid')||{}).value||'',fs=(document.getElementById('ch-feishu-secret')||{}).value||''; if(fa.trim()&&fs.trim()) channels.feishu={enabled:true,appId:fa.trim(),appSecret:fs.trim()};
+  var wb=(document.getElementById('ch-wecom-botid')||{}).value||'',ws=(document.getElementById('ch-wecom-secret')||{}).value||''; if(wb.trim()&&ws.trim()) channels.wecom={enabled:true,botId:wb.trim(),secret:ws.trim()};
+  var dt=(document.getElementById('ch-discord-token')||{}).value||''; if(dt.trim()) channels.discord={enabled:true,token:dt.trim()};
+  var st=(document.getElementById('ch-slack-token')||{}).value||''; if(st.trim()) channels.slack={enabled:true,token:st.trim()};
+  if(Object.keys(channels).length>0){
+    try{var res=await fetch('/api/config');var existing=res.ok?await res.json():{};delete existing.agent;existing.channels=Object.assign(existing.channels||{},channels);await fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(existing)});showToast('渠道配置已保存','success');}catch(e){}
+  }
+  window.open(gatewayUrl(),'_blank');
+}
+
 </script>
 </body>
 </html>
