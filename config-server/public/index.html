@@ -418,6 +418,7 @@ let selectedModel = '';
 let currentStep = 1;
 let gatewayPort = null;
 let wechatPollTimer = null;
+let wechatSession = null;
 let configData = null;
 
 // ===== RENDER PROVIDERS =====
@@ -428,19 +429,19 @@ let configData = null;
     const tagsHtml = p.tags.map(t => '<span class="tag tag-' + t + '">' + t + '</span>').join('');
     let formHtml = '';
     if (p.isCustom) {
-      formHtml = '<div class="provider-expand" style="display:none">' +
+      formHtml = '<div class="provider-expand">' +
         '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
         '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
         '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">\ud83d\udc41</button></div></div>';
     } else if (p.isLocal) {
-      formHtml = '<div class="provider-expand" style="display:none">' +
+      formHtml = '<div class="provider-expand">' +
         '<input type="text" class="input" placeholder="Port (default: ' + (p.base.match(/:(\d+)/)||[])[1] + ')" data-field="port" value="' + (p.base.match(/:(\d+)/)||[])[1] + '">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
         '<button class="btn btn-sm" onclick="testLocal(\'' + p.id + '\')">\ud83d\udd0c Test Connection</button></div>';
     } else {
       const opts = p.models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
-      formHtml = '<div class="provider-expand" style="display:none">' +
+      formHtml = '<div class="provider-expand">' +
         '<select class="input" data-field="model"><option value="">-- Select Model --</option>' + opts + '</select>' +
         '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
         '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">\ud83d\udc41</button></div>' +
@@ -471,13 +472,13 @@ let configData = null;
   grid.innerHTML = CHANNELS.map(ch => {
     let formHtml = '';
     if (ch.special === 'wechat') {
-      formHtml = '<div class="provider-expand channel-form" style="display:none">' +
+      formHtml = '<div class="provider-expand channel-form">' +
         '<p>\u626b\u7801\u767b\u5f55\u4e2a\u4eba\u5fae\u4fe1</p>' +
         '<div id="wechat-qr"></div>' +
         '<button class="btn btn-primary" onclick="startWeChatLogin(event)">\ud83d\udcf1 Start QR Login</button>' +
         '<p class="hint" id="wechat-status"></p></div>';
     } else if (ch.hint) {
-      formHtml = '<div class="provider-expand channel-form" style="display:none">' +
+      formHtml = '<div class="provider-expand channel-form">' +
         '<p class="hint">\ud83d\udcbb Run: <code>' + ch.hint + '</code></p>' +
         '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">\ud83d\udd0c Test</button></div>';
     } else {
@@ -485,7 +486,7 @@ let configData = null;
         '<div class="input-group"><input type="' + f.type + '" class="input" placeholder="' + f.label + '" data-channel="' + ch.id + '" data-key="' + f.key + '" id="ch-' + ch.id + '-' + f.key + '">' +
         (f.type === 'password' ? '<button class="btn-icon" onclick="togglePw(\'' + ch.id + '-' + f.key + '\')">\ud83d\udc41</button>' : '') + '</div>'
       ).join('');
-      formHtml = '<div class="provider-expand channel-form" style="display:none">' + inputs +
+      formHtml = '<div class="provider-expand channel-form">' + inputs +
         '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">\ud83d\udd0c Test</button></div>';
     }
     return '<div class="channel-card" data-type="' + ch.id + '" onclick="toggleChannel(this,\'' + ch.id + '\')">' +
@@ -499,17 +500,17 @@ function toggleProvider(card, id) {
   const grid = document.getElementById('providerGrid');
   const allCards = grid.querySelectorAll('.provider-card');
   const expand = card.querySelector('.provider-expand');
-  const isOpen = expand && expand.style.display !== 'none';
+  const isOpen = expand && expand.classList.contains('open');
 
   // Close all
   allCards.forEach(c => {
-    c.classList.remove('active');
+    c.classList.remove('selected');
     const ex = c.querySelector('.provider-expand');
-    if (ex) ex.style.display = 'none';
+    if (ex) ex.classList.remove('open');
   });
 
   if (!isOpen && expand) {
-    card.classList.add('active');
+    card.classList.add('selected');
     expand.style.display = 'block';
     selectedProvider = id;
     const p = PROVIDERS.find(x => x.id === id);
@@ -555,16 +556,16 @@ function toggleChannel(card, type) {
   const grid = document.getElementById('channelGrid');
   const allCards = grid.querySelectorAll('.channel-card');
   const expand = card.querySelector('.channel-form');
-  const isOpen = expand && expand.style.display !== 'none';
+  const isOpen = expand && expand.classList.contains('open');
 
   allCards.forEach(c => {
-    c.classList.remove('active');
+    c.classList.remove('selected');
     const ex = c.querySelector('.channel-form');
     if (ex) ex.style.display = 'none';
   });
 
   if (!isOpen && expand) {
-    card.classList.add('active');
+    card.classList.add('selected');
     expand.style.display = 'block';
     setTimeout(() => card.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
   }
@@ -628,6 +629,7 @@ function startWeChatLogin(e) {
   if (statusEl) statusEl.textContent = '\u6b63\u5728\u542f\u52a8...';
   fetch('/api/wechat/start', {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
     if (data.qrcodeUrl) {
+      wechatSession = data.sessionKey;
       qrEl.innerHTML = '<img src="' + data.qrcodeUrl + '" style="max-width:180px;border-radius:8px;">';
       if (statusEl) statusEl.textContent = '\u8bf7\u7528\u5fae\u4fe1\u626b\u63cf\u4e8c\u7ef4\u7801';
       pollWeChatStatus();
@@ -642,7 +644,7 @@ function startWeChatLogin(e) {
 function pollWeChatStatus() {
   if (wechatPollTimer) clearInterval(wechatPollTimer);
   wechatPollTimer = setInterval(() => {
-    fetch('/api/wechat/status').then(r => r.json()).then(data => {
+    fetch('/api/wechat/status?session=' + encodeURIComponent(wechatSession || '')).then(function(r){return r.json();}).then(function(data) {
       const statusEl = document.getElementById('wechat-status');
       if (data.status === 'logged_in') {
         clearInterval(wechatPollTimer);
@@ -773,9 +775,9 @@ function doReset() {
       selectedModel = '';
       configData = null;
       document.querySelectorAll('.provider-card').forEach(c => {
-        c.classList.remove('active');
+        c.classList.remove('selected');
         const ex = c.querySelector('.provider-expand');
-        if (ex) { ex.style.display = 'none'; ex.querySelectorAll('input,select').forEach(i => i.value = ''); }
+        if (ex) { ex.classList.remove('open'); ex.querySelectorAll('input,select').forEach(i => i.value = ''); }
       });
       goStep(1);
       updateSaveBtn();
