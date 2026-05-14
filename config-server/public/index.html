@@ -511,7 +511,7 @@ function toggleProvider(card, id) {
 
   if (!isOpen && expand) {
     card.classList.add('selected');
-    expand.style.display = 'block';
+    expand.classList.add('open');
     selectedProvider = id;
     const p = PROVIDERS.find(x => x.id === id);
     selectedBase = p ? p.base : '';
@@ -561,12 +561,12 @@ function toggleChannel(card, type) {
   allCards.forEach(c => {
     c.classList.remove('selected');
     const ex = c.querySelector('.channel-form');
-    if (ex) ex.style.display = 'none';
+    if (ex) ex.classList.remove('open');
   });
 
   if (!isOpen && expand) {
     card.classList.add('selected');
-    expand.style.display = 'block';
+    expand.classList.add('open');
     setTimeout(() => card.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
   }
 }
