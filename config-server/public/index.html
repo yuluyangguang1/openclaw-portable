@@ -555,6 +555,13 @@ let configData = null;
 
 // ===== TOGGLE PROVIDER =====
 function toggleProvider(card, id) {
+  // Don't toggle if user clicked on an input, select, button, or link inside the expand
+  var evt = window.event || arguments[2];
+  if (evt && evt.target) {
+    var tag = evt.target.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'select' || tag === 'button' || tag === 'a' || tag === 'option' || tag === 'textarea') return;
+    if (evt.target.closest && evt.target.closest('.provider-expand')) return;
+  }
   const grid = document.getElementById('providerGrid');
   const allCards = grid.querySelectorAll('.provider-card');
   const expand = card.querySelector('.provider-expand');
@@ -611,6 +618,12 @@ function updateSaveBtn() {
 
 // ===== TOGGLE CHANNEL =====
 function toggleChannel(card, type) {
+  var evt = window.event || arguments[2];
+  if (evt && evt.target) {
+    var tag = evt.target.tagName.toLowerCase();
+    if (tag === 'input' || tag === 'select' || tag === 'button' || tag === 'a' || tag === 'option' || tag === 'textarea') return;
+    if (evt.target.closest && evt.target.closest('.channel-form')) return;
+  }
   const grid = document.getElementById('channelGrid');
   const allCards = grid.querySelectorAll('.channel-card');
   const expand = card.querySelector('.channel-form');
