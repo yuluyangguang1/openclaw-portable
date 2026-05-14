@@ -163,20 +163,21 @@ for /l %%i in (1,1,15) do (
 :runtime_ready
 
 REM Read actual config server port from runtime.json
+REM NOTE: The for/f + node command MUST NOT be inside an if() block.
+REM cmd's parser treats ) inside the JS code as the block-closing paren,
+REM which chops the command and produces "is not recognized" errors.
+REM The try/catch in the JS already handles missing files gracefully.
 set "CONFIG_PORT=18788"
-if exist "!RUNTIME_JSON!" (
-    for /f "usebackq tokens=*" %%p in (`"!NODE_BIN!" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).configServerPort||18788)}catch(e){console.log(18788)}" "!RUNTIME_JSON!"`) do set "CONFIG_PORT=%%p"
-)
+for /f "usebackq tokens=*" %%p in (`"!NODE_BIN!" -e "try{var d=require('fs').readFileSync('!RUNTIME_JSON!'.replace(/\\/g,'/'),'utf8');console.log(JSON.parse(d).configServerPort||18788)}catch(e){console.log(18788)}"`) do set "CONFIG_PORT=%%p"
 
 REM Open both Dashboard and Config Center
 echo   Opening Dashboard and Config Center...
 timeout /t 1 /nobreak >nul
 
 REM Read gateway token from config
+REM Same rule: no if() wrapper around for/f with JS containing parens.
 set "TOKEN=openclaw"
-if exist "!STATE_DIR!\openclaw.json" (
-    for /f "usebackq tokens=*" %%t in (`"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "!STATE_DIR!\openclaw.json"`) do set "TOKEN=%%t"
-)
+for /f "usebackq tokens=*" %%t in (`"!NODE_BIN!" -e "try{var d=require('fs').readFileSync('!STATE_DIR:\=!/openclaw.json','utf8');var t=JSON.parse(d);console.log(t.gateway&&t.gateway.auth&&t.gateway.auth.token||'openclaw')}catch(e){console.log('openclaw')}"`) do set "TOKEN=%%t"
 start "" "http://127.0.0.1:!PORT!/#token=!TOKEN!"
 start "" "http://127.0.0.1:!CONFIG_PORT!/"
 
