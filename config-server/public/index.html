@@ -497,7 +497,7 @@ let configData = null;
       formHtml = '<div class="provider-expand">' +
         '<input type="text" class="input" placeholder="Port (default: ' + (p.base.match(/:(\d+)/)||[])[1] + ')" data-field="port" value="' + (p.base.match(/:(\d+)/)||[])[1] + '">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
-        '<button class="btn btn-sm" onclick="testLocal(\'' + p.id + '\')">Test Connection</button></div>';
+        '<button class="btn btn-sm" onclick="testLocal(\'' + p.id + '\')">检测连接</button></div>';
     } else {
       const opts = p.models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
       formHtml = '<div class="provider-expand">' +
