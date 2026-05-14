@@ -153,15 +153,20 @@ GW_PID=$!
 for i in $(seq 1 30); do
     sleep 0.5
     if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+        # Read gateway token from config (fallback: openclaw)
+        TOKEN="openclaw"
+        if [ -f "$CONFIG_FILE" ]; then
+            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null || echo "openclaw")
+        fi
         # Try common Linux browsers
         if command -v xdg-open >/dev/null 2>&1; then
-            xdg-open "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null &
+            xdg-open "http://127.0.0.1:$PORT/#token=$TOKEN" 2>/dev/null &
             xdg-open "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null &
         elif command -v firefox >/dev/null 2>&1; then
-            firefox "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null &
+            firefox "http://127.0.0.1:$PORT/#token=$TOKEN" 2>/dev/null &
             firefox "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null &
         elif command -v google-chrome >/dev/null 2>&1; then
-            google-chrome "http://127.0.0.1:$PORT/#token=openclaw" 2>/dev/null &
+            google-chrome "http://127.0.0.1:$PORT/#token=$TOKEN" 2>/dev/null &
             google-chrome "http://127.0.0.1:$CONFIG_PORT/" 2>/dev/null &
         fi
         break
@@ -170,7 +175,7 @@ done
 
 echo -e "  ${GREEN}════════════════════════════════${NC}"
 echo -e "  ${GREEN}OpenClaw Portable is running!${NC}"
-echo -e "  ${GREEN}   Dashboard:     http://127.0.0.1:$PORT/#token=openclaw${NC}"
+echo -e "  ${GREEN}   Dashboard:     http://127.0.0.1:$PORT/#token=$TOKEN${NC}"
 echo -e "  ${GREEN}   Config Center: http://127.0.0.1:$CONFIG_PORT/${NC}"
 echo ""
 echo -e "  ${YELLOW}Press Ctrl+C to stop${NC}"
@@ -185,6 +190,6 @@ cleanup() {
     echo -e "  OpenClaw Portable stopped."
     exit 0
 }
-trap cleanup INT TERM
+trap cleanup INT TERM EXIT
 
 wait $GW_PID
