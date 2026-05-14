@@ -397,6 +397,7 @@ footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--t
   <p class="desc">推荐国内用户用 MiniMax / Kimi / DeepSeek</p>
 
   <div class="model-grid">
+    <!-- ═══ 国内推荐 ═══ -->
     <div class="model-card" data-provider="minimax" data-base="https://api.minimax.chat/v1" data-model="MiniMax-Text-01">
       <span class="check">✓</span>
       <h4>MiniMax <span class="tag hot">推荐</span><span class="tag cn">国内</span></h4>
@@ -412,19 +413,19 @@ footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--t
     <div class="model-card" data-provider="deepseek" data-base="https://api.deepseek.com/v1" data-model="deepseek-chat">
       <span class="check">✓</span>
       <h4>DeepSeek <span class="tag cn">国内</span><span class="tag cheap">便宜</span></h4>
-      <p>deepseek-chat，超低价格</p>
+      <p>deepseek-chat / deepseek-reasoner</p>
       <a class="buy-link" href="https://platform.deepseek.com/" target="_blank">→ 获取 API Key</a>
     </div>
-    <div class="model-card" data-provider="zai" data-base="" data-model="glm-5">
+    <div class="model-card" data-provider="zai" data-base="https://open.bigmodel.cn/api/paas/v4" data-model="glm-4-plus">
       <span class="check">✓</span>
       <h4>智谱 GLM <span class="tag cn">国内</span><span class="tag free">有免费</span></h4>
-      <p>glm-5，免费额度可用</p>
+      <p>glm-4-plus / glm-4-flash(免费）</p>
       <a class="buy-link" href="https://open.bigmodel.cn/" target="_blank">→ 获取 API Key</a>
     </div>
-    <div class="model-card" data-provider="qwen" data-base="https://dashscope.aliyuncs.com/compatible-mode/v1" data-model="qwen-turbo">
+    <div class="model-card" data-provider="qwen" data-base="https://dashscope.aliyuncs.com/compatible-mode/v1" data-model="qwen-max">
       <span class="check">✓</span>
       <h4>通义千问 <span class="tag cn">国内</span><span class="tag free">有免费</span></h4>
-      <p>qwen-turbo，阿里云出品</p>
+      <p>qwen-max / qwen-plus / qwen-turbo</p>
       <a class="buy-link" href="https://dashscope.console.aliyun.com/" target="_blank">→ 获取 API Key</a>
     </div>
     <div class="model-card" data-provider="doubao" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-1.5-pro-32k">
@@ -433,23 +434,84 @@ footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--t
       <p>doubao-1.5-pro，字节跳动</p>
       <a class="buy-link" href="https://console.volcengine.com/ark" target="_blank">→ 获取 API Key</a>
     </div>
+    <div class="model-card" data-provider="baichuan" data-base="https://api.baichuan-ai.com/v1" data-model="Baichuan4">
+      <span class="check">✓</span>
+      <h4>百川 <span class="tag cn">国内</span></h4>
+      <p>Baichuan4，长文本理解强</p>
+      <a class="buy-link" href="https://platform.baichuan-ai.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="yi" data-base="https://api.lingyiwanwu.com/v1" data-model="yi-large">
+      <span class="check">✓</span>
+      <h4>零一万物 (Yi) <span class="tag cn">国内</span></h4>
+      <p>yi-large / yi-medium</p>
+      <a class="buy-link" href="https://platform.lingyiwanwu.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="stepfun" data-base="https://api.stepfun.com/v1" data-model="step-2-16k">
+      <span class="check">✓</span>
+      <h4>阶跃星辰 (Step) <span class="tag cn">国内</span></h4>
+      <p>step-2-16k，多模态</p>
+      <a class="buy-link" href="https://platform.stepfun.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="spark" data-base="https://spark-api-open.xf-yun.com/v1" data-model="generalv3.5">
+      <span class="check">✓</span>
+      <h4>讯飞星火 <span class="tag cn">国内</span><span class="tag free">有免费</span></h4>
+      <p>Spark Max / Spark Pro</p>
+      <a class="buy-link" href="https://xinghuo.xfyun.cn/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="hunyuan" data-base="https://api.hunyuan.cloud.tencent.com/v1" data-model="hunyuan-pro">
+      <span class="check">✓</span>
+      <h4>腾讯混元 <span class="tag cn">国内</span></h4>
+      <p>hunyuan-pro / hunyuan-lite(免费）</p>
+      <a class="buy-link" href="https://cloud.tencent.com/product/hunyuan" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="ernie" data-base="https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat" data-model="ernie-4.0-8k">
+      <span class="check">✓</span>
+      <h4>百度文心 (ERNIE) <span class="tag cn">国内</span></h4>
+      <p>ERNIE 4.0，需百度云 access_token</p>
+      <a class="buy-link" href="https://cloud.baidu.com/product/wenxinworkshop" target="_blank">→ 获取 API Key</a>
+    </div>
     <div class="model-card" data-provider="siliconflow" data-base="https://api.siliconflow.cn/v1" data-model="Qwen/Qwen2.5-72B-Instruct">
       <span class="check">✓</span>
       <h4>硅基流动 <span class="tag cn">国内</span><span class="tag cheap">便宜</span></h4>
       <p>多模型聚合，价格低</p>
       <a class="buy-link" href="https://cloud.siliconflow.cn/" target="_blank">→ 获取 API Key</a>
     </div>
+    <!-- ═══ 国际 ═══ -->
     <div class="model-card" data-provider="openai" data-base="https://api.openai.com/v1" data-model="gpt-4o">
       <span class="check">✓</span>
-      <h4>OpenAI</h4>
-      <p>GPT-4o，需翻墙或中转</p>
+      <h4>OpenAI <span class="tag hot">主流</span></h4>
+      <p>GPT-4o / GPT-4.1 / o3-mini</p>
       <a class="buy-link" href="https://platform.openai.com/" target="_blank">→ 获取 API Key</a>
     </div>
     <div class="model-card" data-provider="anthropic" data-base="https://api.anthropic.com/v1" data-model="claude-sonnet-4-20250514">
       <span class="check">✓</span>
-      <h4>Claude</h4>
-      <p>Claude Sonnet 4，需翻墙或中转</p>
+      <h4>Claude (Anthropic) <span class="tag hot">主流</span></h4>
+      <p>Claude Sonnet 4 / Opus 4</p>
       <a class="buy-link" href="https://console.anthropic.com/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="gemini" data-base="https://generativelanguage.googleapis.com/v1beta/openai" data-model="gemini-2.5-pro">
+      <span class="check">✓</span>
+      <h4>Google Gemini <span class="tag free">有免费</span></h4>
+      <p>gemini-2.5-pro / gemini-2.5-flash</p>
+      <a class="buy-link" href="https://aistudio.google.com/apikey" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="mistral" data-base="https://api.mistral.ai/v1" data-model="mistral-large-latest">
+      <span class="check">✓</span>
+      <h4>Mistral</h4>
+      <p>mistral-large / mistral-medium</p>
+      <a class="buy-link" href="https://console.mistral.ai/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="xai" data-base="https://api.x.ai/v1" data-model="grok-3">
+      <span class="check">✓</span>
+      <h4>xAI Grok</h4>
+      <p>grok-3 / grok-3-mini</p>
+      <a class="buy-link" href="https://console.x.ai/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="cohere" data-base="https://api.cohere.com/v2" data-model="command-a-03-2025">
+      <span class="check">✓</span>
+      <h4>Cohere</h4>
+      <p>Command A / Command R+</p>
+      <a class="buy-link" href="https://dashboard.cohere.com/" target="_blank">→ 获取 API Key</a>
     </div>
     <div class="model-card" data-provider="groq" data-base="https://api.groq.com/openai/v1" data-model="llama-3.3-70b-versatile">
       <span class="check">✓</span>
@@ -457,10 +519,36 @@ footer { text-align: center; padding: 40px 20px; font-size: 12px; color: var(--t
       <p>Llama 3.3 70B，超高速推理</p>
       <a class="buy-link" href="https://console.groq.com/" target="_blank">→ 获取 API Key</a>
     </div>
+    <div class="model-card" data-provider="perplexity" data-base="https://api.perplexity.ai" data-model="sonar-pro">
+      <span class="check">✓</span>
+      <h4>Perplexity</h4>
+      <p>sonar-pro，联网搜索增强</p>
+      <a class="buy-link" href="https://www.perplexity.ai/settings/api" target="_blank">→ 获取 API Key</a>
+    </div>
+    <!-- ═══ 聚合平台 ═══ -->
+    <div class="model-card" data-provider="openrouter" data-base="https://openrouter.ai/api/v1" data-model="anthropic/claude-sonnet-4">
+      <span class="check">✓</span>
+      <h4>OpenRouter <span class="tag hot">聚合</span></h4>
+      <p>一个 Key 用所有模型（Claude/GPT/Gemini/...）</p>
+      <a class="buy-link" href="https://openrouter.ai/keys" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="together" data-base="https://api.together.xyz/v1" data-model="meta-llama/Llama-3.3-70B-Instruct-Turbo">
+      <span class="check">✓</span>
+      <h4>Together AI <span class="tag cheap">便宜</span></h4>
+      <p>Llama / Qwen / Mixtral 等开源模型</p>
+      <a class="buy-link" href="https://api.together.xyz/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <div class="model-card" data-provider="fireworks" data-base="https://api.fireworks.ai/inference/v1" data-model="accounts/fireworks/models/llama-v3p3-70b-instruct">
+      <span class="check">✓</span>
+      <h4>Fireworks AI <span class="tag fast">快</span></h4>
+      <p>开源模型高速推理</p>
+      <a class="buy-link" href="https://fireworks.ai/" target="_blank">→ 获取 API Key</a>
+    </div>
+    <!-- ═══ 自定义 + 本地 ═══ -->
     <div class="model-card" data-provider="custom" data-base="" data-model="" style="grid-column:1/-1;border-style:dashed;">
       <span class="check">✓</span>
       <h4>自定义 API <span class="tag">OpenAI 兼容</span></h4>
-      <p>填写任意 OpenAI 兼容 API（OpenRouter、API2D、OneAPI 等）</p>
+      <p>填写任意 OpenAI 兼容 API（API2D、OneAPI、自建中转等）</p>
     </div>
     <div class="model-card" data-provider="lmstudio" data-base="http://127.0.0.1:1234/v1" data-model="" style="grid-column:1/-1;border-color:rgba(139,92,246,0.3);">
       <span class="check">✓</span>
