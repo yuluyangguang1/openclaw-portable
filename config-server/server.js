@@ -454,6 +454,130 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+
+  // API: Update — check for new release from GitHub
+  if (req.url === '/api/update/check' && req.method === 'GET') {
+    (async () => {
+      try {
+        const r = await fetch('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
+          headers: { 'User-Agent': 'OpenClawPortable' }
+        });
+        if (!r.ok) throw new Error('GitHub API error: ' + r.status);
+        const release = await r.json();
+        const latestTag = release.tag_name || '';
+        const currentVer = fs.existsSync(path.join(__dirname, '../OPENCLAW_VERSION'))
+          ? fs.readFileSync(path.join(__dirname, '../OPENCLAW_VERSION'), 'utf8').trim()
+          : 'unknown';
+        const isNewer = latestTag.replace(/^v/, '') !== currentVer;
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({
+          ok: true,
+          current: currentVer,
+          latest: latestTag,
+          isNewer,
+          downloadUrl: release.assets && release.assets[0] ? release.assets[0].browser_download_url : null,
+          releaseUrl: release.html_url,
+          body: (release.body || '').slice(0, 500)
+        }));
+      } catch (err) {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    })();
+    return;
+  }
+
+  // API: Update — download and apply update
+  if (req.url === '/api/update/apply' && req.method === 'POST') {
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({ ok: true, message: 'Update started. The process will restart when complete.' }));
+
+    // Run update in background
+    setTimeout(async () => {
+      try {
+        const { execSync } = require('child_process');
+        const tmpZip = path.join(require('os').tmpdir(), 'openclaw-portable-update.zip');
+        const baseDir = path.join(__dirname, '..');
+
+        // 1. Get latest release download URL
+        const r = await fetch('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
+          headers: { 'User-Agent': 'OpenClawPortable' }
+        });
+        const release = await r.json();
+        const downloadUrl = release.assets && release.assets[0] ? release.assets[0].browser_download_url : null;
+        if (!downloadUrl) { console.error('Update: no download URL found'); return; }
+
+        // 2. Download zip
+        console.log('Update: downloading from ' + downloadUrl);
+        execSync(`curl -fSL -o "${tmpZip}" "${downloadUrl}"`, { timeout: 300000 });
+
+        // 3. Extract (skip data/ and app/runtime/ to preserve user data and node runtime)
+        console.log('Update: extracting...');
+        const extractDir = path.join(require('os').tmpdir(), 'openclaw-portable-extract');
+        execSync(`rm -rf "${extractDir}" && mkdir -p "${extractDir}"`);
+
+        if (process.platform === 'win32') {
+          execSync(`powershell -Command "Expand-Archive -Force '${tmpZip}' '${extractDir}'"`, { timeout: 60000 });
+        } else {
+          execSync(`unzip -qo "${tmpZip}" -d "${extractDir}"`, { timeout: 60000 });
+        }
+
+        // Find the root dir inside the zip (might be nested)
+        const entries = fs.readdirSync(extractDir);
+        let srcDir = extractDir;
+        if (entries.length === 1 && fs.statSync(path.join(extractDir, entries[0])).isDirectory()) {
+          srcDir = path.join(extractDir, entries[0]);
+        }
+
+        // 4. Copy files (skip data/, app/runtime/, .git/)
+        const skipDirs = ['data', '.git'];
+        const skipFiles = [];
+        const copyRecursive = (src, dest) => {
+          const items = fs.readdirSync(src, { withFileTypes: true });
+          for (const item of items) {
+            const srcPath = path.join(src, item.name);
+            const destPath = path.join(dest, item.name);
+            const relPath = path.relative(srcDir, srcPath);
+
+            // Skip protected directories
+            if (skipDirs.some(d => relPath === d || relPath.startsWith(d + path.sep))) continue;
+            // Skip runtime (preserve existing node binary)
+            if (relPath.startsWith('app' + path.sep + 'runtime')) continue;
+
+            if (item.isDirectory()) {
+              fs.mkdirSync(destPath, { recursive: true });
+              copyRecursive(srcPath, destPath);
+            } else {
+              fs.copyFileSync(srcPath, destPath);
+            }
+          }
+        };
+
+        copyRecursive(srcDir, baseDir);
+        console.log('Update: files copied');
+
+        // 5. Cleanup
+        fs.rmSync(tmpZip, { force: true });
+        fs.rmSync(extractDir, { recursive: true, force: true });
+
+        // 6. Update OPENCLAW_VERSION if present in new release
+        const newVerFile = path.join(baseDir, 'OPENCLAW_VERSION');
+        if (fs.existsSync(newVerFile)) {
+          console.log('Update: new version = ' + fs.readFileSync(newVerFile, 'utf8').trim());
+        }
+
+        console.log('Update: complete! Restarting config server...');
+
+        // 7. Restart self
+        setTimeout(() => { process.exit(0); }, 1000);
+      } catch (err) {
+        console.error('Update failed:', err.message);
+      }
+    }, 500);
+    return;
+  }
+
+
   // API: Restart gateway — kills the gateway process and re-launches it.
   // The config-server itself stays alive; only the gateway (openclaw.mjs)
   // is restarted so the new config takes effect without the user having

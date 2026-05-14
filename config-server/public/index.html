@@ -871,10 +871,24 @@ async function checkGateway() {
 
 // ===== RUN COMMAND =====
 function runCmd(cmd) {
-  if (cmd === 'restart' || cmd === 'update') {
-    showToast('\u6b63\u5728\u6267\u884c ' + cmd + '...', 'info');
+  if (cmd === 'update') {
+    showToast('\u6b63\u5728\u68c0\u67e5\u66f4\u65b0...', 'info');
+    fetch('/api/update/check').then(function(r){return r.json();}).then(function(data){
+      if (!data.ok) { showToast(data.error || '\u68c0\u67e5\u5931\u8d25', 'error'); return; }
+      if (!data.isNewer) { showToast('\u5df2\u662f\u6700\u65b0\u7248\u672c ('+data.current+')', 'success'); return; }
+      showModal('\u53d1\u73b0\u65b0\u7248\u672c',
+        '<p>\u5f53\u524d: <strong>'+data.current+'</strong> \u2192 \u6700\u65b0: <strong>'+data.latest+'</strong></p>' +
+        (data.body ? '<p style="margin-top:12px;font-size:0.82em;color:#8aaa9a;max-height:120px;overflow:auto;">'+data.body.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</p>' : ''),
+        [
+          {text:'\u7a0d\u540e\u518d\u8bf4', cls:'btn', action:'closeModal()'},
+          {text:'\u7acb\u5373\u66f4\u65b0', cls:'btn btn-primary', action:'doUpdate()'}
+        ]
+      );
+    }).catch(function(e){ showToast('\u68c0\u67e5\u5931\u8d25: '+e.message, 'error'); });
+  } else if (cmd === 'restart') {
+    showToast('\u6b63\u5728\u91cd\u542f...', 'info');
     fetch('/api/restart', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
-      showToast(cmd + ' \u6307\u4ee4\u5df2\u53d1\u9001', 'success');
+      showToast('\u91cd\u542f\u6307\u4ee4\u5df2\u53d1\u9001', 'success');
       document.getElementById('restartBanner').style.display = 'none';
       setTimeout(checkGateway, 4000);
     }).catch(function(e){ showToast('\u5931\u8d25: '+e.message, 'error'); });
@@ -883,6 +897,27 @@ function runCmd(cmd) {
       {text:'\u597d', cls:'btn btn-primary', action:'closeModal()'}
     ]);
   }
+}
+
+function doUpdate() {
+  closeModal();
+  showToast('\u6b63\u5728\u4e0b\u8f7d\u66f4\u65b0\uff0c\u8bf7\u7a0d\u5019...', 'info');
+  fetch('/api/update/apply', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
+    if (data.ok) {
+      showToast('\u66f4\u65b0\u5df2\u542f\u52a8\uff0c\u5b8c\u6210\u540e\u9875\u9762\u4f1a\u81ea\u52a8\u5237\u65b0', 'success');
+      // Poll for server restart
+      var attempts = 0;
+      var poll = setInterval(function(){
+        attempts++;
+        if (attempts > 60) { clearInterval(poll); showToast('\u66f4\u65b0\u8d85\u65f6\uff0c\u8bf7\u624b\u52a8\u91cd\u542f', 'error'); return; }
+        fetch('/api/heartbeat').then(function(r){
+          if (r.ok) { clearInterval(poll); location.reload(); }
+        }).catch(function(){});
+      }, 3000);
+    } else {
+      showToast(data.error || '\u66f4\u65b0\u5931\u8d25', 'error');
+    }
+  }).catch(function(e){ showToast('\u66f4\u65b0\u5931\u8d25: '+e.message, 'error'); });
 }
 
 // ===== EXPORT / IMPORT CONFIG =====
