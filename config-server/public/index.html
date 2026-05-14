@@ -858,46 +858,38 @@ function goStep(n) {
 // ===== TOAST =====
 function showToast(msg, type) {
   type = type || 'info';
-  let container = document.getElementById('toast-container');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'toast-container';
-    container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px;';
-    document.body.appendChild(container);
-  }
-  const toast = document.createElement('div');
-  toast.className = 'toast toast-' + type;
-  toast.textContent = msg;
-  toast.style.cssText = 'padding:12px 20px;border-radius:8px;color:#fff;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);cursor:pointer;transition:opacity 0.3s;max-width:360px;';
-  if (type === 'success') toast.style.background = '#10b981';
-  else if (type === 'error') toast.style.background = '#ef4444';
-  else if (type === 'warning') toast.style.background = '#f59e0b';
-  else toast.style.background = '#6366f1';
-  toast.onclick = function() { toast.remove(); };
-  container.appendChild(toast);
-  setTimeout(function() { toast.style.opacity = '0'; setTimeout(function() { toast.remove(); }, 300); }, 4000);
+  var container = document.getElementById('toastContainer');
+  if (!container) return;
+  var el = document.createElement('div');
+  el.className = 'toast-item ' + type;
+  el.textContent = msg;
+  container.appendChild(el);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.classList.add('show'); }); });
+  el.onclick = function() { el.remove(); };
+  setTimeout(function(){ el.classList.remove('show'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 300); }, 4000);
 }
 
 // ===== MODAL =====
 function showModal(title, body, btns) {
-  let overlay = document.getElementById('modal-overlay');
-  if (overlay) overlay.remove();
-  overlay = document.createElement('div');
-  overlay.id = 'modal-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-  const modal = document.createElement('div');
-  modal.style.cssText = 'background:#1e1e2e;border-radius:12px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.5);';
-  modal.innerHTML = '<h3 style="margin:0 0 12px;color:#e2e8f0;">' + title + '</h3>' + body +
-    '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
-    (btns || []).map(function(b) { return '<button class="' + b.cls + '" onclick="' + b.action + '">' + b.text + '</button>'; }).join('') + '</div>';
-  overlay.appendChild(modal);
-  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
-  document.body.appendChild(overlay);
+  var overlay = document.getElementById('modalOverlay');
+  if (!overlay) return;
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  var btnDiv = document.getElementById('modalBtns');
+  btnDiv.innerHTML = '';
+  (btns || []).forEach(function(b) {
+    var btn = document.createElement('button');
+    btn.className = b.cls || 'modal-btn-cancel';
+    btn.textContent = b.text;
+    btn.onclick = function() { eval(b.action); };
+    btnDiv.appendChild(btn);
+  });
+  overlay.classList.add('show');
 }
 
 function closeModal() {
-  const overlay = document.getElementById('modal-overlay');
-  if (overlay) overlay.remove();
+  var overlay = document.getElementById('modalOverlay');
+  if (overlay) overlay.classList.remove('show');
 }
 
 // ===== GATEWAY DETECTION =====
