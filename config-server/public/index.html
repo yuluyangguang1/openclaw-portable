@@ -425,9 +425,9 @@ footer { text-align: center; padding: 40px 20px; font-size: 11px; color: #4a7a6a
 <script>
 // ===== PROVIDERS =====
 const PROVIDERS = [
-  {id:'minimax',name:'MiniMax',tags:['hot','cn'],desc:'MiniMax API',base:'https://api.minimax.chat/v1',models:['MiniMax-M2.5','MiniMax-M2.7'],link:'https://platform.minimaxi.com/'},
-  {id:'kimi',name:'Kimi',tags:['hot','cn'],desc:'Moonshot AI',base:'https://api.moonshot.cn/v1',models:['kimi-k2.6','kimi-k2.5'],link:'https://platform.moonshot.cn/'},
-  {id:'deepseek',name:'DeepSeek',tags:['hot','cheap','cn'],desc:'DeepSeek AI',base:'https://api.deepseek.com/v1',models:['deepseek-v4-pro','deepseek-v4-flash','deepseek-chat','deepseek-reasoner'],link:'https://platform.deepseek.com/'},
+  {id:'minimax',name:'MiniMax',tags:['hot','cn'],desc:'M2.5 / M2.7 \u7f16\u7801\u4e0e Agent',base:'https://api.minimax.chat/v1',models:['MiniMax-M2.5','MiniMax-M2.7'],link:'https://platform.minimaxi.com/'},
+  {id:'kimi',name:'Kimi',tags:['hot','cn'],desc:'\u539f\u751f\u591a\u6a21\u6001 Agent',base:'https://api.moonshot.cn/v1',models:['kimi-k2.6','kimi-k2.5'],link:'https://platform.moonshot.cn/'},
+  {id:'deepseek',name:'DeepSeek',tags:['hot','cheap','cn'],desc:'1M \u4e0a\u4e0b\u6587\uff0c\u6027\u4ef7\u6bd4\u9ad8',base:'https://api.deepseek.com/v1',models:['deepseek-v4-pro','deepseek-v4-flash','deepseek-chat','deepseek-reasoner'],link:'https://platform.deepseek.com/'},
   {id:'zai',name:'\u667a\u8c31GLM',tags:['hot','cn'],desc:'\u667a\u8c31AI\u5f00\u653e\u5e73\u53f0',base:'https://open.bigmodel.cn/api/paas/v4',models:['glm-4-plus','glm-4-flash','glm-4-long'],link:'https://open.bigmodel.cn/'},
   {id:'qwen',name:'\u901a\u4e49\u5343\u95ee',tags:['hot','cn'],desc:'\u963f\u91cc\u4e91\u767e\u70bc',base:'https://dashscope.aliyuncs.com/compatible-mode/v1',models:['qwen3-235b-a22b','qwen-max','qwen-plus','qwen-turbo'],link:'https://dashscope.console.aliyun.com/'},
   {id:'doubao',name:'\u8c46\u5305',tags:['cn','fast'],desc:'\u5b57\u8282\u8df3\u52a8\u706b\u5c71\u5f15\u64ce',base:'https://ark.cn-beijing.volces.com/api/v3',models:['doubao-1.5-pro-32k','doubao-1.5-lite-32k'],link:'https://www.volcengine.com/product/doubao'},
@@ -438,17 +438,17 @@ const PROVIDERS = [
   {id:'hunyuan',name:'\u6df7\u5143',tags:['cn'],desc:'\u817e\u8baf\u6df7\u5143',base:'https://api.hunyuan.cloud.tencent.com/v1',models:['hunyuan-pro','hunyuan-lite'],link:'https://hunyuan.tencent.com/'},
   {id:'ernie',name:'\u6587\u5fc3\u4e00\u8a00',tags:['cn'],desc:'\u767e\u5ea6\u6587\u5fc3\u4e00\u8a00',base:'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat',models:['ernie-4.0-8k','ernie-3.5-8k'],link:'https://cloud.baidu.com/product/wenxinworkshop'},
   {id:'siliconflow',name:'SiliconFlow',tags:['cn','cheap'],desc:'\u56fd\u5185\u6a21\u578b\u805a\u5408',base:'https://api.siliconflow.cn/v1',models:['Qwen/Qwen2.5-72B-Instruct','deepseek-ai/DeepSeek-V3'],link:'https://siliconflow.cn/'},
-  {id:'openai',name:'OpenAI',tags:['hot'],desc:'GPT & o-series',base:'https://api.openai.com/v1',models:['gpt-4.1','gpt-4o','o3','o4-mini','gpt-4.1-mini'],link:'https://platform.openai.com/'},
-  {id:'anthropic',name:'Anthropic',tags:['hot'],desc:'Claude series',base:'https://api.anthropic.com/v1',models:['claude-sonnet-4-20250514','claude-opus-4-20250514','claude-haiku-3.5'],link:'https://console.anthropic.com/'},
-  {id:'gemini',name:'Gemini',tags:['hot','free'],desc:'Google AI',base:'https://generativelanguage.googleapis.com/v1beta/openai',models:['gemini-2.5-pro-preview-05-06','gemini-2.5-flash'],link:'https://aistudio.google.com/'},
-  {id:'mistral',name:'Mistral',tags:[],desc:'Mistral AI',base:'https://api.mistral.ai/v1',models:['mistral-large-latest','mistral-medium-latest'],link:'https://console.mistral.ai/'},
-  {id:'xai',name:'xAI',tags:['fast'],desc:'Grok series',base:'https://api.x.ai/v1',models:['grok-3-fast','grok-3','grok-3-mini'],link:'https://console.x.ai/'},
-  {id:'cohere',name:'Cohere',tags:[],desc:'Command series',base:'https://api.cohere.com/v2',models:['command-a-03-2025','command-r-plus'],link:'https://dashboard.cohere.com/'},
+  {id:'openai',name:'OpenAI',tags:['hot'],desc:'GPT-4.1 / 4o / o3 / o4-mini',base:'https://api.openai.com/v1',models:['gpt-4.1','gpt-4o','o3','o4-mini','gpt-4.1-mini'],link:'https://platform.openai.com/'},
+  {id:'anthropic',name:'Anthropic',tags:['hot'],desc:'Sonnet 4 / Opus 4 / Haiku 3.5',base:'https://api.anthropic.com/v1',models:['claude-sonnet-4-20250514','claude-opus-4-20250514','claude-haiku-3.5'],link:'https://console.anthropic.com/'},
+  {id:'gemini',name:'Gemini',tags:['hot','free'],desc:'2.5-pro / 2.5-flash',base:'https://generativelanguage.googleapis.com/v1beta/openai',models:['gemini-2.5-pro-preview-05-06','gemini-2.5-flash'],link:'https://aistudio.google.com/'},
+  {id:'mistral',name:'Mistral',tags:[],desc:'large / medium',base:'https://api.mistral.ai/v1',models:['mistral-large-latest','mistral-medium-latest'],link:'https://console.mistral.ai/'},
+  {id:'xai',name:'xAI',tags:['fast'],desc:'grok-3 / 3-fast / 3-mini',base:'https://api.x.ai/v1',models:['grok-3-fast','grok-3','grok-3-mini'],link:'https://console.x.ai/'},
+  {id:'cohere',name:'Cohere',tags:[],desc:'Command A / R+',base:'https://api.cohere.com/v2',models:['command-a-03-2025','command-r-plus'],link:'https://dashboard.cohere.com/'},
   {id:'groq',name:'Groq',tags:['fast','free'],desc:'\u6781\u901f\u63a8\u7406',base:'https://api.groq.com/openai/v1',models:['llama-3.3-70b-versatile','mixtral-8x7b-32768'],link:'https://console.groq.com/'},
   {id:'perplexity',name:'Perplexity',tags:[],desc:'\u8054\u7f51\u641c\u7d22',base:'https://api.perplexity.ai',models:['sonar-pro','sonar'],link:'https://www.perplexity.ai/settings/api'},
   {id:'openrouter',name:'OpenRouter',tags:['hot'],desc:'\u6a21\u578b\u805a\u5408\u5e73\u53f0',base:'https://openrouter.ai/api/v1',models:['anthropic/claude-sonnet-4','openai/gpt-4.1','google/gemini-2.5-pro'],link:'https://openrouter.ai/'},
-  {id:'together',name:'Together',tags:['cheap'],desc:'Together AI',base:'https://api.together.xyz/v1',models:['meta-llama/Llama-3.3-70B-Instruct-Turbo','Qwen/Qwen2.5-72B-Instruct-Turbo'],link:'https://api.together.xyz/'},
-  {id:'fireworks',name:'Fireworks',tags:['fast'],desc:'Fireworks AI',base:'https://api.fireworks.ai/inference/v1',models:['accounts/fireworks/models/llama-v3p3-70b-instruct'],link:'https://fireworks.ai/'},
+  {id:'together',name:'Together',tags:['cheap'],desc:'\u5f00\u6e90\u6a21\u578b\u6258\u7ba1',base:'https://api.together.xyz/v1',models:['meta-llama/Llama-3.3-70B-Instruct-Turbo','Qwen/Qwen2.5-72B-Instruct-Turbo'],link:'https://api.together.xyz/'},
+  {id:'fireworks',name:'Fireworks',tags:['fast'],desc:'\u9ad8\u901f\u63a8\u7406',base:'https://api.fireworks.ai/inference/v1',models:['accounts/fireworks/models/llama-v3p3-70b-instruct'],link:'https://fireworks.ai/'},
   {id:'custom',name:'\u81ea\u5b9a\u4e49/\u4e2d\u8f6c\u7ad9',tags:[],desc:'\u81ea\u5b9a\u4e49API\u7aef\u70b9',base:'',models:[],link:'',isCustom:true},
   {id:'lmstudio',name:'LM Studio',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:1234/v1',models:[],link:'https://lmstudio.ai/',isLocal:true},
   {id:'ollama',name:'Ollama',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:11434/v1',models:[],link:'https://ollama.com/',isLocal:true}
@@ -462,8 +462,8 @@ const CHANNELS = [
   {id:'wecom',name:'\u4f01\u4e1a\u5fae\u4fe1',icon:'\ud83c\udfe2',fields:[{key:'botId',label:'Bot ID',type:'text'},{key:'secret',label:'Secret',type:'password'}]},
   {id:'discord',name:'Discord',icon:'\ud83c\udfae',fields:[{key:'token',label:'Bot Token',type:'password'}]},
   {id:'slack',name:'Slack',icon:'\ud83d\udcac',fields:[{key:'token',label:'Bot Token',type:'password'}]},
-  {id:'whatsapp',name:'WhatsApp',icon:'\ud83d\udcf1',hint:'docker run -p 3000:3000 openclaw/whatsapp-bridge',fields:[]},
-  {id:'signal',name:'Signal',icon:'\ud83d\udd12',hint:'docker run -p 3001:3001 openclaw/signal-bridge',fields:[]},
+  {id:'whatsapp',name:'WhatsApp',icon:'\ud83d\udcf1',hint:'openclaw channels login whatsapp',fields:[]},
+  {id:'signal',name:'Signal',icon:'\ud83d\udd12',hint:'openclaw channels login signal',fields:[]},
   {id:'line',name:'LINE',icon:'\ud83d\udfe2',fields:[{key:'channelAccessToken',label:'Channel Access Token',type:'password'},{key:'channelSecret',label:'Channel Secret',type:'password'}]},
   {id:'googlechat',name:'Google Chat',icon:'\ud83d\udcec',fields:[{key:'serviceAccountPath',label:'Service Account JSON Path',type:'text'}]},
   {id:'msteams',name:'MS Teams',icon:'\ud83d\udcbb',fields:[{key:'appId',label:'App ID',type:'text'},{key:'password',label:'Password',type:'password'}]},
@@ -492,7 +492,7 @@ let configData = null;
         '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
         '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
-        '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">\ud83d\udc41</button></div></div>';
+        '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">显示</button></div></div>';
     } else if (p.isLocal) {
       formHtml = '<div class="provider-expand">' +
         '<input type="text" class="input" placeholder="Port (default: ' + (p.base.match(/:(\d+)/)||[])[1] + ')" data-field="port" value="' + (p.base.match(/:(\d+)/)||[])[1] + '">' +
@@ -501,10 +501,10 @@ let configData = null;
     } else {
       const opts = p.models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
       formHtml = '<div class="provider-expand">' +
-        '<select class="input" data-field="model"><option value="">-- Select Model --</option>' + opts + '</select>' +
+        '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
         '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
-        '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">\ud83d\udc41</button></div>' +
-        '<a href="' + p.link + '" target="_blank" class="buy-link">\ud83d\udd11 Get API Key</a></div>';
+        '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">显示</button></div>' +
+        '<a href="' + p.link + '" target="_blank" class="buy-link">获取 Key →</a></div>';
     }
     return '<div class="provider-card" data-id="' + p.id + '" onclick="toggleProvider(this,\'' + p.id + '\')">' +
       '<div class="provider-header"><span class="provider-name">' + p.name + '</span>' + tagsHtml + '</div>' +
@@ -538,12 +538,12 @@ let configData = null;
         '<p class="hint" id="wechat-status"></p></div>';
     } else if (ch.hint) {
       formHtml = '<div class="provider-expand channel-form">' +
-        '<p class="hint">Run: <code>' + ch.hint + '</code></p>' +
+        '<p class="hint">\u7ec8\u7aef\u8fd0\u884c: <code>' + ch.hint + '</code></p>' +
         '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
     } else {
       const inputs = ch.fields.map(f =>
         '<div class="input-group"><input type="' + f.type + '" class="input" placeholder="' + f.label + '" data-channel="' + ch.id + '" data-key="' + f.key + '" id="ch-' + ch.id + '-' + f.key + '">' +
-        (f.type === 'password' ? '<button class="btn-icon" onclick="togglePw(\'' + ch.id + '-' + f.key + '\')">\ud83d\udc41</button>' : '') + '</div>'
+        (f.type === 'password' ? '<button class="btn-icon" onclick="togglePw(\'' + ch.id + '-' + f.key + '\')">显示</button>' : '') + '</div>'
       ).join('');
       formHtml = '<div class="provider-expand channel-form">' + inputs +
         '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
@@ -659,7 +659,7 @@ function testLocal(providerId) {
   const base = 'http://127.0.0.1:' + port + '/v1';
   fetch(base + '/models').then(r => r.json()).then(data => {
     if (data && data.data) {
-      showToast('\u2705 Connected! Found ' + data.data.length + ' models', 'success');
+      showToast('\u5df2\u8fde\u63a5\uff0c\u53d1\u73b0 ' + data.data.length + ' \u4e2a\u6a21\u578b', 'success');
       // Auto-fill model select if empty
       const modelInput = card.querySelector('[data-field="model"]');
       if (modelInput && !modelInput.value && data.data.length > 0) {
@@ -667,10 +667,10 @@ function testLocal(providerId) {
         updateSaveBtn();
       }
     } else {
-      showToast('\u26a0\ufe0f Connected but no models found', 'warning');
+      showToast('\u5df2\u8fde\u63a5\u4f46\u672a\u52a0\u8f7d\u6a21\u578b', 'warning');
     }
   }).catch(err => {
-    showToast('\u274c Connection failed: ' + err.message, 'error');
+    showToast('\u8fde\u63a5\u5931\u8d25: ' + err.message, 'error');
   });
 }
 
@@ -687,9 +687,9 @@ function testChannel(e, type) {
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({type: type, config: creds})
   }).then(r => r.json()).then(data => {
-    if (data.ok) showToast('\u2705 ' + type + ' connected!', 'success');
-    else showToast('\u274c ' + (data.error || 'Test failed'), 'error');
-  }).catch(err => showToast('\u274c ' + err.message, 'error'));
+    if (data.ok) showToast(type + ' \u8fde\u63a5\u6210\u529f', 'success');
+    else showToast((data.error || '\u8fde\u63a5\u5931\u8d25'), 'error');
+  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
 // ===== WECHAT LOGIN =====
@@ -708,7 +708,7 @@ function startWeChatLogin(e) {
       if (statusEl) statusEl.textContent = '\u274c ' + (data.error || 'Failed');
     }
   }).catch(err => {
-    if (statusEl) statusEl.textContent = '\u274c ' + err.message;
+    if (statusEl) statusEl.textContent = '\u7f51\u7edc\u9519\u8bef';
   });
 }
 
@@ -825,7 +825,7 @@ function saveChannelsAndOpen() {
     } else {
       showToast('\u274c ' + (data.error || 'Save failed'), 'error');
     }
-  }).catch(err => showToast('\u274c ' + err.message, 'error'));
+  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
 // ===== RESET CONFIG =====
@@ -853,7 +853,7 @@ function doReset() {
       goStep(1);
       updateSaveBtn();
     }
-  }).catch(err => showToast('\u274c ' + err.message, 'error'));
+  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
 // ===== GO STEP =====
@@ -992,7 +992,7 @@ function exportConfig() {
     a.href = url; a.download = 'openclaw-config.json'; a.click();
     URL.revokeObjectURL(url);
     showToast('\u2705 \u914d\u7f6e\u5df2\u5bfc\u51fa', 'success');
-  }).catch(err => showToast('\u274c ' + err.message, 'error'));
+  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
 function startImport() {
@@ -1036,7 +1036,7 @@ function viewConfig() {
       {text:'\u5173\u95ed',cls:'btn',action:'closeModal()'},
       {text:'\u590d\u5236',cls:'btn btn-primary',action:'navigator.clipboard.writeText(JSON.stringify(' + JSON.stringify(data).replace(/'/g,"\\'") + ',null,2));showToast("\u2705 Copied","success");closeModal()'}
     ]);
-  }).catch(err => showToast('\u274c ' + err.message, 'error'));
+  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
 // ===== INIT =====
