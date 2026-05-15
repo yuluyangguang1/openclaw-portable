@@ -852,6 +852,89 @@ function pollWeChatStatus() {
   }, 2000);
 }
 
+// ===== CONFIG SUMMARY =====
+function showConfigSummary(cfg) {
+  var el = document.getElementById('configSummary');
+  if (!el) return;
+  var provider = '?', model = '?', keyHint = '';
+  if (cfg.agents && cfg.agents.defaults && cfg.agents.defaults.model) {
+    var primary = cfg.agents.defaults.model.primary || '';
+    var parts = primary.split('/');
+    provider = parts[0] || '?';
+    model = parts.slice(1).join('/') || '?';
+  }
+  if (cfg.models && cfg.models.providers) {
+    var prov = cfg.models.providers[provider];
+    if (prov && prov.apiKey) {
+      var k = prov.apiKey;
+      keyHint = k.slice(0,4) + '...' + k.slice(-4);
+    }
+  }
+  el.style.display = 'block';
+  el.innerHTML = '\u5f53\u524d: <span style="color:var(--fg);">' + provider + '/' + model + '</span>' +
+    (keyHint ? ' \u00b7 Key: ' + keyHint : '');
+}
+
+function populateQuickSwitch(cfg) {
+  var el = document.getElementById('quickSwitch');
+  var sel = document.getElementById('quickModel');
+  if (!el || !sel) return;
+  var provider = '';
+  if (cfg.agents && cfg.agents.defaults && cfg.agents.defaults.model) {
+    provider = (cfg.agents.defaults.model.primary || '').split('/')[0];
+  }
+  var p = PROVIDERS.find(function(x){return x.id === provider;});
+  if (!p || !p.models || p.models.length <= 1) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  var currentModel = (cfg.agents.defaults.model.primary || '').split('/').slice(1).join('/');
+  sel.innerHTML = p.models.map(function(m){
+    return '<option value="'+m+'"'+(m===currentModel?' selected':'')+'>'+m+'</option>';
+  }).join('');
+}
+
+function quickSwitchModel() {
+  var sel = document.getElementById('quickModel');
+  if (!sel || !sel.value || !configData) return;
+  var provider = '';
+  if (configData.agents && configData.agents.defaults && configData.agents.defaults.model) {
+    provider = (configData.agents.defaults.model.primary || '').split('/')[0];
+  }
+  if (!provider) return;
+  // 更新 configData
+  configData.agents.defaults.model.primary = provider + '/' + sel.value;
+  // 同时更新 models 数组里的 id
+  if (configData.models && configData.models.providers && configData.models.providers[provider]) {
+    var prov = configData.models.providers[provider];
+    if (prov.models && prov.models[0]) {
+      prov.models[0].id = sel.value;
+      prov.models[0].name = sel.value;
+    }
+  }
+  // 保存并重启
+  fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configData)})
+    .then(function(r){return r.json();})
+    .then(function(data){
+      if (data.ok) {
+        showToast('\u5df2\u5207\u6362\u5230 ' + sel.value + '\uff0c\u91cd\u542f\u4e2d...', 'success');
+        showConfigSummary(configData);
+        fetch('/api/restart', {method:'POST'}).then(function(){
+          setTimeout(checkGateway, 4000);
+        });
+      }
+    });
+}
+
+function highlightCurrentProvider(cfg) {
+  if (!cfg.models || !cfg.models.providers) return;
+  var providerIds = Object.keys(cfg.models.providers);
+  if (providerIds.length === 0) return;
+  // 等 DOM 渲染完再高亮
+  setTimeout(function(){
+    var card = document.querySelector('.provider-card[data-id="'+providerIds[0]+'"]');
+    if (card) card.style.borderColor = 'var(--emerald-dim)';
+  }, 500);
+}
+
 // ===== BUILD CONFIG =====
 function buildConfig(provider, base, model, apiKey) {
   var bc = {
@@ -910,6 +993,9 @@ function saveConfig() {
       showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
       try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
       goStep(2);
+      // 显示配置摘要
+      showConfigSummary(cfg);
+      populateQuickSwitch(cfg);
       // 自动重启 Gateway 使新配置生效
       fetch('/api/restart', {method:'POST'}).then(function(){
         showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
@@ -1101,6 +1187,9 @@ async function checkGateway() {
     _gwOfflineCount = 0;
     _gwEverOnline = true;
     dot.className = 'dot on';
+    // 大按钮加在线指示
+    var launchBtn = document.querySelector('.btn-launch');
+    if (launchBtn) launchBtn.style.borderColor = 'var(--emerald)';
     text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank">\u6253\u5f00\u804a\u5929</a>';
   } else {
     _gwOfflineCount++;
@@ -1307,7 +1396,16 @@ function fetchT(url, opts) {
     var hasExisting = false;
     if (data && data.env && data.env.ZAI_API_KEY) hasExisting = true;
     if (data && data.models && data.models.providers && Object.keys(data.models.providers).length > 0) hasExisting = true;
-    if (hasExisting) { configData = data; goStep(2); }
+    if (hasExisting) {
+      configData = data;
+      goStep(2);
+      // Feature 3: 显示配置摘要
+      showConfigSummary(data);
+      // Feature 4: 填充快速切换下拉
+      populateQuickSwitch(data);
+      // Feature 5: 高亮当前 provider
+      highlightCurrentProvider(data);
+    }
     else goStep(1);
   }).catch(function() { goStep(1); });
 
