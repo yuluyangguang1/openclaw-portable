@@ -641,7 +641,9 @@ let configData = null;
         '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
         '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
         '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">显示</button></div>' +
-        '<a href="' + p.link + '" target="_blank" class="buy-link">获取 Key →</a></div>';
+        '<a href="' + p.link + '" target="_blank" class="buy-link">获取 Key →</a> ' +
+        '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+p.id+'\')">' +
+        '测试 Key</button><span id="keytest-'+p.id+'" style="margin-left:8px;font-size:0.78em;"></span></div>';
     }
     return '<div class="provider-card" data-id="' + p.id + '" onclick="toggleProvider(this,\'' + p.id + '\')">' +
       '<div class="provider-header"><span class="provider-name">' + p.name + '</span>' + tagsHtml + '</div>' +
@@ -866,6 +868,34 @@ function pollWeChatStatus() {
       }
     }).catch(() => {});
   }, 2000);
+}
+
+// ===== TEST API KEY =====
+function testKey(providerId) {
+  var p = PROVIDERS.find(function(x){return x.id===providerId;});
+  if (!p) return;
+  var card = document.querySelector('.provider-card[data-id="'+providerId+'"]');
+  if (!card) return;
+  var keyEl = card.querySelector('[data-field="apikey"]');
+  var key = keyEl ? keyEl.value.trim() : '';
+  if (!key || key.length < 6) { showToast('请先填写 API Key', 'error'); return; }
+  var resultEl = document.getElementById('keytest-'+providerId);
+  if (resultEl) resultEl.innerHTML = '<span style="color:var(--warning);">测试中...</span>';
+  fetch('/api/key/test', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({provider: providerId, baseUrl: p.base, apiKey: key})
+  }).then(function(r){return r.json();}).then(function(data){
+    if (resultEl) {
+      if (data.ok) {
+        resultEl.innerHTML = '<span style="color:var(--emerald);">有效' + (data.models ? ' ('+data.models+' 模型)' : '') + '</span>';
+      } else {
+        resultEl.innerHTML = '<span style="color:var(--destructive);">' + (data.error || '失败') + '</span>';
+      }
+    }
+  }).catch(function(){
+    if (resultEl) resultEl.innerHTML = '<span style="color:var(--destructive);">网络错误</span>';
+  });
 }
 
 // ===== PRESETS =====
