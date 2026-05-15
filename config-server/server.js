@@ -531,9 +531,22 @@ const server = http.createServer((req, res) => {
         const downloadUrl = release.assets && release.assets[0] ? release.assets[0].browser_download_url : null;
         if (!downloadUrl) { console.error('Update: no download URL found'); return; }
 
-        // 2. Download zip
+        // 2. Download zip via Node https (no curl dependency)
         console.log('Update: downloading from ' + downloadUrl);
-        execSync(`curl -fSL -o "${tmpZip}" "${downloadUrl}"`, { timeout: 300000 });
+        const https = require('https');
+        await new Promise((resolve, reject) => {
+          const doRequest = (u) => {
+            https.get(u, { headers: { 'User-Agent': 'OpenClawPortable' } }, (res) => {
+              if (res.statusCode === 301 || res.statusCode === 302) return doRequest(res.headers.location);
+              if (res.statusCode !== 200) return reject(new Error('HTTP ' + res.statusCode));
+              const file = fs.createWriteStream(tmpZip);
+              res.pipe(file);
+              file.on('finish', () => file.close(resolve));
+              file.on('error', reject);
+            }).on('error', reject);
+          };
+          doRequest(downloadUrl);
+        });
 
         // 3. Extract (skip data/ and app/runtime/ to preserve user data and node runtime)
         console.log('Update: extracting...');
@@ -543,7 +556,12 @@ const server = http.createServer((req, res) => {
         if (process.platform === 'win32') {
           execSync(`powershell -Command "Expand-Archive -Force '${tmpZip}' '${extractDir}'"`, { timeout: 60000 });
         } else {
-          execSync(`unzip -qo "${tmpZip}" -d "${extractDir}"`, { timeout: 60000 });
+          // Try unzip first, fallback to python -m zipfile if not installed
+          try {
+            execSync(`unzip -qo "${tmpZip}" -d "${extractDir}"`, { timeout: 60000 });
+          } catch (e) {
+            execSync(`python3 -m zipfile -e "${tmpZip}" "${extractDir}"`, { timeout: 60000 });
+          }
         }
 
         // Find the root dir inside the zip (might be nested)
@@ -553,8 +571,24 @@ const server = http.createServer((req, res) => {
           srcDir = path.join(extractDir, entries[0]);
         }
 
-        // 4. Copy files (skip data/, app/runtime/, .git/)
+        // 4. Backup current files for rollback
+        console.log('Update: backing up...');
+        fs.mkdirSync(backupDir, { recursive: true });
         const skipDirs = ['data', '.git'];
+        const backupRecursive = (src, dst) => {
+          if (!fs.existsSync(src)) return;
+          fs.mkdirSync(dst, { recursive: true });
+          for (const item of fs.readdirSync(src, { withFileTypes: true })) {
+            const rel = path.relative(baseDir, path.join(src, item.name));
+            if (skipDirs.some(d => rel === d || rel.startsWith(d + path.sep))) continue;
+            if (rel.startsWith('app' + path.sep + 'runtime')) continue;
+            if (item.isDirectory()) backupRecursive(path.join(src, item.name), path.join(dst, item.name));
+            else fs.copyFileSync(path.join(src, item.name), path.join(dst, item.name));
+          }
+        };
+        backupRecursive(baseDir, backupDir);
+
+        // 5. Copy files (skip data/, app/runtime/, .git/)
         const skipFiles = [];
         const copyRecursive = (src, dest) => {
           const items = fs.readdirSync(src, { withFileTypes: true });
