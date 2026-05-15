@@ -45,7 +45,7 @@
     pointer-events: none; z-index: 99;
     mix-blend-mode: lighten;
     opacity: 0.22;
-    background: radial-gradient(at 0 0, #ffbd3859, transparent 60%);
+    background: radial-gradient(ellipse at 0% 0%, rgba(255,189,56,0) 60%, rgba(255,189,56,0.35) 100%);
   }
 
   /* grain overlay */
@@ -71,8 +71,9 @@
   }
   .hero .logo { width: 72px; height: 72px; margin-bottom: 14px; opacity: 0.95; }
   .hero h1 {
-    font-size: 32px; font-weight: 400; letter-spacing: 4px;
+    font-size: 32px; font-weight: 600; letter-spacing: 4px;
     margin-bottom: 8px; color: var(--fg);
+    mix-blend-mode: plus-lighter;
   }
   .hero .tagline { font-size: 13px; color: var(--fg-muted); letter-spacing: 2px; font-family: var(--font-mono); }
   .hero .version {
@@ -142,8 +143,9 @@
   .step-section.active { max-height: 12000px; opacity: 1; margin-bottom: 16px; }
   .step-section.collapsed { max-height: 0; opacity: 0; margin-bottom: 0; border-color: transparent; }
   .step-section h2 {
-    color: var(--fg); font-size: 1.05em; font-weight: 500;
+    color: var(--fg); font-size: 1.05em; font-weight: 600;
     margin-bottom: 6px; letter-spacing: 1px;
+    mix-blend-mode: plus-lighter;
   }
   .step-section .desc { color: var(--fg-muted); font-size: 0.85em; margin-bottom: 18px; font-family: var(--font-mono); }
 
