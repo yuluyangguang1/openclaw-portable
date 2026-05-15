@@ -751,7 +751,69 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: Channel connectivity test (lightweight fetch-based)
+  // API: Test API Key validity (lightweight model list request)
+  if (req.url === '/api/key/test' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; if (body.length > 10000) req.destroy(); });
+    req.on('end', async () => {
+      try {
+        const { provider, baseUrl, apiKey } = JSON.parse(body);
+        if (!baseUrl || !apiKey) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: 'Missing baseUrl or apiKey'}));
+          return;
+        }
+        // Try to list models (most OpenAI-compatible APIs support GET /models)
+        const url = baseUrl.replace(/\/+$/, '') + '/models';
+        const https = require('https');
+        const http = require('http');
+        const mod = url.startsWith('https') ? https : http;
+        const headers = { 'Authorization': 'Bearer ' + apiKey, 'User-Agent': 'OpenClawPortable' };
+        // Special case: zhipu uses different auth
+        if (provider === 'zai') {
+          headers['Authorization'] = 'Bearer ' + apiKey;
+        }
+        const reqOpts = new URL(url);
+        const testReq = mod.get({
+          hostname: reqOpts.hostname,
+          port: reqOpts.port,
+          path: reqOpts.pathname + reqOpts.search,
+          headers: headers,
+          timeout: 10000,
+        }, (resp) => {
+          let data = '';
+          resp.on('data', c => { data += c; if (data.length > 50000) resp.destroy(); });
+          resp.on('end', () => {
+            res.writeHead(200, {'Content-Type':'application/json'});
+            if (resp.statusCode >= 200 && resp.statusCode < 300) {
+              let modelCount = 0;
+              try { modelCount = JSON.parse(data).data ? JSON.parse(data).data.length : 0; } catch(e) {}
+              res.end(JSON.stringify({ok: true, models: modelCount, status: resp.statusCode}));
+            } else if (resp.statusCode === 401 || resp.statusCode === 403) {
+              res.end(JSON.stringify({ok: false, error: 'Key 无效或已过期 (HTTP ' + resp.statusCode + ')'}));
+            } else {
+              res.end(JSON.stringify({ok: false, error: 'HTTP ' + resp.statusCode}));
+            }
+          });
+        });
+        testReq.on('error', (err) => {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: '连接失败: ' + err.message}));
+        });
+        testReq.on('timeout', () => {
+          testReq.destroy();
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: '连接超时 (10s)'}));
+        });
+      } catch(err) {
+        res.writeHead(200, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ok: false, error: err.message}));
+      }
+    });
+    return;
+  }
+
+    // API: Channel connectivity test (lightweight fetch-based)
   if (req.url === '/api/channel/test' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => {
