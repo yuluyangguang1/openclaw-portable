@@ -613,8 +613,29 @@ const server = http.createServer((req, res) => {
       } catch (err) {
         console.error('Update failed:', err.message);
         cleanupTmp();
-        // Note: full rollback would require copying backup back, skipped for simplicity
-        // The user can re-download from GitHub Releases manually
+        // Rollback: restore from backup if it exists
+        if (fs.existsSync(backupDir)) {
+          console.error('Update: rolling back from backup...');
+          try {
+            const restoreRecursive = (src, dst) => {
+              for (const item of fs.readdirSync(src, { withFileTypes: true })) {
+                const srcP = path.join(src, item.name);
+                const dstP = path.join(dst, item.name);
+                if (item.isDirectory()) {
+                  fs.mkdirSync(dstP, { recursive: true });
+                  restoreRecursive(srcP, dstP);
+                } else {
+                  fs.copyFileSync(srcP, dstP);
+                }
+              }
+            };
+            restoreRecursive(backupDir, baseDir);
+            console.error('Update: rollback complete');
+          } catch (rbErr) {
+            console.error('Update: rollback failed:', rbErr.message);
+          }
+          try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
+        }
       }
     }, 500);
     return;
