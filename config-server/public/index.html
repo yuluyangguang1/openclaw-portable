@@ -1068,20 +1068,29 @@ function openGateway() {
 }
 
 var _gwOfflineCount = 0;
+var _gwEverOnline = false;
 async function checkGateway() {
   var dot = document.getElementById('statusDot');
   var text = document.getElementById('statusText');
   var port = await findGatewayPort();
   if (port) {
     _gwOfflineCount = 0;
+    _gwEverOnline = true;
     dot.className = 'dot on';
     text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank">\u6253\u5f00\u804a\u5929</a>';
   } else {
-    // 临时失败不立即显示离线，连续 2 次失败才更新 UI
     _gwOfflineCount++;
     if (_gwOfflineCount >= 2) {
-      dot.className = 'dot off';
-      text.innerHTML = 'Gateway \u672a\u542f\u52a8 \u00b7 \u8bf7\u8fd0\u884c\u542f\u52a8\u811a\u672c';
+      if (!_gwEverOnline && _gwOfflineCount < 40) {
+        // 首次启动：Gateway 还在安装插件，显示等待提示
+        dot.className = 'dot off';
+        dot.style.background = 'var(--warning)';
+        text.innerHTML = 'Gateway \u542f\u52a8\u4e2d\u2026 \u9996\u6b21\u542f\u52a8\u9700\u8981 2-5 \u5206\u949f\u5b89\u88c5\u63d2\u4ef6';
+      } else {
+        dot.className = 'dot off';
+        dot.style.background = '';
+        text.innerHTML = 'Gateway \u672a\u542f\u52a8 \u00b7 \u8bf7\u8fd0\u884c\u542f\u52a8\u811a\u672c';
+      }
     }
   }
 }
