@@ -948,7 +948,14 @@ function saveChannelsAndOpen() {
   });
 
   if (Object.keys(channels).length === 0) {
-    openGateway();
+    // 等 Gateway 重启完成再打开（saveConfig 已触发重启）
+    showToast('\u7b49\u5f85 Gateway \u5c31\u7eea...', 'info');
+    var _waitOpen = setInterval(function(){
+      findGatewayPort().then(function(port){
+        if (port) { clearInterval(_waitOpen); openGateway(); }
+      });
+    }, 2000);
+    setTimeout(function(){ clearInterval(_waitOpen); openGateway(); }, 15000);
     return;
   }
 
@@ -962,8 +969,10 @@ function saveChannelsAndOpen() {
     });
   }).then(r => r.json()).then(data => {
     if (data.ok) {
-      showToast('\u2705 \u6e20\u9053\u914d\u7f6e\u5df2\u4fdd\u5b58!', 'success');
-      openGateway();
+      showToast('\u6e20\u9053\u5df2\u4fdd\u5b58\uff0c\u91cd\u542f Gateway...', 'success');
+      fetch('/api/restart', {method:'POST'}).then(function(){
+        setTimeout(function(){ openGateway(); }, 5000);
+      });
     } else {
       showToast('\u274c ' + (data.error || 'Save failed'), 'error');
     }
@@ -983,7 +992,8 @@ function doReset() {
   var defaultCfg = {gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}}};
   fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaultCfg)}).then(function(r){return r.json();}).then(function(data) {
     if (data.ok) {
-      showToast('\u2705 \u5df2\u91cd\u7f6e', 'success');
+      showToast('\u5df2\u91cd\u7f6e\uff0c\u91cd\u542f Gateway...', 'success');
+      fetch('/api/restart', {method:'POST'}).catch(function(){});
       selectedProvider = null;
       selectedBase = '';
       selectedModel = '';
