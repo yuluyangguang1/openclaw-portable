@@ -510,10 +510,18 @@ const server = http.createServer((req, res) => {
 
     // Run update in background
     setTimeout(async () => {
+      const { execSync } = require('child_process');
+      const tmpZip = path.join(require('os').tmpdir(), 'openclaw-portable-update.zip');
+      const tmpExtract = path.join(require('os').tmpdir(), 'openclaw-portable-extract');
+      const baseDir = path.join(__dirname, '..');
+      const backupDir = path.join(require('os').tmpdir(), 'openclaw-update-backup-' + Date.now());
+
+      const cleanupTmp = () => {
+        try { fs.rmSync(tmpZip, { force: true }); } catch(e) {}
+        try { fs.rmSync(tmpExtract, { recursive: true, force: true }); } catch(e) {}
+      };
+
       try {
-        const { execSync } = require('child_process');
-        const tmpZip = path.join(require('os').tmpdir(), 'openclaw-portable-update.zip');
-        const baseDir = path.join(__dirname, '..');
 
         // 1. Get latest release download URL
         const r = await fetch('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
@@ -584,10 +592,29 @@ const server = http.createServer((req, res) => {
 
         console.log('Update: complete! Restarting config server...');
 
-        // 7. Restart self
-        setTimeout(() => { process.exit(0); }, 1000);
+        // 7. Cleanup temp files
+        cleanupTmp();
+        try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
+
+        // 8. Restart self by spawning new node process and exiting
+        setTimeout(() => {
+          try {
+            const { spawn } = require('child_process');
+            const child = spawn(process.execPath, [__filename], {
+              detached: true,
+              stdio: 'ignore',
+              cwd: __dirname,
+              env: process.env,
+            });
+            child.unref();
+          } catch(e) { console.error('Failed to respawn:', e.message); }
+          setTimeout(() => process.exit(0), 500);
+        }, 1000);
       } catch (err) {
         console.error('Update failed:', err.message);
+        cleanupTmp();
+        // Note: full rollback would require copying backup back, skipped for simplicity
+        // The user can re-download from GitHub Releases manually
       }
     }, 500);
     return;
@@ -622,7 +649,15 @@ const server = http.createServer((req, res) => {
           try {
             const pids = execSync(`lsof -ti :${p} 2>/dev/null || ss -tlnp 2>/dev/null | grep ":${p} " | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p'`, {encoding:'utf8', timeout:5000}).trim();
             for (const pid of pids.split('\n').filter(Boolean)) {
-              try { process.kill(parseInt(pid), 'SIGTERM'); } catch(e) {}
+              // 先确认是 openclaw/node 相关进程，避免误杀
+              try {
+                const cmd = execSync(`ps -p ${pid} -o command= 2>/dev/null`, {encoding:'utf8', timeout:2000});
+                if (cmd && (cmd.includes('openclaw') || cmd.includes('node'))) {
+                  process.kill(parseInt(pid), 'SIGTERM');
+                }
+              } catch(e) {
+                // ps 失败时不冒险杀进程
+              }
             }
           } catch(e) {}
         }
