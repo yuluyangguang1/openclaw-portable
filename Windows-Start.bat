@@ -54,6 +54,7 @@ set "NPM_BIN=!NODE_DIR!\npm.cmd"
 
 set "OPENCLAW_HOME=!DATA_DIR!"
 set "OPENCLAW_STATE_DIR=!STATE_DIR!"
+set "OPENCLAW_DISABLE_BONJOUR=1"
 set "OPENCLAW_CONFIG_PATH=!STATE_DIR!\openclaw.json"
 
 REM Check runtime
