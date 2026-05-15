@@ -474,6 +474,13 @@
 <div class="step-section active" id="step1"><div style="padding:24px;">
   <h2>选择模型平台</h2>
   <p class="desc">点击展开 → 选择模型 → 填写密钥 → 保存</p>
+  <!-- 一键预设 -->
+  <div id="presetArea" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.78em;">一键 DeepSeek</button>
+    <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4')" style="font-size:0.78em;">一键 OpenRouter</button>
+    <button class="io-btn" onclick="applyPreset('gemini','gemini-2.5-flash')" style="font-size:0.78em;">一键 Gemini (免费)</button>
+  </div>
+
   <div class="model-grid" id="providerGrid"></div>
   <div class="btn-row">
     <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled>保存并继续 →</button>
@@ -494,6 +501,15 @@
     <div class="cmd-card" onclick="runCmd('doctor')"><div class="cmd-icon">⚕</div><div class="cmd-name">诊断</div><div class="cmd-desc">检查运行环境</div></div>
     <div class="cmd-card" onclick="runCmd('onboard')"><div class="cmd-icon">→</div><div class="cmd-name">引导</div><div class="cmd-desc">初始化设置</div></div>
     <div class="cmd-card" onclick="runCmd('restart')"><div class="cmd-icon">⟳</div><div class="cmd-name">重启</div><div class="cmd-desc">使配置生效</div></div>
+  </div>
+
+  <!-- 技能列表 -->
+  <div style="margin-top:20px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">已安装技能</h3>
+      <button class="io-btn" onclick="loadSkills()" style="font-size:0.75em;">刷新</button>
+    </div>
+    <div id="skillsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>
   </div>
 
   <!-- 渠道配置 -->
@@ -850,6 +866,35 @@ function pollWeChatStatus() {
       }
     }).catch(() => {});
   }, 2000);
+}
+
+// ===== PRESETS =====
+function applyPreset(providerId, modelName) {
+  // 展开对应卡片
+  var card = document.querySelector('.provider-card[data-id="'+providerId+'"]');
+  if (card) {
+    toggleProvider(card, providerId);
+    // 等 DOM 更新后填充
+    setTimeout(function(){
+      var c = document.querySelector('.provider-card[data-id="'+providerId+'"]');
+      if (!c) return;
+      // 选择模型
+      var sel = c.querySelector('[data-field="model"]');
+      if (sel) {
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value === modelName) { sel.selectedIndex = i; break; }
+        }
+      }
+      // 聚焦 API Key 输入框
+      var keyInput = c.querySelector('[data-field="apikey"]');
+      if (keyInput) {
+        keyInput.focus();
+        keyInput.placeholder = '粘贴你的 ' + providerId + ' API Key';
+      }
+      updateSaveBtn();
+      showToast('已选择 ' + providerId + '/' + modelName + '，请填写 API Key', 'info');
+    }, 200);
+  }
 }
 
 // ===== CONFIG SUMMARY =====
@@ -1276,6 +1321,34 @@ function doUpdate() {
     }
   }).catch(function(e){ showToast('\u66f4\u65b0\u5931\u8d25: '+e.message, 'error'); });
 }
+
+// ===== SKILLS =====
+var SKILLS_CN = [
+  {id:'china-search', name:'国内搜索', desc:'百度/搜狗搜索'},
+  {id:'china-translate', name:'中英翻译', desc:'翻译工具'},
+  {id:'china-weather', name:'天气查询', desc:'城市天气'},
+  {id:'xiaohongshu-writer', name:'小红书文案', desc:'种草笔记'},
+  {id:'zhihu-writer', name:'知乎回答', desc:'专业回答'},
+  {id:'weibo-poster', name:'微博文案', desc:'热点文案'},
+  {id:'wechat-article', name:'公众号文章', desc:'长文写作'},
+  {id:'bilibili-helper', name:'B站助手', desc:'视频文案'},
+  {id:'douyin-script', name:'抖音脚本', desc:'短视频脚本'},
+  {id:'deepseek-helper', name:'DeepSeek增强', desc:'深度思考'}
+];
+
+function loadSkills() {
+  var el = document.getElementById('skillsList');
+  if (!el) return;
+  el.innerHTML = SKILLS_CN.map(function(s){
+    return '<div style="background:var(--secondary);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">' +
+      '<div style="color:var(--fg);font-size:0.82em;font-weight:500;">' + s.name + '</div>' +
+      '<div style="color:var(--fg-muted);font-size:0.7em;font-family:var(--font-mono);margin-top:3px;">' + s.desc + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// 页面加载时显示技能
+setTimeout(loadSkills, 100);
 
 // ===== EXPORT / IMPORT CONFIG =====
 function exportConfig() {
