@@ -6,10 +6,15 @@
 
 - **零安装** — 自带 Node.js 运行时，双击启动
 - **跨平台** — macOS (ARM/Intel)、Linux x64、Windows x64
-- **可视化配置** — 浏览器内选模型、填 Key、一键启动
-- **多模型支持** — 国产（千问/GLM/DeepSeek/Kimi/MiniMax/豆包等）、国际（OpenAI/Claude/Gemini/Groq 等）、本地（LM Studio/Ollama）
+- **可视化配置中心** — 两步流程：选模型填 Key → 启动
+- **27 个模型平台** — 国产 13 个 + 国际 8 个 + 聚合 3 个 + 自定义中转 + 本地（LM Studio/Ollama）
+- **12 个聊天渠道** — Telegram/QQ/飞书/企微/Discord/Slack/WhatsApp/Signal/LINE/Google Chat/MS Teams/微信
+- **自动更新** — 从 GitHub Releases 一键下载更新（带备份回滚）
+- **运行日志** — 配置中心可查看 Gateway 实时日志
+- **配置导入导出** — JSON 格式备份/恢复
 - **中文技能包** — 内置搜索、翻译、天气、小红书/知乎/微博/B站等写作助手
 - **数据本地** — API Key 和聊天记录只存在 U 盘上，不上传
+- **HermesAgent 风格 UI** — 深绿色调，复古打字机字体，统一设计语言
 
 ## 快速开始
 
@@ -71,10 +76,34 @@ openclaw-portable/
 
 启动后会在 `http://127.0.0.1:18788` 打开配置页面：
 
-1. **配置**（第一步）— 点击模型平台卡片展开，选择具体模型，填写 API Key
-2. **启动**（第二步）— 打开聊天界面，或执行更新/诊断/重启等命令
+### 步骤一：配置模型
 
-支持自定义中转站（任意 OpenAI 兼容 API）和本地模型（LM Studio / Ollama）。
+- 点击模型平台卡片展开
+- 选择具体模型（下拉菜单）
+- 填写 API Key（密码框，可显示）
+- 自定义中转站：Base URL + 模型名 + Key 一步到位
+- 本地模型：LM Studio (1234) / Ollama (11434) 自动检测
+
+### 步骤二：启动
+
+- **大按钮：打开聊天界面** — 直接进入 Gateway
+- **命令面板**：
+  - 更新：从 GitHub Releases 下载新版（带回滚）
+  - 诊断：openclaw doctor
+  - 引导：openclaw onboard
+  - 重启：重启 Gateway
+- **配置管理**：导出 / 导入 / 查看 JSON / 重新配置 / 查看日志
+- **渠道接入**：12 个聊天平台一站式配置
+
+### 顶部状态栏
+
+- Gateway 运行状态（绿点 + 端口）
+- 一键打开聊天
+
+### 后台机制
+
+- 心跳检测：5 秒一次，3 次失败显示断连提示
+- 自动版本号：从 PORTABLE_VERSION 文件实时读取
 
 ## 内置技能
 
