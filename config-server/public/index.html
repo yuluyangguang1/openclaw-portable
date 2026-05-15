@@ -907,11 +907,25 @@ function saveConfig() {
     body: JSON.stringify(cfg)
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
-      showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58', 'success');
-      // 通知其他 tab：配置已变更
+      showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
       try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
       goStep(2);
-      document.getElementById('restartBanner').style.display = 'block';
+      // 自动重启 Gateway 使新配置生效
+      fetch('/api/restart', {method:'POST'}).then(function(){
+        showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
+        var waitCount = 0;
+        var waitReady = setInterval(function(){
+          waitCount++;
+          if (waitCount > 30) { clearInterval(waitReady); return; }
+          findGatewayPort().then(function(port){
+            if (port) {
+              clearInterval(waitReady);
+              showToast('Gateway \u5df2\u5c31\u7eea', 'success');
+              checkGateway();
+            }
+          });
+        }, 2000);
+      }).catch(function(){});
     } else {
       showToast((data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
     }
