@@ -327,6 +327,85 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 32px;
+    max-width: 1100px;
+    margin: -20px auto 0;
+    padding: 0 24px 60px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+  .toc-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 0;
+  }
+  .toc-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--fg-muted);
+    padding: 0 16px 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+  }
+  .toc-list { list-style: none; padding: 8px 0; }
+  .toc-list li { margin: 0; }
+  .toc-list a {
+    display: block;
+    padding: 6px 16px;
+    font-size: 12px;
+    color: var(--fg-muted);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    font-family: var(--font-mono);
+  }
+  .toc-list a:hover { color: var(--fg); background: var(--secondary); }
+  .toc-list a.active {
+    color: var(--emerald);
+    border-left-color: var(--emerald);
+    background: var(--secondary);
+  }
+
+  /* Main content */
+  .main {
+    min-width: 0;
+  }
+
+  /* Hero inner */
+  .hero-inner { position: relative; z-index: 2; max-width: 700px; margin: 0 auto; }
+  .hero .logo { width: 72px; height: 72px; margin-bottom: 16px; }
+  .hero .tagline { font-size: 13px; color: var(--fg-muted); letter-spacing: 1px; font-family: var(--font-mono); margin-top: 8px; }
+  .hero .version {
+    display: inline-block; margin-top: 16px; padding: 4px 14px;
+    border: 1px solid var(--border); border-radius: 20px;
+    font-size: 11px; color: var(--emerald); letter-spacing: 1.5px;
+    font-family: var(--font-mono);
+  }
+
+  /* Subsection */
+  .subsection { margin-top: 20px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; gap: 16px; }
+    .sidebar { position: static; max-height: none; }
+  }
 </style>
 </head>
 <body>
@@ -335,26 +414,26 @@
 <div class="hero">
   <div class="hero-inner">
     <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="0" width="100" height="100" rx="16" fill="#1E293B"/>
-      <g fill="#F1F5F9">
+      <rect x="0" y="0" width="100" height="100" rx="16" fill="var(--card)"/>
+      <g fill="var(--fg)">
         <ellipse cx="50" cy="46" rx="24" ry="26"/>
-        <path d="M30 28L24 18L36 26" fill="#3B82F6"/>
-        <path d="M70 28L76 18L64 26" fill="#3B82F6"/>
-        <ellipse cx="40" cy="42" rx="6" ry="7" fill="#1E293B"/>
-        <circle cx="41" cy="41" r="3.5" fill="#F1F5F9"/>
-        <circle cx="42" cy="40" r="1.3" fill="#3B82F6"/>
-        <ellipse cx="60" cy="42" rx="6" ry="7" fill="#1E293B"/>
-        <circle cx="59" cy="41" r="3.5" fill="#F1F5F9"/>
-        <circle cx="60" cy="40" r="1.3" fill="#3B82F6"/>
-        <path d="M43 58Q50 63,57 58" fill="none" stroke="#1E293B" stroke-width="1.8" stroke-linecap="round"/>
-        <line x1="68" y1="54" x2="72" y2="62" stroke="#F1F5F9" stroke-width="2"/>
-        <rect x="68" y="62" width="8" height="10" rx="1.5" fill="#3B82F6"/>
+        <path d="M30 28L24 18L36 26" fill="var(--emerald)"/>
+        <path d="M70 28L76 18L64 26" fill="var(--emerald)"/>
+        <ellipse cx="40" cy="42" rx="6" ry="7" fill="var(--card)"/>
+        <circle cx="41" cy="41" r="3.5" fill="var(--fg)"/>
+        <circle cx="42" cy="40" r="1.3" fill="var(--emerald)"/>
+        <ellipse cx="60" cy="42" rx="6" ry="7" fill="var(--card)"/>
+        <circle cx="59" cy="41" r="3.5" fill="var(--fg)"/>
+        <circle cx="60" cy="40" r="1.3" fill="var(--emerald)"/>
+        <path d="M43 58Q50 63,57 58" fill="none" stroke="var(--card)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="68" y1="54" x2="72" y2="62" stroke="var(--fg)" stroke-width="2"/>
+        <rect x="68" y="62" width="8" height="10" rx="1.5" fill="var(--emerald)"/>
         <rect x="70" y="58" width="4" height="6" rx="1"/>
       </g>
     </svg>
     <h1>OpenClaw Portable</h1>
     <p class="tagline">插上 U 盘就能用的 AI Agent — AI模型配置 · 技能市场 · 多平台聊天</p>
-    <span class="version">2026.4.29 · 跨平台</span>
+    <span class="version">v0.4.0 · 跨平台 · 零安装</span>
   </div>
 </div>
 
@@ -384,14 +463,14 @@
 
 <!-- 1: About -->
 <div class="section" id="about">
-  <div class="section-header"><div class="section-icon">&#x1F4E6;</div><h2>它是什么</h2></div>
+  <div class="section-header"><div class="section-icon">□</div><h2>它是什么</h2></div>
   <p><strong>OpenClaw Portable</strong> 是一个「开箱即用」的 AI 助手便携包。它把 OpenClaw 核心程序、Node.js 运行时、AI 模型配置面板和技能市场全部打包在一个文件夹里。<strong>你什么都不用装</strong>，解压、双击，就能在 Windows / macOS / Linux 上直接运行。</p>
-  <div class="callout callout-tip"><span class="callout-icon">&#x2728;</span><div><strong>为什么叫"便携版"？</strong>整个文件夹复制到 U 盘，插到任何机器上都能直接用。所有配置和对话记录保存在 U 盘里，宿主机不留痕迹。</div></div>
+  <div class="callout callout-tip"><span class="callout-icon">·</span><div><strong>为什么叫"便携版"？</strong>整个文件夹复制到 U 盘，插到任何机器上都能直接用。所有配置和对话记录保存在 U 盘里，宿主机不留痕迹。</div></div>
   <h3>能做什么</h3>
   <table>
     <thead><tr><th>功能</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>AI 对话</td><td>15+ 模型：DeepSeek、Kimi、Claude、GPT-4o 等</td></tr>
+      <tr><td>AI 对话</td><td>27 个平台：DeepSeek、Kimi、Claude、GPT、Gemini 等</td></tr>
       <tr><td>聊天平台接入</td><td>微信 / 飞书 / QQ / Telegram / Discord / Slack 等 12 个渠道</td></tr>
       <tr><td>本地模型</td><td>llama.cpp / LM Studio / Ollama 离线可用</td></tr>
       <tr><td>技能市场</td><td>13,000+ AI Skills 浏览和安装</td></tr>
@@ -402,7 +481,7 @@
 
 <!-- 2: Quick Start -->
 <div class="section" id="quickstart">
-  <div class="section-header"><div class="section-icon">&#x1F680;</div><h2>快速开始（三步上手）</h2></div>
+  <div class="section-header"><div class="section-icon">→</div><h2>快速开始（三步上手）</h2></div>
   <p>根据你的系统选择对应平台：</p>
   <div class="platform-grid">
     <div class="platform-card"><div class="icon">&#x1F5A5;</div><strong>Windows</strong><span>双击 <code>Windows-Start.bat</code></span></div>
@@ -415,7 +494,7 @@
     <div class="step"><span class="step-num">2</span><span class="step-content"><strong>浏览器自动打开配置页面</strong>（首次运行）。在这里选一个 AI 模型、填写 API Key。不知道从哪拿 Key？推荐用 <strong>DeepSeek</strong> 或 <strong>OpenRouter</strong>，注册就有。</span></div>
     <div class="step"><span class="step-num">3</span><span class="step-content"><strong>保存配置后开始对话</strong>：浏览器打开 <code>http://127.0.0.1:18789</code> 即可。</span></div>
   </div>
-  <div class="callout callout-info"><span class="callout-icon">&#x1F310;</span><div><strong>占用的端口：</strong><div class="ports"><span class="port">配置 <span class="port-num">18788</span></span><span class="port">对话 <span class="port-num">18789</span></span></div>只在本机监听（127.0.0.1），外部访问不到。</div></div>
+  <div class="callout callout-info"><span class="callout-icon">○</span><div><strong>占用的端口：</strong><div class="ports"><span class="port">配置 <span class="port-num">18788</span></span><span class="port">对话 <span class="port-num">18789</span></span></div>只在本机监听（127.0.0.1），外部访问不到。</div></div>
   <div class="callout callout-tip"><span class="callout-icon">&#x1F4BE;</span><div><strong>配置持久化：</strong>所有配置保存在 U 盘 <code>data/.openclaw/openclaw.json</code> 中，拔盘携带，Mac 和 Windows 共享同一份配置。</div></div>
   <h3>以后再次启动</h3>
   <p>下次用的时候，<strong>直接双击同一个启动器就行</strong>。会自动读取上次的配置进入对话。</p>
@@ -472,7 +551,7 @@
   <h3>直接双击打开</h3>
   <div class="download-grid">
     <a href="Config.html" class="dl-card"><span class="dl-icon">&#x2699;</span><span class="dl-text"><div class="dl-title">中文配置向导</div><div class="dl-meta">Config.html — 选模型、填 Key、接 QQ</div></span><span class="dl-arrow">→</span></a>
-    <a href="http://127.0.0.1:18788/" target="_blank" class="dl-card"><span class="dl-icon">&#x1F310;</span><span class="dl-text"><div class="dl-title">在线配置中心</div><div class="dl-meta">http://127.0.0.1:18788/</div></span><span class="dl-arrow">→</span></a>
+    <a href="http://127.0.0.1:18788/" target="_blank" class="dl-card"><span class="dl-icon">○</span><span class="dl-text"><div class="dl-title">在线配置中心</div><div class="dl-meta">http://127.0.0.1:18788/</div></span><span class="dl-arrow">→</span></a>
   </div>
 </div>
 
@@ -504,7 +583,7 @@
 
 <!-- 6: Chat Platforms -->
 <div class="section" id="chat">
-  <div class="section-header"><div class="section-icon">&#x1F4AC;</div><h2>聊天平台接入（12 渠道）</h2></div>
+  <div class="section-header"><div class="section-icon">○</div><h2>聊天平台接入（12 渠道）</h2></div>
   <p>在配置中心「渠道」区域配置。支持将 AI Agent 接入 12 种聊天平台：</p>
   <h3>国内常用</h3>
   <table>
@@ -540,7 +619,7 @@
       <tr><td><strong>vLLM</strong></td><td>高性能 GPU 推理</td><td>需要 NVIDIA 显卡</td></tr>
     </tbody>
   </table>
-  <div class="callout callout-warn"><span class="callout-icon">&#x26A0;</span><div><strong>切换回在线模型：</strong>随时在配置中心改回 DeepSeek、Kim 等。两种模式互不冲突。</div></div>
+  <div class="callout callout-warn"><span class="callout-icon">!</span><div><strong>切换回在线模型：</strong>随时在配置中心改回 DeepSeek、Kim 等。两种模式互不冲突。</div></div>
 </div>
 
 <!-- 8: Ports -->
@@ -612,7 +691,7 @@
 </div>
 
 <div class="footer">
-  OPENCLAW PORTABLE · 2026.4.29 · 跨平台便携 AI 助手
+  OPENCLAW PORTABLE · v0.4.0 · 跨平台 · 零安装便携 AI 助手
 </div>
 
 <script>
