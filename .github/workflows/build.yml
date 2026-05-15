@@ -120,45 +120,48 @@ jobs:
           set -e
           TAG="${GITHUB_REF#refs/tags/}"
           {
-            echo "# OpenClaw Portable $TAG"
+            echo "## OpenClaw Portable $TAG"
             echo
-            echo "> 🦞 U-Claw 虾盘 — OpenClaw AI 助手离线安装 U 盘"
-            echo "> 一个压缩包，任意平台解压即用 · 零安装 · 零痕迹"
+            echo "便携版 AI 助手，解压即用，零安装，跨平台。"
             echo
-            echo "## 下载 Download"
+            echo "### 下载"
             echo
             echo "| 文件 | 说明 |"
             echo "|---|---|"
             echo "| [OpenClawPortable.zip](https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/OpenClawPortable.zip) | 全平台通用包 (macOS arm64/x64 + Linux x64/arm64 + Windows x64) |"
             echo
-            echo "## 支持平台"
+            echo "### 启动方式"
             echo
-            echo "| 平台 | 启动方式 |"
+            echo "| 平台 | 操作 |"
             echo "|---|---|"
-            echo "| macOS (Apple Silicon / Intel) | 双击 \`Mac-Start.command\` |"
-            echo "| Linux (x86_64 / arm64) | \`bash Linux-Start.sh\` |"
-            echo "| Windows 10/11 (x64) | 双击 \`Windows-Start.bat\` |"
+            echo "| macOS | 双击 \`Mac-Start.command\` |"
+            echo "| Windows | 双击 \`Windows-Start.bat\` |"
+            echo "| Linux | \`bash Linux-Start.sh\` |"
             echo
-            echo "## 首次使用"
+            echo "### 首次使用"
             echo
             echo "1. 解压到 U 盘或任意目录"
-            echo "2. 双击对应平台的启动器"
-            echo "3. 浏览器自动打开配置面板 → 选模型 → 填 API Key → 开始用"
+            echo "2. 双击启动器"
+            echo "3. 浏览器打开配置中心 → 选模型 → 填 Key → 保存 → 打开聊天"
             echo
-            echo "## macOS 首次双击提示「您没有权限」"
+            echo "### macOS 权限问题"
+            echo
+            echo "首次双击如果提示无法打开："
             echo
             echo "\`\`\`bash"
             echo "cd ~/Downloads/OpenClawPortable"
             echo "xattr -cr . && chmod +x Mac-Start.command"
             echo "\`\`\`"
             echo
-            echo "## SHA-256"
+            echo "### SHA-256"
             echo
             echo "\`\`\`"
             sha256sum OpenClawPortable.zip 2>/dev/null || shasum -a 256 OpenClawPortable.zip
             echo "\`\`\`"
             echo
             echo "---"
+            echo
+            echo "基于 [OpenClaw](https://github.com/nicepkg/openclaw) · MIT License"
           } > release-notes.md
           cat release-notes.md
 
