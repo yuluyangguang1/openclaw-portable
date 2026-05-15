@@ -827,11 +827,14 @@ function saveChannelsAndOpen() {
     return;
   }
 
-  const payload = Object.assign({}, configData || {}, {channels: channels});
-  fetch('/api/config', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
+  // 先获取最新配置再合并，避免清空已有 models 字段
+  fetch('/api/config').then(function(r){return r.json();}).then(function(existing){
+    var payload = Object.assign({}, existing || {}, {channels: channels});
+    return fetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
   }).then(r => r.json()).then(data => {
     if (data.ok) {
       showToast('\u2705 \u6e20\u9053\u914d\u7f6e\u5df2\u4fdd\u5b58!', 'success');
@@ -852,7 +855,8 @@ function resetConfig() {
 
 function doReset() {
   closeModal();
-  fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json();}).then(function(data) {
+  var defaultCfg = {gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}}};
+  fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaultCfg)}).then(function(r){return r.json();}).then(function(data) {
     if (data.ok) {
       showToast('\u2705 \u5df2\u91cd\u7f6e', 'success');
       selectedProvider = null;
