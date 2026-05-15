@@ -816,6 +816,8 @@ function testChannel(e, type) {
 // ===== WECHAT LOGIN =====
 function startWeChatLogin(e) {
   e.stopPropagation();
+  // 清理旧的 polling timer，防止重复点击导致多个 timer
+  if (wechatPollTimer) { clearInterval(wechatPollTimer); wechatPollTimer = null; }
   const statusEl = document.getElementById('wechat-status');
   const qrEl = document.getElementById('wechat-qr');
   if (statusEl) statusEl.textContent = '\u6b63\u5728\u542f\u52a8...';
@@ -1087,7 +1089,13 @@ function runCmd(cmd) {
   }
 }
 
+var _updateInProgress = false;
 function doUpdate() {
+  if (_updateInProgress) {
+    showToast('\u66f4\u65b0\u8fdb\u884c\u4e2d\uff0c\u8bf7\u52ff\u91cd\u590d\u70b9\u51fb', 'warning');
+    return;
+  }
+  _updateInProgress = true;
   closeModal();
   showToast('\u6b63\u5728\u4e0b\u8f7d\u66f4\u65b0\uff0c\u8bf7\u7a0d\u5019...', 'info');
   fetch('/api/update/apply', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
@@ -1200,6 +1208,18 @@ function loadVersion() {
   }).catch(function(){});
 }
 
+// ===== UTILS =====
+// 包装 fetch 添加超时（默认 30s）防止 UI 无限等待
+function fetchT(url, opts) {
+  opts = opts || {};
+  var ms = opts.timeout || 30000;
+  var ctrl = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, ms);
+  return fetch(url, Object.assign({}, opts, {signal: ctrl.signal})).finally(function(){
+    clearTimeout(timer);
+  });
+}
+
 // ===== INIT =====
 (function init() {
   loadVersion();
@@ -1218,6 +1238,18 @@ function loadVersion() {
     if (hasExisting) { configData = data; goStep(2); }
     else goStep(1);
   }).catch(function() { goStep(1); });
+
+  // 页面卸载时清理资源
+  window.addEventListener('beforeunload', function() {
+    if (wechatSession) {
+      // 用 sendBeacon 确保请求发出（fetch 在 unload 时会被取消）
+      try {
+        navigator.sendBeacon('/api/wechat/cancel',
+          new Blob([JSON.stringify({session: wechatSession})], {type:'application/json'}));
+      } catch(e) {}
+    }
+    if (wechatPollTimer) { clearInterval(wechatPollTimer); }
+  });
 
   // Heartbeat - show disconnect overlay after 3 consecutive failures
   var _hbFails = 0;

@@ -471,6 +471,9 @@ const server = http.createServer((req, res) => {
   }
 
 
+  // === Update concurrency lock ===
+  // 防止用户连续点击触发多个并发更新（修改文件时互相破坏）
+
   // API: Update — check for new release from GitHub
   if (req.url === '/api/update/check' && req.method === 'GET') {
     (async () => {
@@ -505,6 +508,12 @@ const server = http.createServer((req, res) => {
 
   // API: Update — download and apply update
   if (req.url === '/api/update/apply' && req.method === 'POST') {
+    if (global._updateInProgress) {
+      res.writeHead(409, {'Content-Type':'application/json'});
+      res.end(JSON.stringify({ ok: false, error: 'Update already in progress' }));
+      return;
+    }
+    global._updateInProgress = true;
     res.writeHead(200, {'Content-Type':'application/json'});
     res.end(JSON.stringify({ ok: true, message: 'Update started. The process will restart when complete.' }));
 
@@ -670,6 +679,7 @@ const server = http.createServer((req, res) => {
           }
           try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
         }
+        global._updateInProgress = false;
       }
     }, 500);
     return;
