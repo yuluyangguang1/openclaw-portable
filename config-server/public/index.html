@@ -908,6 +908,8 @@ function saveConfig() {
   }).then(function(r) { return r.json(); }).then(function(data) {
     if (data.ok) {
       showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58', 'success');
+      // 通知其他 tab：配置已变更
+      try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
       goStep(2);
       document.getElementById('restartBanner').style.display = 'block';
     } else {
@@ -1033,11 +1035,30 @@ function closeModal() {
 }
 
 // ===== GATEWAY DETECTION =====
+// 优化: 优先尝试上次成功的端口（缓存），失败再扫描全部，并行减少等待
 async function findGatewayPort() {
-  for (var p = 18789; p <= 18799; p++) {
-    try { await fetch('http://127.0.0.1:'+p+'/', {mode:'no-cors'}); gatewayPort = p; return p; } catch(e) {}
+  // 优先复用上次成功的端口
+  if (gatewayPort) {
+    try {
+      var r = await fetchT('http://127.0.0.1:'+gatewayPort+'/', {mode:'no-cors', timeout: 2000});
+      return gatewayPort;
+    } catch(e) { gatewayPort = null; }
   }
-  gatewayPort = null; return null;
+  // 并行扫描所有端口，第一个成功的胜出
+  var promises = [];
+  for (var p = 18789; p <= 18799; p++) {
+    (function(port){
+      promises.push(
+        fetchT('http://127.0.0.1:'+port+'/', {mode:'no-cors', timeout: 2000})
+          .then(function(){ return port; })
+          .catch(function(){ return null; })
+      );
+    })(p);
+  }
+  var results = await Promise.all(promises);
+  var found = results.find(function(x){ return x !== null; });
+  gatewayPort = found || null;
+  return gatewayPort;
 }
 
 function gatewayUrl() { return 'http://127.0.0.1:'+(gatewayPort||18789)+'/#token=openclaw'; }
@@ -1046,16 +1067,22 @@ function openGateway() {
   window.open('http://127.0.0.1:'+(gatewayPort||18789)+'/#token=openclaw', '_blank');
 }
 
+var _gwOfflineCount = 0;
 async function checkGateway() {
   var dot = document.getElementById('statusDot');
   var text = document.getElementById('statusText');
   var port = await findGatewayPort();
   if (port) {
+    _gwOfflineCount = 0;
     dot.className = 'dot on';
     text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank">\u6253\u5f00\u804a\u5929</a>';
   } else {
-    dot.className = 'dot off';
-    text.innerHTML = 'Gateway \u672a\u542f\u52a8 \u00b7 \u8bf7\u8fd0\u884c\u542f\u52a8\u811a\u672c';
+    // 临时失败不立即显示离线，连续 2 次失败才更新 UI
+    _gwOfflineCount++;
+    if (_gwOfflineCount >= 2) {
+      dot.className = 'dot off';
+      text.innerHTML = 'Gateway \u672a\u542f\u52a8 \u00b7 \u8bf7\u8fd0\u884c\u542f\u52a8\u811a\u672c';
+    }
   }
 }
 
@@ -1105,9 +1132,21 @@ function doUpdate() {
       var attempts = 0;
       var poll = setInterval(function(){
         attempts++;
-        if (attempts > 60) { clearInterval(poll); showToast('\u66f4\u65b0\u8d85\u65f6\uff0c\u8bf7\u624b\u52a8\u91cd\u542f', 'error'); return; }
+        if (attempts > 60) {
+          clearInterval(poll);
+          _updateInProgress = false;
+          showModal('\u66f4\u65b0\u8d85\u65f6',
+            '<p>3 \u5206\u949f\u540e\u670d\u52a1\u5668\u672a\u91cd\u542f\u3002</p>' +
+            '<p>\u53ef\u80fd\u539f\u56e0\uff1a</p>' +
+            '<ul style="margin:8px 0 0 16px;font-size:0.85em;color:var(--fg-muted);">' +
+            '<li>\u66f4\u65b0\u8fc7\u7a0b\u5728\u540e\u53f0\u5d29\u6e83</li>' +
+            '<li>spawn \u5b50\u8fdb\u7a0b\u5931\u8d25</li>' +
+            '<li>\u9700\u8981\u624b\u52a8\u91cd\u542f\u542f\u52a8\u5668</li></ul>',
+            [{text:'\u624b\u52a8\u91cd\u542f\u542f\u52a8\u5668', cls:'btn btn-primary', action:'closeModal()'}]);
+          return;
+        }
         fetch('/api/heartbeat').then(function(r){
-          if (r.ok) { clearInterval(poll); location.reload(); }
+          if (r.ok) { clearInterval(poll); _updateInProgress = false; location.reload(); }
         }).catch(function(){});
       }, 3000);
     } else {

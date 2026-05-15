@@ -447,19 +447,22 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: Get current portable version (for dynamic display)
+  // API: Get current portable version (cached, only re-read every 60s)
   if (req.url === '/api/version' && req.method === 'GET') {
-    let portable = 'unknown', openclaw = 'unknown';
-    try {
-      const pf = path.join(__dirname, '../PORTABLE_VERSION');
-      if (fs.existsSync(pf)) portable = fs.readFileSync(pf, 'utf8').trim();
-    } catch(e) {}
-    try {
-      const of = path.join(__dirname, '../OPENCLAW_VERSION');
-      if (fs.existsSync(of)) openclaw = fs.readFileSync(of, 'utf8').trim();
-    } catch(e) {}
+    if (!global._versionCache || Date.now() - global._versionCache.t > 60000) {
+      let portable = 'unknown', openclaw = 'unknown';
+      try {
+        const pf = path.join(__dirname, '../PORTABLE_VERSION');
+        if (fs.existsSync(pf)) portable = fs.readFileSync(pf, 'utf8').trim();
+      } catch(e) {}
+      try {
+        const of = path.join(__dirname, '../OPENCLAW_VERSION');
+        if (fs.existsSync(of)) openclaw = fs.readFileSync(of, 'utf8').trim();
+      } catch(e) {}
+      global._versionCache = {portable, openclaw, t: Date.now()};
+    }
     res.writeHead(200, {'Content-Type':'application/json'});
-    res.end(JSON.stringify({portable, openclaw}));
+    res.end(JSON.stringify({portable: global._versionCache.portable, openclaw: global._versionCache.openclaw}));
     return;
   }
 
