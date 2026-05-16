@@ -1,7 +1,7 @@
 #!/bin/bash
 # ============================================================
 # OpenClaw Portable Maintenance Functions (shared by Mac menus)
-# Requires caller to set: $UCLAW_DIR, $DATA_DIR, $STATE_DIR,
+# Requires caller to set: $PORTABLE_DIR, $DATA_DIR, $STATE_DIR,
 #   $CONFIG_PATH, $NODE_BIN, $NPM_BIN, $CORE_DIR,
 #   color vars ($RED $GREEN $YELLOW $CYAN $WHITE $NC $BOLD $DIM),
 #   and run_oc() function.
@@ -9,13 +9,13 @@
 
 LOG_DIR="$DATA_DIR/logs"
 BACKUP_DIR="$DATA_DIR/backups"
-DEFAULT_CONFIG="$UCLAW_DIR/default-config.json"
+DEFAULT_CONFIG="$PORTABLE_DIR/default-config.json"
 
 # Detect install mode: installed (~/.openclaw-portable), usb (/Volumes or /media), portable (other)
 detect_install_mode() {
-    if echo "$UCLAW_DIR" | grep -q "/.openclaw-portable"; then
+    if echo "$PORTABLE_DIR" | grep -q "/.openclaw-portable"; then
         echo "installed"
-    elif echo "$UCLAW_DIR" | grep -qE "/Volumes/|/media/|/mnt/"; then
+    elif echo "$PORTABLE_DIR" | grep -qE "/Volumes/|/media/|/mnt/"; then
         echo "usb"
     else
         echo "portable"
@@ -262,7 +262,7 @@ do_uninstall() {
             echo "  检测到: 便携版本"
             echo ""
             echo "  便携版不需要卸载 —— 直接删除文件夹即可:"
-            echo -e "    ${YELLOW}$UCLAW_DIR${NC}"
+            echo -e "    ${YELLOW}$PORTABLE_DIR${NC}"
             echo ""
             if [ -d "$HOME/.openclaw-portable" ]; then
                 echo -e "  ${YELLOW}发现本机数据: ~/.openclaw-portable/${NC}"
@@ -352,7 +352,7 @@ do_cleanup() {
     [ -d "$DATA_DIR/memory" ] && echo "    memory:       $(du -sh "$DATA_DIR/memory" 2>/dev/null | cut -f1)"
     [ -d "$BACKUP_DIR" ] && echo "    backups:      $(du -sh "$BACKUP_DIR" 2>/dev/null | cut -f1)"
     [ -d "$LOG_DIR" ] && echo "    logs:         $(du -sh "$LOG_DIR" 2>/dev/null | cut -f1)"
-    echo "    总计:         $(du -sh "$UCLAW_DIR" 2>/dev/null | cut -f1)"
+    echo "    总计:         $(du -sh "$PORTABLE_DIR" 2>/dev/null | cut -f1)"
     echo ""
 
     local CLEANED=0
@@ -406,7 +406,7 @@ do_cleanup() {
         echo -e "  ${GREEN}没有需要清理的内容${NC}"
     else
         echo ""
-        echo "  清理后总计: $(du -sh "$UCLAW_DIR" 2>/dev/null | cut -f1)"
+        echo "  清理后总计: $(du -sh "$PORTABLE_DIR" 2>/dev/null | cut -f1)"
     fi
 }
 

@@ -9,13 +9,13 @@
 # layout, where the user-facing root only contains launchers + docs).
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ "$(basename "$_SCRIPT_DIR")" = "system" ]; then
-    UCLAW_DIR="$(dirname "$_SCRIPT_DIR")"
+    PORTABLE_DIR="$(dirname "$_SCRIPT_DIR")"
 else
-    UCLAW_DIR="$_SCRIPT_DIR"
+    PORTABLE_DIR="$_SCRIPT_DIR"
 fi
-APP_DIR="$UCLAW_DIR/app"
+APP_DIR="$PORTABLE_DIR/app"
 CORE_DIR="$APP_DIR/core"
-DATA_DIR="$UCLAW_DIR/data"
+DATA_DIR="$PORTABLE_DIR/data"
 STATE_DIR="$DATA_DIR/.openclaw"
 CONFIG_FILE="$STATE_DIR/openclaw.json"
 
@@ -30,7 +30,7 @@ NC='\033[0m'
 
 # Read version from file
 OPENCLAW_VER="unknown"
-[ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+[ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
 
 echo ""
 echo -e "${GOLD}  ██╗   ██╗██╗  ██╗   ██╗ ██████╗${NC}"
@@ -67,9 +67,9 @@ export PATH="$NODE_DIR/bin:$PATH"
 if [ -f "$_SCRIPT_DIR/lib/preflight.sh" ]; then
     # shellcheck disable=SC1091
     source "$_SCRIPT_DIR/lib/preflight.sh"
-elif [ -f "$UCLAW_DIR/lib/preflight.sh" ]; then
+elif [ -f "$PORTABLE_DIR/lib/preflight.sh" ]; then
     # shellcheck disable=SC1091
-    source "$UCLAW_DIR/lib/preflight.sh"
+    source "$PORTABLE_DIR/lib/preflight.sh"
     if ! preflight_run; then
         read -p "  按回车关闭..."
         exit 1
@@ -180,7 +180,7 @@ done
 
 # ---- 8. Start Config Server in background ----
 echo -e "  ${CYAN}Starting Config Center...${NC}"
-CONFIG_SERVER="$UCLAW_DIR/config-server"
+CONFIG_SERVER="$PORTABLE_DIR/config-server"
 "$NODE_BIN" "$CONFIG_SERVER/server.js" &
 CONFIG_PID=$!
 sleep 2

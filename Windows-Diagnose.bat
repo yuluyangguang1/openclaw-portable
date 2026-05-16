@@ -7,11 +7,11 @@ set "_SCRIPT_DIR=%~dp0"
 if "!_SCRIPT_DIR:~-1!"=="\" set "_SCRIPT_DIR=!_SCRIPT_DIR:~0,-1!"
 for %%I in ("!_SCRIPT_DIR!") do set "_SCRIPT_PARENT=%%~nI"
 if /I "!_SCRIPT_PARENT!"=="system" (
-    for %%I in ("!_SCRIPT_DIR!\..") do set "UCLAW_DIR=%%~fI\"
+    for %%I in ("!_SCRIPT_DIR!\..") do set "PORTABLE_DIR=%%~fI\"
 ) else (
-    set "UCLAW_DIR=%~dp0"
+    set "PORTABLE_DIR=%~dp0"
 )
-set "LOG_FILE=%UCLAW_DIR%diagnostic-log.txt"
+set "LOG_FILE=%PORTABLE_DIR%diagnostic-log.txt"
 
 echo.
 echo   ========================================
@@ -36,7 +36,7 @@ echo. >> "%LOG_FILE%"
 
 REM 1. Check Node.js
 echo [1/7] 检查 Node.js 运行环境...
-set "NODE_BIN=%UCLAW_DIR%app\runtime\node-win-x64\node.exe"
+set "NODE_BIN=%PORTABLE_DIR%app\runtime\node-win-x64\node.exe"
 set "ERROR_COUNT=0"
 if exist "%NODE_BIN%" (
     echo   [OK] Node.js found >> "%LOG_FILE%"
@@ -52,11 +52,11 @@ if exist "%NODE_BIN%" (
 )
 
 REM Migration shim: rename old core-win to core for existing USB users
-if exist "%UCLAW_DIR%app\core-win" if not exist "%UCLAW_DIR%app\core" ren "%UCLAW_DIR%app\core-win" core
+if exist "%PORTABLE_DIR%app\core-win" if not exist "%PORTABLE_DIR%app\core" ren "%PORTABLE_DIR%app\core-win" core
 
 REM 2. Check core directory
 echo [2/7] 检查依赖目录...
-set "CORE_DIR=%UCLAW_DIR%app\core"
+set "CORE_DIR=%PORTABLE_DIR%app\core"
 if exist "%CORE_DIR%" (
     echo   [OK] core directory exists >> "%LOG_FILE%"
     echo   ✓ 依赖目录: 正常
@@ -92,7 +92,7 @@ if exist "%OPENCLAW_MJS%" (
 
 REM 5. Check config
 echo [5/7] 检查配置文件...
-set "STATE_DIR=%UCLAW_DIR%data\.openclaw"
+set "STATE_DIR=%PORTABLE_DIR%data\.openclaw"
 if exist "%STATE_DIR%\openclaw.json" (
     echo   [OK] Config file exists >> "%LOG_FILE%"
     echo   ✓ 配置文件: 正常
@@ -133,8 +133,8 @@ echo. >> "%LOG_FILE%"
 echo Testing OpenClaw startup: >> "%LOG_FILE%"
 echo ---------------------------------------- >> "%LOG_FILE%"
 
-set "OPENCLAW_HOME=%UCLAW_DIR%data"
-set "OPENCLAW_STATE_DIR=%UCLAW_DIR%data\.openclaw"
+set "OPENCLAW_HOME=%PORTABLE_DIR%data"
+set "OPENCLAW_STATE_DIR=%PORTABLE_DIR%data\.openclaw"
 set "OPENCLAW_CONFIG_PATH=%OPENCLAW_STATE_DIR%\openclaw.json"
 
 if exist "%NODE_BIN%" if exist "%OPENCLAW_MJS%" (
@@ -156,7 +156,7 @@ if exist "%NODE_BIN%" if exist "%OPENCLAW_MJS%" (
 REM Disk space check
 echo. >> "%LOG_FILE%"
 echo Disk Space: >> "%LOG_FILE%"
-for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%UCLAW_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do (
+for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%PORTABLE_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do (
     echo   Total size: %%s MB >> "%LOG_FILE%"
 )
 

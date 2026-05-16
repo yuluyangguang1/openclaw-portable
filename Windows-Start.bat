@@ -29,17 +29,17 @@ set "_SCRIPT_DIR=%~dp0"
 if "!_SCRIPT_DIR:~-1!"=="\" set "_SCRIPT_DIR=!_SCRIPT_DIR:~0,-1!"
 for %%I in ("!_SCRIPT_DIR!") do set "_SCRIPT_PARENT=%%~nI"
 if /I "!_SCRIPT_PARENT!"=="system" (
-    for %%I in ("!_SCRIPT_DIR!\..") do set "UCLAW_DIR=%%~fI\"
+    for %%I in ("!_SCRIPT_DIR!\..") do set "PORTABLE_DIR=%%~fI\"
 ) else (
-    set "UCLAW_DIR=%~dp0"
+    set "PORTABLE_DIR=%~dp0"
 )
 
 REM Read version from OPENCLAW_VERSION at the portable root (must run
-REM AFTER UCLAW_DIR is resolved — in the release zip layout the .bat
+REM AFTER PORTABLE_DIR is resolved — in the release zip layout the .bat
 REM lives in system\ while OPENCLAW_VERSION is one level up).
 set "OPENCLAW_VER=unknown"
-if exist "!UCLAW_DIR!OPENCLAW_VERSION" (
-    for /f "usebackq tokens=* delims=" %%v in ("!UCLAW_DIR!OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+if exist "!PORTABLE_DIR!OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("!PORTABLE_DIR!OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
 )
 
 echo.
@@ -57,13 +57,13 @@ if defined ESC (
 )
 echo.
 
-set "APP_DIR=!UCLAW_DIR!app"
+set "APP_DIR=!PORTABLE_DIR!app"
 
 REM Migration shim: rename old core-win to core for existing USB users
 if exist "!APP_DIR!\core-win" if not exist "!APP_DIR!\core" ren "!APP_DIR!\core-win" core
 
 set "CORE_DIR=!APP_DIR!\core"
-set "DATA_DIR=!UCLAW_DIR!data"
+set "DATA_DIR=!PORTABLE_DIR!data"
 set "STATE_DIR=!DATA_DIR!\.openclaw"
 set "NODE_DIR=!APP_DIR!\runtime\node-win-x64"
 set "NODE_BIN=!NODE_DIR!\node.exe"
@@ -100,8 +100,8 @@ if not exist "!CORE_DIR!\node_modules\openclaw\openclaw.mjs" (
     set /a PRECHECK_FAILS+=1
 )
 
-if not exist "!UCLAW_DIR!config-server\server.js" (
-    echo   [PRECHECK] 配置中心缺失: !UCLAW_DIR!config-server\server.js
+if not exist "!PORTABLE_DIR!config-server\server.js" (
+    echo   [PRECHECK] 配置中心缺失: !PORTABLE_DIR!config-server\server.js
     echo              重新下载发布包
     set /a PRECHECK_FAILS+=1
 )
@@ -226,7 +226,7 @@ echo.
 
 REM Start Config Server in background and record its PID for cleanup
 echo   Starting Config Center...
-set "CONFIG_SERVER=!UCLAW_DIR!config-server"
+set "CONFIG_SERVER=!PORTABLE_DIR!config-server"
 start /B "" "!NODE_BIN!" "!CONFIG_SERVER!\server.js" >nul 2>&1
 
 REM Wait for config server to write runtime.json (poll up to 15s for slow USB)

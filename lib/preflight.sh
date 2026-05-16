@@ -7,7 +7,7 @@
 # all failures and present them together.
 #
 # Caller must export before sourcing:
-#   UCLAW_DIR, APP_DIR, CORE_DIR, DATA_DIR, STATE_DIR, NODE_BIN
+#   PORTABLE_DIR, APP_DIR, CORE_DIR, DATA_DIR, STATE_DIR, NODE_BIN
 # And the color vars: RED GREEN YELLOW CYAN NC
 
 preflight_run() {
@@ -39,7 +39,7 @@ preflight_run() {
     fi
 
     # ── 3. Config-server present ─────────────────────────────────
-    local CONFIG_SERVER_JS="$UCLAW_DIR/config-server/server.js"
+    local CONFIG_SERVER_JS="$PORTABLE_DIR/config-server/server.js"
     if [ ! -f "$CONFIG_SERVER_JS" ]; then
         FAILS+=("配置中心缺失: $CONFIG_SERVER_JS")
         FAILS+=("  → 重新下载发布包")

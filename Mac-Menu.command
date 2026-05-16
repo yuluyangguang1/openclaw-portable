@@ -4,11 +4,11 @@
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ "$(basename "$_SCRIPT_DIR")" = "system" ]; then
-    UCLAW_DIR="$(dirname "$_SCRIPT_DIR")"
+    PORTABLE_DIR="$(dirname "$_SCRIPT_DIR")"
 else
-    UCLAW_DIR="$_SCRIPT_DIR"
+    PORTABLE_DIR="$_SCRIPT_DIR"
 fi
-APP_DIR="$UCLAW_DIR/app"
+APP_DIR="$PORTABLE_DIR/app"
 
 # Migration shim: rename old core-mac to core for existing USB users
 if [ -d "$APP_DIR/core-mac" ] && [ ! -d "$APP_DIR/core" ]; then
@@ -16,7 +16,7 @@ if [ -d "$APP_DIR/core-mac" ] && [ ! -d "$APP_DIR/core" ]; then
 fi
 
 CORE_DIR="$APP_DIR/core"
-DATA_DIR="$UCLAW_DIR/data"
+DATA_DIR="$PORTABLE_DIR/data"
 STATE_DIR="$DATA_DIR/.openclaw"
 CONFIG_PATH="$STATE_DIR/openclaw.json"
 
@@ -49,12 +49,12 @@ mkdir -p "$STATE_DIR" "$DATA_DIR/memory" "$DATA_DIR/backups" "$DATA_DIR/logs"
 if [ -f "$_SCRIPT_DIR/lib/maintain.sh" ]; then
     source "$_SCRIPT_DIR/lib/maintain.sh"
 else
-    source "$UCLAW_DIR/lib/maintain.sh"
+    source "$PORTABLE_DIR/lib/maintain.sh"
 fi
 
 # Remove macOS quarantine (check any file, not just NODE_BIN)
-if xattr -lr "$UCLAW_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then
-    xattr -rd com.apple.quarantine "$UCLAW_DIR" 2>/dev/null || true
+if xattr -lr "$PORTABLE_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then
+    xattr -rd com.apple.quarantine "$PORTABLE_DIR" 2>/dev/null || true
 fi
 
 # Run openclaw command
@@ -73,7 +73,7 @@ show_menu() {
     [ -f "$CONFIG_PATH" ] && CFG_STATUS="${GREEN}已配置${NC}"
 
     local OPENCLAW_VER="unknown"
-    [ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+    [ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
     echo ""
     echo -e "  ${CYAN}${BOLD}╔══════════════════════════════════════╗"
     echo -e "  ║   OpenClaw Portable $OPENCLAW_VER"
@@ -290,9 +290,9 @@ do_sysinfo() {
     echo "  CPU:   $(uname -m)"
     echo "  内存:  $(sysctl -n hw.memsize 2>/dev/null | awk '{printf "%.0f GB", $1/1024/1024/1024}')"
     echo "  Node:  $("$NODE_BIN" --version 2>/dev/null)"
-    echo "  路径:  $UCLAW_DIR"
-    echo "  大小:  $(du -sh "$UCLAW_DIR" 2>/dev/null | cut -f1)"
-    echo "  磁盘:  $(df -h "$UCLAW_DIR" | tail -1 | awk '{print $4 " 可用"}')"
+    echo "  路径:  $PORTABLE_DIR"
+    echo "  大小:  $(du -sh "$PORTABLE_DIR" 2>/dev/null | cut -f1)"
+    echo "  磁盘:  $(df -h "$PORTABLE_DIR" | tail -1 | awk '{print $4 " 可用"}')"
 }
 
 # Main loop

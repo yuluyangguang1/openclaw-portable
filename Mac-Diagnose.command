@@ -6,11 +6,11 @@
 
 _SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 if [ "$(basename "$_SCRIPT_DIR")" = "system" ]; then
-    UCLAW_DIR="$(dirname "$_SCRIPT_DIR")"
+    PORTABLE_DIR="$(dirname "$_SCRIPT_DIR")"
 else
-    UCLAW_DIR="$_SCRIPT_DIR"
+    PORTABLE_DIR="$_SCRIPT_DIR"
 fi
-LOG_FILE="$UCLAW_DIR/diagnostic-log.txt"
+LOG_FILE="$PORTABLE_DIR/diagnostic-log.txt"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -29,7 +29,7 @@ echo ""
 
 # Clear old log
 OPENCLAW_VER="unknown"
-[ -f "$UCLAW_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$UCLAW_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+[ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
 cat > "$LOG_FILE" << EOF
 OpenClaw Portable Diagnostic Report
 Version: $OPENCLAW_VER
@@ -42,9 +42,9 @@ EOF
 echo "[1/6] Checking Node.js runtime..."
 ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ]; then
-    NODE_BIN="$UCLAW_DIR/app/runtime/node-mac-arm64/bin/node"
+    NODE_BIN="$PORTABLE_DIR/app/runtime/node-mac-arm64/bin/node"
 else
-    NODE_BIN="$UCLAW_DIR/app/runtime/node-mac-x64/bin/node"
+    NODE_BIN="$PORTABLE_DIR/app/runtime/node-mac-x64/bin/node"
 fi
 
 if [ -f "$NODE_BIN" ]; then
@@ -58,13 +58,13 @@ else
 fi
 
 # Migration shim: rename old core-mac to core for existing USB users
-if [ -d "$UCLAW_DIR/app/core-mac" ] && [ ! -d "$UCLAW_DIR/app/core" ]; then
-    mv "$UCLAW_DIR/app/core-mac" "$UCLAW_DIR/app/core"
+if [ -d "$PORTABLE_DIR/app/core-mac" ] && [ ! -d "$PORTABLE_DIR/app/core" ]; then
+    mv "$PORTABLE_DIR/app/core-mac" "$PORTABLE_DIR/app/core"
 fi
 
 # 2. Check core directory
 echo "[2/6] Checking core directory..."
-CORE_DIR="$UCLAW_DIR/app/core"
+CORE_DIR="$PORTABLE_DIR/app/core"
 if [ -d "$CORE_DIR" ]; then
     echo "  [OK] core directory exists" >> "$LOG_FILE"
     echo -e "  ${GREEN}✓${NC} core: Found"
@@ -112,8 +112,8 @@ echo "" >> "$LOG_FILE"
 echo "Testing OpenClaw startup:" >> "$LOG_FILE"
 echo "----------------------------------------" >> "$LOG_FILE"
 
-export OPENCLAW_HOME="$UCLAW_DIR/data"
-export OPENCLAW_STATE_DIR="$UCLAW_DIR/data/.openclaw"
+export OPENCLAW_HOME="$PORTABLE_DIR/data"
+export OPENCLAW_STATE_DIR="$PORTABLE_DIR/data/.openclaw"
 export OPENCLAW_CONFIG_PATH="$OPENCLAW_STATE_DIR/openclaw.json"
 
 if [ -f "$NODE_BIN" ] && [ -f "$OPENCLAW_MJS" ]; then

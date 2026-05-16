@@ -7,19 +7,19 @@ set "_SCRIPT_DIR=%~dp0"
 if "!_SCRIPT_DIR:~-1!"=="\" set "_SCRIPT_DIR=!_SCRIPT_DIR:~0,-1!"
 for %%I in ("!_SCRIPT_DIR!") do set "_SCRIPT_PARENT=%%~nI"
 if /I "!_SCRIPT_PARENT!"=="system" (
-    for %%I in ("!_SCRIPT_DIR!\..") do set "UCLAW_DIR=%%~fI\"
+    for %%I in ("!_SCRIPT_DIR!\..") do set "PORTABLE_DIR=%%~fI\"
 ) else (
-    set "UCLAW_DIR=%~dp0"
+    set "PORTABLE_DIR=%~dp0"
 )
-set "APP_DIR=%UCLAW_DIR%app"
+set "APP_DIR=%PORTABLE_DIR%app"
 
 REM Migration shim: rename old core-win to core for existing USB users
 if exist "%APP_DIR%\core-win" if not exist "%APP_DIR%\core" ren "%APP_DIR%\core-win" core
 
 set "CORE_DIR=%APP_DIR%\core"
-set "DATA_DIR=%UCLAW_DIR%data"
+set "DATA_DIR=%PORTABLE_DIR%data"
 set "STATE_DIR=%DATA_DIR%\.openclaw"
-set "NODE_DIR=%UCLAW_DIR%app\runtime\node-win-x64"
+set "NODE_DIR=%PORTABLE_DIR%app\runtime\node-win-x64"
 set "NODE_BIN=%NODE_DIR%\node.exe"
 set "NPM_BIN=%NODE_DIR%\npm.cmd"
 
@@ -42,8 +42,8 @@ cls
 
 REM Read version
 set "OPENCLAW_VER=unknown"
-if exist "%UCLAW_DIR%OPENCLAW_VERSION" (
-    for /f "usebackq tokens=* delims=" %%v in ("%UCLAW_DIR%OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+if exist "%PORTABLE_DIR%OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("%PORTABLE_DIR%OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
 )
 
 echo.
@@ -301,10 +301,10 @@ for /f "tokens=*" %%v in ('powershell -command "[math]::Round((Get-CimInstance W
 if exist "%NODE_BIN%" (
     for /f "tokens=*" %%v in ('"%NODE_BIN%" --version') do echo   Node:   %%v
 )
-echo   Path:   %UCLAW_DIR%
+echo   Path:   %PORTABLE_DIR%
 echo   Data:   %DATA_DIR%
-for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%UCLAW_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do echo   Size:   %%s MB
-for /f "tokens=3" %%s in ('dir /-c "%UCLAW_DIR%." 2^>nul ^| findstr /c:"bytes free"') do echo   Free:   %%s bytes
+for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%PORTABLE_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do echo   Size:   %%s MB
+for /f "tokens=3" %%s in ('dir /-c "%PORTABLE_DIR%." 2^>nul ^| findstr /c:"bytes free"') do echo   Free:   %%s bytes
 echo.
 if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     for /f "tokens=*" %%v in ('"%NODE_BIN%" -e "console.log(require('%CORE_DIR:\=/%/node_modules/openclaw/package.json').version)"') do echo   OpenClaw: %%v
@@ -431,8 +431,8 @@ echo   [3/4] Clearing memory...
 rmdir /s /q "%DATA_DIR%\memory" 2>nul
 mkdir "%DATA_DIR%\memory" 2>nul
 echo   [4/4] Restoring default config...
-if exist "%UCLAW_DIR%default-config.json" (
-    copy "%UCLAW_DIR%default-config.json" "%STATE_DIR%\openclaw.json" >nul
+if exist "%PORTABLE_DIR%default-config.json" (
+    copy "%PORTABLE_DIR%default-config.json" "%STATE_DIR%\openclaw.json" >nul
 ) else (
     (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )
@@ -459,7 +459,7 @@ if exist "%USERPROFILE%\.openclaw-portable" (
     )
 ) else (
     echo   Portable version - just delete this folder to uninstall.
-    echo   Path: %UCLAW_DIR%
+    echo   Path: %PORTABLE_DIR%
     echo.
     echo   For Electron desktop app:
     echo     Open Settings - Apps - find OpenClaw Portable - Uninstall
@@ -538,7 +538,7 @@ if exist "%BACKUP_DIR%" (
 if exist "%LOG_DIR%" (
     for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%LOG_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1KB" 2^>nul') do echo     logs:         %%s KB
 )
-for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%UCLAW_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do echo     Total:        %%s MB
+for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%PORTABLE_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do echo     Total:        %%s MB
 echo.
 
 REM Clean old backups (keep latest 3)
@@ -583,7 +583,7 @@ if /i "!delcache!"=="y" (
 )
 
 echo.
-for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%UCLAW_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do echo   Total after cleanup: %%s MB
+for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%PORTABLE_DIR%' -Recurse -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1MB" 2^>nul') do echo   Total after cleanup: %%s MB
 pause
 goto :menu
 
