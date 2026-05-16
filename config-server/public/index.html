@@ -497,7 +497,7 @@
 <!-- Step 1 -->
 <div class="step-section active" id="step1"><div style="padding:24px;">
   <h2>选择模型平台</h2>
-  <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">33</span> 个平台。</p>
+  <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">32</span> 个平台。</p>
 
   <!-- 搜索 + 标签筛选 -->
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
@@ -526,8 +526,8 @@
   <!-- 本地模型自动检测 (auto-discovery) -->
   <div id="localPanel" style="display:none;margin-bottom:18px;padding:14px 16px;background:var(--secondary);border:1px solid var(--emerald-dim);border-radius:8px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85em;font-weight:600;">检测到本地模型运行</span>
-      <button class="io-btn" onclick="scanLocalModels()" style="font-size:0.72em;padding:4px 10px;">重新扫描</button>
+      <span id="localPanelTitle" style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85em;font-weight:600;">本地模型</span>
+      <button class="io-btn" onclick="scanLocalModels({showHintsIfEmpty:true})" style="font-size:0.72em;padding:4px 10px;">重新扫描</button>
     </div>
     <div id="localRuntimes"></div>
   </div>
@@ -724,38 +724,31 @@ function applyProviderFilter(tag) {
     c.classList.toggle('active', c.getAttribute('data-filter') === tag);
   });
   renderProviders();
-  // When user clicks the 本地 chip, also surface the local-model panel
-  // (with detected runtimes if any, install hints otherwise).
+  // When user clicks the 本地 chip, surface the local-model panel.
+  // scanLocalModels() handles both the detected and not-detected
+  // cases internally — no double-fetch.
   if (tag === 'local') {
-    var panel = document.getElementById('localPanel');
-    if (panel && panel.style.display !== 'block') {
-      // Try a fresh scan first; if nothing comes back, show install hints.
-      fetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
-        var running = (data.runtimes || []).filter(function(r){return r.running;});
-        if (running.length > 0) {
-          scanLocalModels();
-        } else {
-          showLocalModelHints();
-        }
-      }).catch(function(){ showLocalModelHints(); });
-    }
+    scanLocalModels({ showHintsIfEmpty: true });
   }
 }
 
 function searchProviders(q) {
   providerSearchQuery = q.trim();
-  // When searching, deselect any filter chip (search overrides filter)
   if (providerSearchQuery) {
+    // Active search overrides any filter chip; clear visual state.
+    // We deliberately don't change providerFilter here so that if the
+    // user clears the search box without picking a chip, we restore
+    // their previously-selected filter rather than jumping to 'hot'.
     document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
       c.classList.remove('active');
     });
   } else {
-    // Empty search → restore the last-active filter or default to 'hot'
-    var active = document.querySelector('#providerFilterChips .filter-chip.active');
-    if (!active) {
-      var hotChip = document.querySelector('#providerFilterChips [data-filter="hot"]');
-      if (hotChip) hotChip.classList.add('active');
-    }
+    // Empty search → restore the visual chip for the current filter.
+    // Without this, after typing then clearing, the chip would remain
+    // greyed out even though providerFilter is still active behind it.
+    document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
+      c.classList.toggle('active', c.getAttribute('data-filter') === providerFilter);
+    });
   }
   renderProviders();
 }
@@ -1690,22 +1683,30 @@ function fetchT(url, opts) {
 }
 
 // ===== LOCAL MODEL AUTO-DETECT =====
-function scanLocalModels() {
+function scanLocalModels(opts) {
+  opts = opts || {};
   var panel = document.getElementById('localPanel');
   var listEl = document.getElementById('localRuntimes');
+  var titleEl = document.getElementById('localPanelTitle');
   if (!panel || !listEl) return;
   listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.8em;font-family:var(--font-mono);">扫描中...</div>';
   panel.style.display = 'block';
+  if (titleEl) titleEl.textContent = '本地模型 — 扫描中';
   fetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
     var running = (data.runtimes || []).filter(function(r){return r.running;});
     if (running.length === 0) {
-      // No runtime detected. Keep the panel hidden by default to avoid
-      // cluttering the page for users who only use cloud APIs. The
-      // 'shouldShowEmptyHint' logic could be added later (e.g. only
-      // show after the user clicks 'Rescan' explicitly).
-      panel.style.display = 'none';
+      // No runtime detected. Show install hints if explicitly requested
+      // (e.g. user clicked the 本地 chip), otherwise hide silently to
+      // avoid cluttering the page for users who only use cloud APIs.
+      if (opts.showHintsIfEmpty) {
+        if (titleEl) titleEl.textContent = '本地模型 — 未检测到运行';
+        showLocalModelHints();
+      } else {
+        panel.style.display = 'none';
+      }
       return;
     }
+    if (titleEl) titleEl.textContent = '检测到本地模型运行';
     listEl.innerHTML = running.map(function(rt){
       var modelsHtml;
       if (!rt.models || rt.models.length === 0) {
@@ -1731,8 +1732,12 @@ function applyLocalRuntime(runtimeId, port) {
   var sel = document.getElementById('local-' + runtimeId + '-model');
   if (!sel || !sel.value) return;
   var modelName = sel.value;
-  // The OpenAI-compatible base URL pattern. Ollama uses /v1, others use /v1.
+  // The OpenAI-compatible base URL pattern. All probed runtimes serve
+  // an OpenAI-compatible endpoint at /v1.
   var base = 'http://127.0.0.1:' + port + '/v1';
+  // LM Studio uses the OpenAI Responses API shape; everything else uses
+  // Completions. Mirror the same heuristic the cloud buildConfig uses.
+  var apiType = (runtimeId === 'lmstudio') ? 'openai-responses' : 'openai-completions';
   // Build a config payload similar to what saveConfig does for cloud providers.
   // Local models don't need an API key (we send a placeholder).
   var providerKey = 'local-' + runtimeId;
@@ -1740,7 +1745,7 @@ function applyLocalRuntime(runtimeId, port) {
   providers[providerKey] = {
     baseUrl: base,
     apiKey: 'local-no-key',
-    api: 'openai-completions',
+    api: apiType,
     models: [{
       id: modelName, name: modelName, reasoning: false,
       input: ['text'],
@@ -1787,6 +1792,7 @@ function showLocalModelHints() {
   var listEl = document.getElementById('localRuntimes');
   if (!panel || !listEl) return;
   panel.style.display = 'block';
+  // Caller (scanLocalModels) sets the title; we just fill the body.
   listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.82em;font-family:var(--font-mono);line-height:1.7;">' +
     '<div style="margin-bottom:8px;">未检测到本地模型运行。安装并启动以下任一工具后点 <strong>重新扫描</strong>：</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;">' +
