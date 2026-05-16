@@ -174,6 +174,27 @@
   }
   .provider-card.selected .check { display: block; }
 
+  /* Filter chips for provider search */
+  .filter-chip {
+    padding: 5px 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    color: var(--fg-muted);
+    font-family: var(--font-mono);
+    font-size: 0.74em;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.04em;
+  }
+  .filter-chip:hover { color: var(--fg); border-color: var(--fg-muted); }
+  .filter-chip.active {
+    background: var(--emerald);
+    border-color: var(--emerald);
+    color: var(--bg);
+    font-weight: 600;
+  }
+
   /* Provider expand */
   .provider-expand {
     max-height: 0; overflow: hidden;
@@ -476,8 +497,26 @@
 <!-- Step 1 -->
 <div class="step-section active" id="step1"><div style="padding:24px;">
   <h2>选择模型平台</h2>
-  <p class="desc">点击展开 → 选择模型 → 填写密钥 → 保存</p>
-  <!-- 一键预设 -->
+  <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">28</span> 个平台。</p>
+
+  <!-- 搜索 + 标签筛选 -->
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+    <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费"
+      oninput="searchProviders(this.value)"
+      style="flex:1;min-width:200px;padding:8px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;">
+    <span id="providerCount" style="color:var(--fg-muted);font-size:0.78em;font-family:var(--font-mono);"></span>
+  </div>
+  <div id="providerFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+    <button class="filter-chip active" data-filter="hot"   onclick="applyProviderFilter('hot')">推荐</button>
+    <button class="filter-chip"        data-filter="all"   onclick="applyProviderFilter('all')">全部</button>
+    <button class="filter-chip"        data-filter="cn"    onclick="applyProviderFilter('cn')">国产</button>
+    <button class="filter-chip"        data-filter="free"  onclick="applyProviderFilter('free')">免费</button>
+    <button class="filter-chip"        data-filter="fast"  onclick="applyProviderFilter('fast')">快</button>
+    <button class="filter-chip"        data-filter="cheap" onclick="applyProviderFilter('cheap')">便宜</button>
+    <button class="filter-chip"        data-filter="local" onclick="applyProviderFilter('local')">本地</button>
+  </div>
+
+  <!-- 一键预设 (推荐配置快速入口) -->
   <div id="presetArea" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
     <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.78em;">一键 DeepSeek</button>
     <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4')" style="font-size:0.78em;">一键 OpenRouter</button>
@@ -485,6 +524,9 @@
   </div>
 
   <div class="model-grid" id="providerGrid"></div>
+  <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
+    没有匹配的平台。<a href="#" onclick="event.preventDefault();applyProviderFilter('all');" style="color:var(--emerald);">点此显示全部</a>
+  </div>
   <div class="btn-row">
     <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled>保存并继续 →</button>
   </div>
@@ -524,11 +566,17 @@
     <div id="skillsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>
   </div>
 
-  <!-- 渠道配置 -->
+  <!-- 渠道配置 (默认折叠，避免淹没首屏) -->
   <div style="margin-top:28px;">
-    <h3 style="color:#ffe6cb;font-size:0.95em;margin-bottom:10px;">接入聊天平台（可选）</h3>
-    <p style="color:#8aaa9a;font-size:0.8em;margin-bottom:12px;">点击展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
-    <div class="model-grid" id="channelGrid"></div>
+    <button id="channelToggle" onclick="toggleChannelsPanel()"
+      style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:var(--font-mono);font-size:0.88em;cursor:pointer;text-align:left;">
+      <span>接入聊天平台 (可选 · 12 个)</span>
+      <span id="channelToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">▾</span>
+    </button>
+    <div id="channelPanel" style="display:none;margin-top:12px;">
+      <p style="color:#8aaa9a;font-size:0.8em;margin-bottom:12px;">点击卡片展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
+      <div class="model-grid" id="channelGrid"></div>
+    </div>
   </div>
 
   <div class="io-bar" style="margin-top:24px;">
@@ -630,10 +678,81 @@ let wechatSession = null;
 let configData = null;
 
 // ===== RENDER PROVIDERS =====
-(function renderProviders() {
-  const grid = document.getElementById('providerGrid');
+// Global state for provider filtering. The default filter shows
+// only providers tagged 'hot' so first-time users see ~5 cards
+// instead of a wall of 28. Users can click chips or search to
+// reveal more.
+var providerFilter = 'hot';
+var providerSearchQuery = '';
+
+function _matchProvider(p) {
+  if (providerSearchQuery) {
+    var q = providerSearchQuery.toLowerCase();
+    var hay = (p.id + ' ' + p.name + ' ' + (p.desc || '') + ' ' + (p.models || []).join(' ') + ' ' + (p.tags || []).join(' ')).toLowerCase();
+    // Also match Chinese tag aliases
+    var aliasMap = {hot:'推荐',free:'免费',cn:'国产',fast:'快',cheap:'便宜',local:'本地'};
+    (p.tags || []).forEach(function(t){ if (aliasMap[t]) hay += ' ' + aliasMap[t]; });
+    if (p.isLocal) hay += ' local 本地';
+    if (p.isCustom) hay += ' custom 自定义 中转';
+    return hay.indexOf(q) !== -1;
+  }
+  if (providerFilter === 'all') return true;
+  if (providerFilter === 'local') return !!p.isLocal;
+  return (p.tags || []).indexOf(providerFilter) !== -1;
+}
+
+function applyProviderFilter(tag) {
+  providerFilter = tag;
+  providerSearchQuery = '';
+  var search = document.getElementById('providerSearch');
+  if (search) search.value = '';
+  document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
+    c.classList.toggle('active', c.getAttribute('data-filter') === tag);
+  });
+  renderProviders();
+}
+
+function searchProviders(q) {
+  providerSearchQuery = q.trim();
+  // When searching, deselect any filter chip (search overrides filter)
+  if (providerSearchQuery) {
+    document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
+      c.classList.remove('active');
+    });
+  } else {
+    // Empty search → restore the last-active filter or default to 'hot'
+    var active = document.querySelector('#providerFilterChips .filter-chip.active');
+    if (!active) {
+      var hotChip = document.querySelector('#providerFilterChips [data-filter="hot"]');
+      if (hotChip) hotChip.classList.add('active');
+    }
+  }
+  renderProviders();
+}
+
+function renderProviders() {
+  var grid = document.getElementById('providerGrid');
   if (!grid) return;
-  grid.innerHTML = PROVIDERS.map(p => {
+  var visible = PROVIDERS.filter(_matchProvider);
+  var emptyEl = document.getElementById('providerEmpty');
+  var countEl = document.getElementById('providerCount');
+  var totalEl = document.getElementById('providerTotal');
+  if (totalEl) totalEl.textContent = String(PROVIDERS.length);
+  if (countEl) {
+    if (providerSearchQuery) {
+      countEl.textContent = '匹配 ' + visible.length + ' / ' + PROVIDERS.length;
+    } else {
+      countEl.textContent = '显示 ' + visible.length + ' / ' + PROVIDERS.length;
+    }
+  }
+  if (visible.length === 0) {
+    grid.style.display = 'none';
+    if (emptyEl) emptyEl.style.display = 'block';
+    return;
+  }
+  grid.style.display = '';
+  if (emptyEl) emptyEl.style.display = 'none';
+  grid.innerHTML = visible.map(p => {
     const tagsHtml = p.tags.map(t => '<span class="tag ' + t + '">' + ({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t) + '</span>').join('');
     let formHtml = '';
     if (p.isCustom) {
@@ -661,19 +780,30 @@ let configData = null;
       '<div class="provider-header"><span class="provider-name">' + p.name + '</span>' + tagsHtml + '</div>' +
       '<div class="provider-desc">' + p.desc + '</div>' + formHtml + '</div>';
   }).join('');
+}
 
-  // Event delegation for input changes
+// Initial render + delegated input listener (only attached once)
+renderProviders();
+(function attachProviderListeners(){
+  var grid = document.getElementById('providerGrid');
+  if (!grid) return;
   grid.addEventListener('input', function(e) {
-    if (e.target.matches('[data-field]')) {
-      updateSaveBtn();
-    }
+    if (e.target.matches('[data-field]')) updateSaveBtn();
   });
   grid.addEventListener('change', function(e) {
-    if (e.target.matches('[data-field]')) {
-      updateSaveBtn();
-    }
+    if (e.target.matches('[data-field]')) updateSaveBtn();
   });
 })();
+
+// ===== CHANNELS PANEL TOGGLE =====
+function toggleChannelsPanel() {
+  var panel = document.getElementById('channelPanel');
+  var arrow = document.getElementById('channelToggleArrow');
+  if (!panel) return;
+  var isOpen = panel.style.display === 'block';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
 
 // ===== RENDER CHANNELS =====
 (function renderChannels() {
