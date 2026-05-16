@@ -89,14 +89,23 @@ if not exist "!UCLAW_DIR!config-server\server.js" (
     set /a PRECHECK_FAILS+=1
 )
 
-REM Test data dir is writable
-echo test > "!DATA_DIR!\.write_test" 2>nul
-if not exist "!DATA_DIR!\.write_test" (
-    echo   [PRECHECK] 数据目录不可写: !DATA_DIR!
-    echo              检查 U 盘是否被锁定为只读
+REM Test data dir is writable. Create it first if it doesn't exist —
+REM on first launch DATA_DIR has never been created, so the touch test
+REM would always fail and the user sees a misleading 'unwritable' error.
+if not exist "!DATA_DIR!" mkdir "!DATA_DIR!" 2>nul
+if not exist "!DATA_DIR!" (
+    echo   [PRECHECK] 无法创建数据目录: !DATA_DIR!
+    echo              检查 U 盘是否被锁定为只读，或权限不足
     set /a PRECHECK_FAILS+=1
 ) else (
-    del "!DATA_DIR!\.write_test" 2>nul
+    echo test > "!DATA_DIR!\.write_test" 2>nul
+    if not exist "!DATA_DIR!\.write_test" (
+        echo   [PRECHECK] 数据目录不可写: !DATA_DIR!
+        echo              检查 U 盘是否被锁定为只读
+        set /a PRECHECK_FAILS+=1
+    ) else (
+        del "!DATA_DIR!\.write_test" 2>nul
+    )
 )
 
 if !PRECHECK_FAILS! gtr 0 (
