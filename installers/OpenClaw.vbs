@@ -1,8 +1,6 @@
-' OpenClaw.vbs - Windows portable launcher shim (v5)
-' Uses Shell.Application.ShellExecute instead of WScript.Shell.Run.
-' ShellExecute is the same API used by Explorer double-click, so it
-' works in every restricted environment that allows the user to
-' double-click a .bat file at all.
+' OpenClaw.vbs - Windows portable launcher shim (v6)
+' Forces a clean cmd window with echo off, so the user only sees
+' the OpenClaw banner / status messages, not every batch command.
 
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set sh  = CreateObject("Shell.Application")
@@ -15,6 +13,15 @@ If Not fso.FileExists(batPath) Then
     WScript.Quit 1
 End If
 
+' Use cmd.exe /c with explicit @echo off and /d-cd. This guarantees
+' the launched window respects @echo off regardless of the user's
+' AutoRun registry entries (which can re-enable echo and clobber
+' Shell.Application.ShellExecute's default behavior).
+'   /D = ignore HKCU\Software\Microsoft\Command Processor\AutoRun
+'        which can be set by tools like git-bash or zoxide
+'   /K = keep window open after the command finishes (so users see
+'        any final error message before the window closes)
+cmdArgs = "/D /K """ & batPath & """"
+
 ' ShellExecute(File, Args, WorkingDir, Verb, ShowFlag)
-'   ShowFlag 1 = SW_SHOWNORMAL (normal cmd window so users see logs)
-sh.ShellExecute batPath, "", scriptDir, "open", 1
+sh.ShellExecute "cmd.exe", cmdArgs, scriptDir, "open", 1

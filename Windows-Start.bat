@@ -1,6 +1,8 @@
 ﻿@echo off
-setlocal EnableDelayedExpansion
-chcp 65001 >nul 2>&1
+@setlocal EnableDelayedExpansion
+@chcp 65001 >nul 2>&1
+@cls
+@echo off
 title OpenClaw Portable - Portable AI Agent
 
 REM Enable ANSI escape codes (Windows 10 1909+). On older builds the
