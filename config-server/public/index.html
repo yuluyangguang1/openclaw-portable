@@ -1512,7 +1512,15 @@ function fetchT(url, opts) {
   setInterval(checkGateway, 15000);
 
   // Load existing config to auto-advance
-  fetch('/api/config').then(function(r){return r.json();}).then(function(data) {
+  fetch('/api/config').then(function(r){
+    // Surface recovery: server sets X-OpenClaw-Recovery when main config
+    // file was unreadable and a backup was used instead.
+    var recoverySource = r.headers.get('X-OpenClaw-Recovery');
+    if (recoverySource) {
+      showToast('配置文件损坏，已从备份恢复：' + recoverySource, 'warning');
+    }
+    return r.json();
+  }).then(function(data) {
     if (data && data.gateway && data.gateway.auth && data.gateway.auth.token) {
       // has token config
     }

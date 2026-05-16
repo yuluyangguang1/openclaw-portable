@@ -71,6 +71,42 @@ echo.
 
 set "PATH=!NODE_DIR!;!NODE_DIR!\node_modules\.bin;!PATH!"
 
+REM ---- Pre-flight self-check (Windows-native) ────────────────────
+REM Catches the same classes of "打不开" issues the macOS / Linux
+REM preflight catches: missing core, unwritable data dir, no free port.
+REM We collect failures into a counter and bail with a single dialog.
+set /a PRECHECK_FAILS=0
+
+if not exist "!CORE_DIR!\node_modules\openclaw\openclaw.mjs" (
+    echo   [PRECHECK] OpenClaw 核心缺失: !CORE_DIR!\node_modules\openclaw\openclaw.mjs
+    echo              重新下载发布包或运行 setup.bat
+    set /a PRECHECK_FAILS+=1
+)
+
+if not exist "!UCLAW_DIR!config-server\server.js" (
+    echo   [PRECHECK] 配置中心缺失: !UCLAW_DIR!config-server\server.js
+    echo              重新下载发布包
+    set /a PRECHECK_FAILS+=1
+)
+
+REM Test data dir is writable
+echo test > "!DATA_DIR!\.write_test" 2>nul
+if not exist "!DATA_DIR!\.write_test" (
+    echo   [PRECHECK] 数据目录不可写: !DATA_DIR!
+    echo              检查 U 盘是否被锁定为只读
+    set /a PRECHECK_FAILS+=1
+) else (
+    del "!DATA_DIR!\.write_test" 2>nul
+)
+
+if !PRECHECK_FAILS! gtr 0 (
+    echo.
+    echo   启动失败：发现 !PRECHECK_FAILS! 个问题，请按上方提示修复
+    echo.
+    pause
+    exit /b 1
+)
+
 REM Init data directories
 if not exist "!DATA_DIR!" mkdir "!DATA_DIR!"
 if not exist "!STATE_DIR!" mkdir "!STATE_DIR!"
@@ -213,7 +249,28 @@ set "_JS=%TEMP%\oc-write-port-%RANDOM%.js"
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" !PORT! >nul 2>&1
 del "!_JS!" 2>nul
 
+REM ── Gateway watchdog: auto-restart on crash, up to 3 times ──────
+REM cmd has no `wait` equivalent; we run gateway in foreground and
+REM check %errorlevel% afterwards. Exit code 0 = clean, others = crash.
+set /a GW_RESTARTS=0
+:gw_loop
 "!NODE_BIN!" "!OPENCLAW_MJS!" gateway run --allow-unconfigured --force --port !PORT!
+set GW_EXIT=!errorlevel!
+if !GW_EXIT! equ 0 goto gw_done
+if !GW_EXIT! equ 130 goto gw_done
+if !GW_EXIT! equ 143 goto gw_done
+set /a GW_RESTARTS+=1
+if !GW_RESTARTS! geq 3 (
+    echo.
+    echo   Gateway 已重启 3 次仍失败 ^(exit=!GW_EXIT!^)，停止自愈
+    echo   请检查上方日志或运行 Windows-Diagnose.bat
+    goto gw_done
+)
+echo.
+echo   Gateway 异常退出 ^(code=!GW_EXIT!^), 2 秒后第 !GW_RESTARTS! 次自动重启...
+timeout /t 2 /nobreak >nul
+goto gw_loop
+:gw_done
 
 REM Gateway exited — clean up config-server (W6 fix)
 echo.

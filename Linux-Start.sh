@@ -53,6 +53,16 @@ fi
 NODE_BIN="$NODE_DIR/bin/node"
 export PATH="$NODE_DIR/bin:$PATH"
 
+# ---- 1b. Pre-flight self-check ────────────────────────────────────
+if [ -f "$UCLAW_DIR/lib/preflight.sh" ]; then
+    # shellcheck disable=SC1091
+    source "$UCLAW_DIR/lib/preflight.sh"
+    if ! preflight_run; then
+        read -p "  按回车关闭..."
+        exit 1
+    fi
+fi
+
 # ---- 2. Check runtime ----
 if [ ! -f "$NODE_BIN" ]; then
     echo -e "  ${RED}Error: Node.js runtime not found${NC}"
@@ -219,14 +229,53 @@ echo -e "  ${YELLOW}Press Ctrl+C to stop${NC}"
 echo -e "  ${GREEN}════════════════════════════════${NC}"
 echo ""
 
-# ---- Cleanup on exit ----
-cleanup() {
-    kill $GW_PID 2>/dev/null
-    kill $CONFIG_PID 2>/dev/null
+# ---- Cleanup helper (called from on_exit_handler) ----
+cleanup_children() {
+    [ -n "$GW_PID" ] && kill $GW_PID 2>/dev/null
+    [ -n "$CONFIG_PID" ] && kill $CONFIG_PID 2>/dev/null
     echo ""
     echo -e "  OpenClaw Portable stopped."
-    exit 0
 }
-trap cleanup INT TERM EXIT
 
-wait $GW_PID
+# Combined EXIT handler: kill children + keep terminal open on errors
+on_exit_handler() {
+    local code=$?
+    cleanup_children
+    if [ "$code" -ne 0 ] && [ "$code" -ne 130 ] && [ "$code" -ne 143 ]; then
+        echo ""
+        echo -e "  ${RED}OpenClaw 异常退出 (code=$code)${NC}"
+        echo -e "  ${YELLOW}请将上方错误信息复制给开发者${NC}"
+        echo ""
+        read -p "  按回车关闭..."
+    fi
+    exit "$code"
+}
+trap on_exit_handler INT TERM EXIT
+
+# ── Gateway watchdog: auto-restart on crash, up to 3 times ──────
+# Exit codes that mean "don\'t restart":
+#   0   — clean exit
+#   130 — Ctrl+C (SIGINT)
+#   143 — SIGTERM (cleanup_children sent it)
+GW_MAX_RESTARTS=3
+GW_RESTARTS=0
+while [ -n "$GW_PID" ]; do
+    wait $GW_PID
+    GW_EXIT=$?
+    if [ $GW_EXIT -eq 0 ] || [ $GW_EXIT -eq 130 ] || [ $GW_EXIT -eq 143 ]; then
+        break
+    fi
+    GW_RESTARTS=$((GW_RESTARTS + 1))
+    if [ $GW_RESTARTS -ge $GW_MAX_RESTARTS ]; then
+        echo ""
+        echo -e "  ${RED}Gateway 已重启 $GW_MAX_RESTARTS 次仍失败 (exit=$GW_EXIT)，停止自愈${NC}"
+        echo -e "  ${YELLOW}请检查上方日志或运行诊断 (Mac-Diagnose / Linux-Diagnose)${NC}"
+        exit $GW_EXIT
+    fi
+    echo ""
+    echo -e "  ${YELLOW}Gateway 异常退出 (code=$GW_EXIT)，2 秒后第 $GW_RESTARTS 次自动重启...${NC}"
+    sleep 2
+    "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
+    GW_PID=$!
+done
+

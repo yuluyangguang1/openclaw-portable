@@ -9,6 +9,89 @@ const PORT_RANGE_START = 18788;
 const PORT_RANGE_END = 18798;
 const CONFIG_PATH = path.join(__dirname, '../data/.openclaw/openclaw.json');
 const RUNTIME_PATH = path.join(__dirname, '../data/.openclaw/runtime.json');
+const CONFIG_BACKUP_DIR = path.join(path.dirname(CONFIG_PATH), 'backups');
+const CONFIG_BACKUP_KEEP = 5;
+
+// ── Config persistence: atomic write + auto-recovery ────────────────────────
+//
+// USB-stick reality: the user can yank the drive at any moment, the file
+// system may be exFAT/FAT32 (no journaling), and OS-level write buffering
+// can lose the last MB on a hard eject. So:
+//   - safeReadConfig: parse main file; if broken, walk backups newest-to-oldest
+//   - atomicWriteConfig: tmp file → fsync → rename (POSIX-atomic) + rolling backup
+//   - keep the last CONFIG_BACKUP_KEEP saves, prune older
+
+function safeReadConfig() {
+  // Fast path: main file parses cleanly
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+      return { config: JSON.parse(raw), source: 'main' };
+    }
+  } catch (e) {
+    console.warn('[config] main file unreadable:', e.message, '— trying backups');
+  }
+  // Recovery: scan backups newest first
+  try {
+    if (fs.existsSync(CONFIG_BACKUP_DIR)) {
+      const files = fs.readdirSync(CONFIG_BACKUP_DIR)
+        .filter(f => f.startsWith('openclaw-') && f.endsWith('.json'))
+        .sort()
+        .reverse();
+      for (const f of files) {
+        const p = path.join(CONFIG_BACKUP_DIR, f);
+        try {
+          const raw = fs.readFileSync(p, 'utf8');
+          const cfg = JSON.parse(raw);
+          console.warn(`[config] recovered from backup: ${f}`);
+          return { config: cfg, source: 'backup:' + f };
+        } catch (e) { /* try next */ }
+      }
+    }
+  } catch (e) { /* fallthrough */ }
+  return { config: {}, source: 'empty' };
+}
+
+function atomicWriteConfig(config) {
+  // Strip deprecated top-level keys before persisting
+  if (config && typeof config === 'object') delete config.agent;
+
+  const dir = path.dirname(CONFIG_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  // Backup current file (if any) BEFORE we overwrite, so the most-recent
+  // good config is always retrievable.
+  try {
+    if (fs.existsSync(CONFIG_PATH)) {
+      fs.mkdirSync(CONFIG_BACKUP_DIR, { recursive: true });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupPath = path.join(CONFIG_BACKUP_DIR, `openclaw-${ts}.json`);
+      fs.copyFileSync(CONFIG_PATH, backupPath);
+      // Prune old backups beyond CONFIG_BACKUP_KEEP
+      const old = fs.readdirSync(CONFIG_BACKUP_DIR)
+        .filter(f => f.startsWith('openclaw-') && f.endsWith('.json'))
+        .sort();
+      while (old.length > CONFIG_BACKUP_KEEP) {
+        try { fs.unlinkSync(path.join(CONFIG_BACKUP_DIR, old.shift())); } catch (_) {}
+      }
+    }
+  } catch (e) {
+    console.warn('[config] backup before write failed (continuing):', e.message);
+  }
+
+  // Atomic write: .tmp → fsync → rename
+  const tmp = CONFIG_PATH + '.tmp';
+  const json = JSON.stringify(config, null, 2);
+  let fd = null;
+  try {
+    fd = fs.openSync(tmp, 'w');
+    fs.writeSync(fd, json);
+    try { fs.fsyncSync(fd); } catch (_) { /* fsync may fail on some FS */ }
+  } finally {
+    if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
+  }
+  fs.renameSync(tmp, CONFIG_PATH);
+}
 
 // ── WeChat Login State ──────────────────────────────────────────────────────
 const DEFAULT_WECHAT_BASE_URL = 'https://ilinkai.weixin.qq.com';
@@ -285,16 +368,13 @@ async function handleWeChatStatus(sessionKey) {
       userId: result.ilink_user_id,
     });
 
-    // 3. Update openclaw.json to enable the plugin
+    // 3. Update openclaw.json to enable the plugin (atomic + auto-recovery)
     try {
-      const configRaw = fs.existsSync(CONFIG_PATH) ? fs.readFileSync(CONFIG_PATH, 'utf-8') : '{}';
-      const config = JSON.parse(configRaw);
+      const { config } = safeReadConfig();
       if (!config.plugins) config.plugins = {};
       if (!config.plugins.entries) config.plugins.entries = {};
       config.plugins.entries['openclaw-weixin'] = { enabled: true };
-      const dir = path.dirname(CONFIG_PATH);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+      atomicWriteConfig(config);
     } catch (e) {
       console.error('Failed to update config:', e.message);
     }
@@ -399,13 +479,18 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // API: Get config
+  // API: Get config (auto-recovers from backup if main file is corrupt)
   if (req.url === '/api/config' && req.method === 'GET') {
     try {
-      const config = fs.existsSync(CONFIG_PATH)
-        ? JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'))
-        : {};
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      const { config, source } = safeReadConfig();
+      // Surface the recovery hint via a header so the UI can show a banner
+      // without changing the body shape (avoids breaking existing parsers).
+      // Must be set before writeHead, which flushes headers immediately.
+      const headers = { 'Content-Type': 'application/json' };
+      if (source && source !== 'main' && source !== 'empty') {
+        headers['X-OpenClaw-Recovery'] = source;
+      }
+      res.writeHead(200, headers);
       res.end(JSON.stringify(config));
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -425,11 +510,7 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const config = JSON.parse(body);
-        // 清除旧版废弃键，防止 OpenClaw 报 "agent.* was moved" 错误
-        delete config.agent;
-        const dir = path.dirname(CONFIG_PATH);
-        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-        fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
+        atomicWriteConfig(config);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
