@@ -290,6 +290,26 @@ function normalizeAccountId(raw) {
   return String(raw).toLowerCase().replace(/[^a-z0-9._-]/g, '-');
 }
 
+// Generic atomic JSON write helper. Used for both the main openclaw.json
+// (via atomicWriteConfig) and WeChat account credentials. Same pattern:
+// .tmp file, fsync, POSIX rename. Never leaves a half-written JSON
+// behind even if the user yanks the USB stick mid-write.
+function atomicWriteJson(filePath, data) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const tmp = filePath + '.tmp';
+  const json = JSON.stringify(data, null, 2);
+  let fd = null;
+  try {
+    fd = fs.openSync(tmp, 'w');
+    fs.writeSync(fd, json);
+    try { fs.fsyncSync(fd); } catch (_) {}
+  } finally {
+    if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
+  }
+  fs.renameSync(tmp, filePath);
+}
+
 async function saveWeChatAccount(rawAccountId, payload) {
   const accountId = normalizeAccountId(rawAccountId);
   fs.mkdirSync(WECHAT_ACCOUNTS_DIR, { recursive: true });
@@ -300,16 +320,16 @@ async function saveWeChatAccount(rawAccountId, payload) {
   };
   if (payload.baseUrl) data.baseUrl = payload.baseUrl.trim();
   if (payload.userId) data.userId = payload.userId.trim();
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+  atomicWriteJson(filePath, data);
 
-  // Update account index
+  // Update account index (also atomic)
   let accounts = [];
   try { accounts = JSON.parse(fs.readFileSync(WECHAT_ACCOUNT_INDEX_FILE, 'utf-8')); } catch {}
   if (!Array.isArray(accounts)) accounts = [];
   if (!accounts.includes(accountId)) {
     accounts.push(accountId);
     fs.mkdirSync(WECHAT_STATE_DIR, { recursive: true });
-    fs.writeFileSync(WECHAT_ACCOUNT_INDEX_FILE, JSON.stringify(accounts, null, 2));
+    atomicWriteJson(WECHAT_ACCOUNT_INDEX_FILE, accounts);
   }
   return accountId;
 }
@@ -601,7 +621,20 @@ const server = http.createServer((req, res) => {
         const currentVer = fs.existsSync(path.join(__dirname, '../PORTABLE_VERSION'))
           ? fs.readFileSync(path.join(__dirname, '../PORTABLE_VERSION'), 'utf8').trim()
           : 'unknown';
-        const isNewer = latestTag.replace(/^v/, '') !== currentVer;
+        // Semver-aware compare. Old impl was string equality, which
+        // returned true even when latest < current (e.g. user has dev
+        // build v0.9.0 but latest tag is v0.7.0 → would prompt downgrade).
+        const cmpSemver = (a, b) => {
+          const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
+          const pb = String(b).split('.').map(n => parseInt(n, 10) || 0);
+          for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+            const x = pa[i] || 0, y = pb[i] || 0;
+            if (x !== y) return x > y ? 1 : -1;
+          }
+          return 0;
+        };
+        const cleanLatest = latestTag.replace(/^v/, '');
+        const isNewer = cmpSemver(cleanLatest, currentVer) > 0;
         res.writeHead(200, {'Content-Type':'application/json'});
         res.end(JSON.stringify({
           ok: true,

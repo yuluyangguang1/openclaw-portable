@@ -181,7 +181,8 @@
     padding: 0;
   }
   .provider-expand.open {
-    max-height: 500px;
+    max-height: 800px;
+    overflow-y: auto;
     padding: 14px 0 4px;
     border-top: 1px solid var(--border);
     margin-top: 12px;
@@ -869,14 +870,29 @@ function pollWeChatStatus() {
   wechatPollTimer = setInterval(() => {
     fetch('/api/wechat/status?session=' + encodeURIComponent(wechatSession || '')).then(function(r){return r.json();}).then(function(data) {
       const statusEl = document.getElementById('wechat-status');
-      if (data.status === 'logged_in') {
+      const qrEl = document.getElementById('wechat-qr');
+      // Server returns: 'wait' | 'refreshed' | 'confirmed' | 'expired' | 'error'
+      // Frontend used to look for 'logged_in' which the server never returns,
+      // so successful logins silently never finished from the UI's view.
+      if (data.status === 'confirmed') {
         clearInterval(wechatPollTimer);
-        if (statusEl) statusEl.textContent = '\u2705 \u5df2\u767b\u5f55: ' + (data.name || '');
-        showToast('\u5fae\u4fe1\u767b\u5f55\u6210\u529f!', 'success');
+        wechatPollTimer = null;
+        if (statusEl) statusEl.textContent = '\u2705 \u767b\u5f55\u6210\u529f' + (data.accountId ? ' (' + data.accountId + ')' : '');
+        showToast('\u5fae\u4fe1\u767b\u5f55\u6210\u529f\uff01\u91cd\u542f Gateway \u540e\u751f\u6548', 'success');
+      } else if (data.status === 'refreshed' && data.qrcodeUrl) {
+        // QR code expired and was auto-refreshed; swap the image in place
+        if (qrEl) qrEl.innerHTML = '<img src="' + data.qrcodeUrl + '" style="max-width:180px;border-radius:8px;">';
+        if (statusEl) statusEl.textContent = '\u4e8c\u7ef4\u7801\u5df2\u5237\u65b0\uff0c\u8bf7\u91cd\u626b';
+      } else if (data.status === 'expired') {
+        clearInterval(wechatPollTimer);
+        wechatPollTimer = null;
+        if (statusEl) statusEl.textContent = '\u274c \u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u626b\u7801';
       } else if (data.status === 'error') {
         clearInterval(wechatPollTimer);
-        if (statusEl) statusEl.textContent = '\u274c ' + (data.error || 'Error');
+        wechatPollTimer = null;
+        if (statusEl) statusEl.textContent = '\u274c ' + (data.message || data.error || 'Error');
       }
+      // 'wait' = still waiting for scan, no UI update needed
     }).catch(() => {});
   }, 2000);
 }
@@ -957,8 +973,17 @@ function showConfigSummary(cfg) {
     }
   }
   el.style.display = 'block';
-  el.innerHTML = '\u5f53\u524d: <span style="color:var(--fg);">' + provider + '/' + model + '</span>' +
-    (keyHint ? ' \u00b7 Key: ' + keyHint : '');
+  // Build with DOM nodes (not innerHTML) — provider/model come from the
+  // user's openclaw.json which they may have imported from anywhere. A
+  // string like "<img onerror=...>" would otherwise execute.
+  el.textContent = '';
+  var label = document.createTextNode('\u5f53\u524d: ');
+  var pmSpan = document.createElement('span');
+  pmSpan.style.color = 'var(--fg)';
+  pmSpan.textContent = provider + '/' + model;
+  el.appendChild(label);
+  el.appendChild(pmSpan);
+  if (keyHint) el.appendChild(document.createTextNode(' \u00b7 Key: ' + keyHint));
 }
 
 function populateQuickSwitch(cfg) {

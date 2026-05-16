@@ -287,6 +287,42 @@ timeout /t 2 /nobreak >nul
 goto gw_loop
 :gw_done
 
+REM ── Restart hand-off ───────────────────────────────────────────
+REM If the gateway exited because /api/restart asked it to (taskkill
+REM produces exit code 1, Ctrl+C produces -1073741510), the
+REM config-server is in the middle of spawning a detached replacement.
+REM Killing config-server now would leave the user with a half-restart
+REM and a dead UI. Wait up to 30s for the new gateway to come up.
+if !GW_EXIT! equ 1 goto handoff
+if !GW_EXIT! equ -1073741510 goto stopconfig
+goto stopconfig
+
+:handoff
+echo.
+echo   检测到 /api/restart，等待新 Gateway 上线...
+set /a HANDOFF_TRIES=0
+:handoff_wait
+ping -n 1 -w 500 127.0.0.1 >nul
+powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 1 -UseBasicParsing).StatusCode | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo   新 Gateway 已就绪，继续运行
+    goto handoff_wait_config
+)
+set /a HANDOFF_TRIES+=1
+if !HANDOFF_TRIES! geq 60 (
+    echo   等待新 Gateway 超时（30s），停止
+    goto stopconfig
+)
+goto handoff_wait
+
+:handoff_wait_config
+REM Stay alive while config-server is up. Loop checks if our
+REM CONFIG_PORT is still LISTENING; when it stops, we exit cleanly.
+ping -n 1 -w 1000 127.0.0.1 >nul
+netstat -an 2>nul | findstr ":!CONFIG_PORT! " | findstr "LISTENING" >nul 2>&1
+if !errorlevel! equ 0 goto handoff_wait_config
+
+:stopconfig
 REM Gateway exited — clean up config-server (W6 fix)
 echo.
 echo   Stopping Config Center...

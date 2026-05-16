@@ -58,6 +58,20 @@ fi
 NODE_BIN="$NODE_DIR/bin/node"
 export PATH="$NODE_DIR/bin:$PATH"
 
+# ---- 2. Remove macOS quarantine ----
+# Must run BEFORE preflight: preflight invokes "$NODE_BIN" --version,
+# which Gatekeeper will block on a quarantined USB stick. If we ran
+# preflight first, every quarantined-USB user would see a misleading
+# "Node 运行时无法启动" failure when the real problem is the xattr.
+# Check any file in the bundle for quarantine (not just NODE_BIN —
+# if the user re-downloaded a single launcher, NODE_BIN might be clean
+# while other files still have the xattr). Recursive clear is cheap.
+if xattr -lr "$UCLAW_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then
+    echo -e "  ${YELLOW}Removing macOS security restriction...${NC}"
+    xattr -rd com.apple.quarantine "$UCLAW_DIR" 2>/dev/null || true
+    echo -e "  ${GREEN}Done${NC}"
+fi
+
 # ---- 1b. Pre-flight self-check ────────────────────────────────────
 # Runs all the cheap sanity checks (node binary, openclaw core,
 # config-server present, data dir writable, free port, free space,
@@ -71,16 +85,6 @@ if [ -f "$UCLAW_DIR/lib/preflight.sh" ]; then
         read -p "  按回车关闭..."
         exit 1
     fi
-fi
-
-# ---- 2. Remove macOS quarantine ----
-# Check any file in the bundle for quarantine (not just NODE_BIN —
-# if the user re-downloaded a single launcher, NODE_BIN might be clean
-# while other files still have the xattr). Recursive clear is cheap.
-if xattr -lr "$UCLAW_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then
-    echo -e "  ${YELLOW}Removing macOS security restriction...${NC}"
-    xattr -rd com.apple.quarantine "$UCLAW_DIR" 2>/dev/null || true
-    echo -e "  ${GREEN}Done${NC}"
 fi
 
 # ---- 3. Check runtime ----
@@ -274,4 +278,25 @@ while [ -n "$GW_PID" ]; do
     "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
     GW_PID=$!
 done
+
+# After the gateway exited gracefully (143 = SIGTERM, often from
+# /api/restart), the config-server may still be running and about
+# to spawn a detached gateway in 2 seconds. If we exit now, the
+# EXIT trap kills the config-server and the user is left with a
+# dead UI even though they just clicked "Restart". Hand off to
+# the config-server\'s lifetime instead.
+if [ "$GW_EXIT" = "143" ] && [ -n "$CONFIG_PID" ] && kill -0 "$CONFIG_PID" 2>/dev/null; then
+    echo ""
+    echo -e "  ${CYAN}检测到 /api/restart，等待新 Gateway 上线...${NC}"
+    for _ in $(seq 1 60); do
+        if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+            echo -e "  ${GREEN}新 Gateway 已就绪${NC}"
+            break
+        fi
+        sleep 0.5
+    done
+    # Stay alive for as long as the config-server is running. The user
+    # closes the launcher window when they want to stop everything.
+    wait "$CONFIG_PID"
+fi
 

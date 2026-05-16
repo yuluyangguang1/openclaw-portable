@@ -279,3 +279,24 @@ while [ -n "$GW_PID" ]; do
     GW_PID=$!
 done
 
+# After the gateway exited gracefully (143 = SIGTERM, often from
+# /api/restart), the config-server may still be running and about
+# to spawn a detached gateway in 2 seconds. If we exit now, the
+# EXIT trap kills the config-server and the user is left with a
+# dead UI even though they just clicked "Restart". Hand off to
+# the config-server\'s lifetime instead.
+if [ "$GW_EXIT" = "143" ] && [ -n "$CONFIG_PID" ] && kill -0 "$CONFIG_PID" 2>/dev/null; then
+    echo ""
+    echo -e "  ${CYAN}检测到 /api/restart，等待新 Gateway 上线...${NC}"
+    for _ in $(seq 1 60); do
+        if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+            echo -e "  ${GREEN}新 Gateway 已就绪${NC}"
+            break
+        fi
+        sleep 0.5
+    done
+    # Stay alive for as long as the config-server is running. The user
+    # closes the launcher window when they want to stop everything.
+    wait "$CONFIG_PID"
+fi
+
