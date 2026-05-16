@@ -24,11 +24,13 @@
 
 启动：
 
-| 平台 | 操作 |
-|------|------|
-| macOS | 双击 `Mac-Start.command` |
-| Windows | 双击 `Windows-Start.bat` |
-| Linux | `bash Linux-Start.sh` |
+| 平台 | 推荐 | 备用 |
+|------|------|------|
+| macOS | 双击 `OpenClaw.app` | 双击 `Mac-Start.command` |
+| Windows | 双击 `OpenClaw.vbs` | 双击 `Windows-Start.bat` |
+| Linux | 双击 `OpenClaw.desktop` | `bash Linux-Start.sh` |
+
+`OpenClaw.app` / `.vbs` / `.desktop` 是带图标的便携启动器，把整个解压目录拖到 U 盘后，双击启动器即可，所有数据（API Key、对话历史、配置）都跟随 U 盘走，不污染主机。
 
 启动后自动打开浏览器配置页面，选择模型平台 → 填写 API Key → 保存 → 打开聊天。
 

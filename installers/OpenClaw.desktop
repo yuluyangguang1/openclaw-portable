@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=OpenClaw
+Comment=Portable AI agent — data lives where this app lives
+GenericName=AI Agent
+Exec=bash -c 'cd "$(dirname "%k")" && bash Linux-Start.sh'
+Path=
+Icon=openclaw
+Terminal=true
+Categories=Development;Utility;
+Keywords=AI;LLM;Agent;Chat;
+StartupNotify=true

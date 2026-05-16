@@ -6,10 +6,10 @@ name: Build Desktop
 # supported for testing.
 
 on:
+  # NOTE: tag trigger disabled — we pivoted to the .app/.vbs shim
+  # approach (data stays on USB stick). This Electron build is on hold
+  # and only runs on manual dispatch.
   workflow_dispatch:
-  push:
-    tags:
-      - 'v*'
 
 permissions:
   contents: write

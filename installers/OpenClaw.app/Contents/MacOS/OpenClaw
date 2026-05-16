@@ -1,0 +1,45 @@
+#!/bin/bash
+# OpenClaw.app launcher — finds the portable folder this .app sits in
+# and execs the existing Mac-Start.command. Designed to be portable:
+# the .app bundle lives next to Mac-Start.command, app/, data/, etc.,
+# and double-clicking it starts OpenClaw with all data on the same
+# device (USB stick, external drive, anywhere).
+#
+# Bundle layout when running:
+#   <PORTABLE_ROOT>/
+#     OpenClaw.app/
+#       Contents/
+#         MacOS/
+#           OpenClaw      ← this script ($0)
+#     Mac-Start.command   ← what we exec
+#     app/
+#     data/
+#
+# So from $0, ../../.. is the portable root.
+
+set -e
+
+# Resolve the script's true path (handle symlinks like /Volumes mounts).
+SOURCE="$0"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+BIN_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+
+# BIN_DIR = .../OpenClaw.app/Contents/MacOS
+# Portable root = BIN_DIR/../../..
+PORTABLE_ROOT="$(cd "$BIN_DIR/../../.." && pwd)"
+
+LAUNCHER="$PORTABLE_ROOT/Mac-Start.command"
+
+if [ ! -f "$LAUNCHER" ]; then
+  /usr/bin/osascript -e "display dialog \"OpenClaw 启动失败：找不到 Mac-Start.command\n\n请把 OpenClaw.app 放在 OpenClawPortable 目录下（与 Mac-Start.command 同级），不要单独移动。\n\n查找路径：\n$LAUNCHER\" buttons {\"OK\"} default button 1 with icon stop with title \"OpenClaw\""
+  exit 1
+fi
+
+# Open Terminal.app to run Mac-Start.command so users see logs and
+# can Ctrl+C. This matches the existing portable double-click UX
+# while letting the .app be the entry point.
+/usr/bin/open -a Terminal "$LAUNCHER"

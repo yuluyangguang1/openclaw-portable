@@ -43,6 +43,25 @@ jobs:
           ls -d app/runtime/*/
           echo "OpenClaw installed OK"
 
+      - name: Lift app shells to zip root
+        run: |
+          set -e
+          # The repo keeps installers/ as a source directory so the
+          # commits stay tidy. For end users, OpenClaw.app, OpenClaw.vbs,
+          # OpenClaw.desktop, openclaw.png need to sit at the portable
+          # root (next to Mac-Start.command etc.) so double-click works.
+          if [ -d installers/OpenClaw.app ]; then
+            cp -R installers/OpenClaw.app ./OpenClaw.app
+          fi
+          [ -f installers/OpenClaw.vbs ] && cp installers/OpenClaw.vbs ./OpenClaw.vbs || true
+          [ -f installers/OpenClaw.desktop ] && cp installers/OpenClaw.desktop ./OpenClaw.desktop || true
+          [ -f installers/openclaw.png ] && cp installers/openclaw.png ./openclaw.png || true
+          # Source dir not needed in user zip
+          rm -rf installers
+          # Restore exec bit on the .app launcher binary (cp preserved it
+          # but defensive belt-and-suspenders).
+          [ -f OpenClaw.app/Contents/MacOS/OpenClaw ] && chmod +x OpenClaw.app/Contents/MacOS/OpenClaw || true
+
       - name: Prepare portable folder
         run: |
           set -e
@@ -51,7 +70,7 @@ jobs:
           # on any supported platform. setup.* scripts and CI config
           # are kept in the repo (for rebuilding) but stripped from the
           # user-facing zip.
-          rm -rf .git .github .gitignore
+          rm -rf .git .github .gitignore desktop
           # Build-only tooling: users don't rebuild from the zip —
           # they run the launcher directly. setup.* would only confuse
           # them, and Install scripts violate the zero-trace promise by
