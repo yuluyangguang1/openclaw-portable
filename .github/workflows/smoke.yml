@@ -106,31 +106,12 @@ jobs:
             sleep 1
           done
 
-      - name: Boot config-server (Windows)
+      - name: Prepare config (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path data/.openclaw | Out-Null
           '{"gateway":{"mode":"local","auth":{"token":"openclaw"}}}' | Out-File -Encoding ascii data/.openclaw/openclaw.json
-          # Use cmd.exe start /B so the child detaches from the current
-          # shell (Start-Process -NoNewWindow keeps a handle that
-          # GitHub Actions kills when the step ends; child died before
-          # the next step ran).
-          $logFile = Join-Path $PWD "server.log"
-          Start-Process -FilePath "cmd.exe" -ArgumentList "/c","start","/B","node","config-server/server.js",">$logFile","2>&1" -NoNewWindow -Wait
-          $ok = $false
-          for ($i = 1; $i -le 60; $i++) {
-            try {
-              $r = Invoke-WebRequest -Uri "http://127.0.0.1:18788/api/heartbeat" -TimeoutSec 2 -UseBasicParsing
-              if ($r.StatusCode -eq 200) { $ok = $true; Write-Host "OK: heartbeat after ${i}s"; break }
-            } catch {}
-            Start-Sleep -Seconds 1
-          }
-          if (-not $ok) {
-            Write-Host "FAIL: server did not respond in 60s"
-            if (Test-Path $logFile) { Get-Content $logFile -Tail 80 }
-            exit 1
-          }
 
       - name: API smoke (POSIX)
         if: runner.os != 'Windows'
@@ -179,56 +160,84 @@ jobs:
             exit 1
           fi
 
-      - name: API smoke (Windows)
+      - name: Boot + API smoke (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $base = "http://127.0.0.1:18788"
-          $v = Invoke-RestMethod "$base/api/version"
-          if (-not $v.portable) { throw "version missing" }
-          Write-Host "OK: /api/version"
-
-          $c = Invoke-RestMethod "$base/api/config"
-          if (-not $c.gateway) { throw "config missing gateway" }
-          Write-Host "OK: /api/config GET"
-
-          $payload = @{
-            gateway = @{ mode = "local"; auth = @{ token = "openclaw" } }
-            models = @{ providers = @{ deepseek = @{ baseUrl = "https://api.deepseek.com/v1"; apiKey = "sk-test"; api = "openai-completions"; models = @(@{ id = "deepseek-chat"; name = "deepseek-chat" }) } } }
-            agents = @{ defaults = @{ model = @{ primary = "deepseek/deepseek-chat" } } }
-          } | ConvertTo-Json -Depth 6
-          $r = Invoke-RestMethod "$base/api/config" -Method Post -Body $payload -ContentType "application/json"
-          if (-not $r.ok) { throw "POST /api/config not ok" }
-          Write-Host "OK: /api/config POST"
-
-          $c2 = Invoke-RestMethod "$base/api/config"
-          if (-not $c2.models.providers.deepseek) { throw "config not persisted" }
-          Write-Host "OK: config persisted"
-
-          $kt = Invoke-RestMethod "$base/api/key/test" -Method Post -Body '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' -ContentType "application/json" -TimeoutSec 15
-          if ($null -eq $kt.ok) { throw "key/test missing 'ok' field" }
-          Write-Host "OK: /api/key/test responds"
-
-          $idx = Invoke-WebRequest "$base/" -UseBasicParsing
-          if ($idx.Content -notmatch "OpenClaw Portable") { throw "index.html missing brand" }
-          Write-Host "OK: index.html served"
-
-          # PowerShell normalizes URIs and would collapse '..' before sending.
-          # Use System.Net.HttpWebRequest with a custom-built URI that bypasses the normalizer
-          # by using percent-encoded dots.
-          $req = [System.Net.HttpWebRequest]::Create("$base/%2e%2e/server.js")
-          $req.Method = "GET"
+          # Run server, run tests, kill server — all in the same step so
+          # the child process stays alive (Windows kills detached children
+          # of a step's shell when the step ends, no matter what we do).
+          $serverProc = Start-Process -FilePath node -ArgumentList "config-server/server.js" -PassThru -RedirectStandardOutput server.out -RedirectStandardError server.err
           try {
-            $resp = $req.GetResponse()
-            $code = [int]$resp.StatusCode
-            $resp.Close()
-          } catch [System.Net.WebException] {
-            if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode } else { $code = 0 }
-          }
-          if ($code -eq 403 -or $code -eq 404) {
-            Write-Host "OK: path traversal blocked (HTTP $code)"
-          } else {
-            throw "path traversal returned $code"
+            $ok = $false
+            for ($i = 1; $i -le 60; $i++) {
+              try {
+                $r = Invoke-WebRequest -Uri "http://127.0.0.1:18788/api/heartbeat" -TimeoutSec 2 -UseBasicParsing
+                if ($r.StatusCode -eq 200) { $ok = $true; Write-Host "OK: heartbeat after ${i}s"; break }
+              } catch {}
+              if ($serverProc.HasExited) {
+                Write-Host "FAIL: server exited unexpectedly with code $($serverProc.ExitCode)"
+                Get-Content server.out, server.err -ErrorAction SilentlyContinue
+                exit 1
+              }
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ok) {
+              Write-Host "FAIL: server did not respond in 60s"
+              Get-Content server.out, server.err -ErrorAction SilentlyContinue
+              exit 1
+            }
+
+            $base = "http://127.0.0.1:18788"
+            $v = Invoke-RestMethod "$base/api/version"
+            if (-not $v.portable) { throw "version missing" }
+            Write-Host "OK: /api/version"
+
+            $c = Invoke-RestMethod "$base/api/config"
+            if (-not $c.gateway) { throw "config missing gateway" }
+            Write-Host "OK: /api/config GET"
+
+            $payload = @{
+              gateway = @{ mode = "local"; auth = @{ token = "openclaw" } }
+              models = @{ providers = @{ deepseek = @{ baseUrl = "https://api.deepseek.com/v1"; apiKey = "sk-test"; api = "openai-completions"; models = @(@{ id = "deepseek-chat"; name = "deepseek-chat" }) } } }
+              agents = @{ defaults = @{ model = @{ primary = "deepseek/deepseek-chat" } } }
+            } | ConvertTo-Json -Depth 6
+            $r = Invoke-RestMethod "$base/api/config" -Method Post -Body $payload -ContentType "application/json"
+            if (-not $r.ok) { throw "POST /api/config not ok" }
+            Write-Host "OK: /api/config POST"
+
+            $c2 = Invoke-RestMethod "$base/api/config"
+            if (-not $c2.models.providers.deepseek) { throw "config not persisted" }
+            Write-Host "OK: config persisted"
+
+            $kt = Invoke-RestMethod "$base/api/key/test" -Method Post -Body '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' -ContentType "application/json" -TimeoutSec 15
+            if ($null -eq $kt.ok) { throw "key/test missing 'ok' field" }
+            Write-Host "OK: /api/key/test responds"
+
+            $idx = Invoke-WebRequest "$base/" -UseBasicParsing
+            if ($idx.Content -notmatch "OpenClaw Portable") { throw "index.html missing brand" }
+            Write-Host "OK: index.html served"
+
+            $req = [System.Net.HttpWebRequest]::Create("$base/%2e%2e/server.js")
+            $req.Method = "GET"
+            try {
+              $resp = $req.GetResponse()
+              $code = [int]$resp.StatusCode
+              $resp.Close()
+            } catch [System.Net.WebException] {
+              if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode } else { $code = 0 }
+            }
+            if ($code -eq 403 -or $code -eq 404) {
+              Write-Host "OK: path traversal blocked (HTTP $code)"
+            } else {
+              throw "path traversal returned $code"
+            }
+          } finally {
+            if ($serverProc -and -not $serverProc.HasExited) {
+              Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
+            }
+            if (Test-Path server.out) { Get-Content server.out -Tail 30 }
+            if (Test-Path server.err) { Get-Content server.err -Tail 30 }
           }
 
       - name: Cleanup (POSIX)
@@ -242,11 +251,9 @@ jobs:
         if: always() && runner.os == 'Windows'
         shell: pwsh
         run: |
-          # Kill whatever process is bound to 18788 (we don't track the
-          # child PID across steps; killing by listening port is
-          # reliable on Windows runners).
+          # Belt-and-suspenders: even if the smoke step's finally block
+          # ran, kill any leftover process bound to 18788.
           $conns = Get-NetTCPConnection -LocalPort 18788 -State Listen -ErrorAction SilentlyContinue
           if ($conns) {
             $conns | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
           }
-          if (Test-Path server.log) { Get-Content server.log -Tail 50 }
