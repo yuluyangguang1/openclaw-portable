@@ -494,6 +494,15 @@
   <div style="text-align:center;margin-bottom:28px;">
     <h2 style="font-size:1.2em;margin-bottom:6px;">配置完成</h2>
     <p class="desc" style="margin-bottom:0;">密钥仅保存在本地，不会上传到任何服务器</p>
+    <div id="configSummary" style="margin-top:14px;padding:8px 14px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78em;color:var(--fg-muted);display:none;text-align:left;"></div>
+  </div>
+
+  <div id="quickSwitch" style="margin-bottom:16px;display:none;">
+    <label style="display:block;font-size:0.78em;color:var(--fg-muted);margin-bottom:6px;font-family:var(--font-mono);">快速切换模型</label>
+    <div style="display:flex;gap:8px;">
+      <select id="quickModel" style="flex:1;padding:9px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;"></select>
+      <button onclick="quickSwitchModel()" style="padding:9px 16px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-family:var(--font-mono);font-size:0.85em;cursor:pointer;">切换</button>
+    </div>
   </div>
 
   <button class="btn-launch" onclick="saveChannelsAndOpen()">打开聊天界面 →</button>
