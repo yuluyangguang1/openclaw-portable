@@ -145,7 +145,7 @@ jobs:
           rmdir lib
           # NOTE: default-config.json stays at the root. lib/maintain.sh
           # and Windows-Menu.bat reference it as
-          # $UCLAW_DIR/default-config.json during factory reset; moving
+          # $PORTABLE_DIR/default-config.json during factory reset; moving
           # it would silently break that path. The file is small and
           # not visually distracting at root.
           # The .app, .vbs, .desktop shims (already at root from
