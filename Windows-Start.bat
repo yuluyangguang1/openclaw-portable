@@ -220,27 +220,40 @@ for /l %%i in (1,1,15) do (
 )
 :runtime_ready
 
-REM Read actual config server port from runtime.json
-REM NOTE: Paths with spaces break inside for/f backtick commands even with
-REM delayed expansion. Write a tiny .js helper to a temp file and run it.
+REM Read actual config server port from runtime.json.
+REM Two cmd quirks we deliberately work around here:
+REM   1. `||` and `&` are command separators even inside >> redirection,
+REM      so the embedded JS uses a ternary instead of x||fallback.
+REM   2. for /F backtick commands fail on paths with non-ASCII chars +
+REM      spaces (e.g. C:\Users\高\Desktop\...). The cmd subshell
+REM      mangles UTF-8 multi-byte sequences. Write Node's stdout to a
+REM      temp file and read it with set /p — this is encoding-invariant.
 set "CONFIG_PORT=18788"
 set "_JS=%TEMP%\oc-read-port-%RANDOM%.js"
->>"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[1],'utf8');console.log(JSON.parse(d).configServerPort||18788)}catch(e){console.log(18788)}
-for /f "tokens=*" %%p in ('"!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!"') do set "CONFIG_PORT=%%p"
+set "_OUT=%TEMP%\oc-read-port-%RANDOM%.out"
+>"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[1],'utf8');var v=JSON.parse(d).configServerPort;console.log(v?v:18788)}catch(e){console.log(18788)}
+"!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" >"!_OUT!" 2>nul
+if exist "!_OUT!" (
+    set /p CONFIG_PORT=<"!_OUT!"
+)
 del "!_JS!" 2>nul
+del "!_OUT!" 2>nul
 
 REM Open both Dashboard and Config Center
 echo   Opening Dashboard and Config Center...
 timeout /t 1 /nobreak >nul
 
-REM Read gateway token from config
-REM The JS must NOT contain & or && — cmd interprets them as command
-REM separators even inside >> redirection. Use nested ternary instead.
+REM Read gateway token from config (same encoding-safe pattern as above)
 set "TOKEN=openclaw"
 set "_JS=%TEMP%\oc-read-token-%RANDOM%.js"
->>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
-for /f "tokens=*" %%t in ('"!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json"') do set "TOKEN=%%t"
+set "_OUT=%TEMP%\oc-read-token-%RANDOM%.out"
+>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
+"!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json" >"!_OUT!" 2>nul
+if exist "!_OUT!" (
+    set /p TOKEN=<"!_OUT!"
+)
 del "!_JS!" 2>nul
+del "!_OUT!" 2>nul
 start "" "http://127.0.0.1:!PORT!/#token=!TOKEN!"
 start "" "http://127.0.0.1:!CONFIG_PORT!/"
 
@@ -254,7 +267,7 @@ set "OPENCLAW_MJS=!CORE_DIR!\node_modules\openclaw\openclaw.mjs"
 REM Persist the actual gateway port so /api/restart re-launches on the
 REM same port instead of the hardcoded default.
 set "_JS=%TEMP%\oc-write-port-%RANDOM%.js"
->>"!_JS!" echo var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}
+>"!_JS!" echo var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" !PORT! >nul 2>&1
 del "!_JS!" 2>nul
 
