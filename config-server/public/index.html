@@ -724,6 +724,22 @@ function applyProviderFilter(tag) {
     c.classList.toggle('active', c.getAttribute('data-filter') === tag);
   });
   renderProviders();
+  // When user clicks the 本地 chip, also surface the local-model panel
+  // (with detected runtimes if any, install hints otherwise).
+  if (tag === 'local') {
+    var panel = document.getElementById('localPanel');
+    if (panel && panel.style.display !== 'block') {
+      // Try a fresh scan first; if nothing comes back, show install hints.
+      fetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
+        var running = (data.runtimes || []).filter(function(r){return r.running;});
+        if (running.length > 0) {
+          scanLocalModels();
+        } else {
+          showLocalModelHints();
+        }
+      }).catch(function(){ showLocalModelHints(); });
+    }
+  }
 }
 
 function searchProviders(q) {
@@ -1683,6 +1699,10 @@ function scanLocalModels() {
   fetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
     var running = (data.runtimes || []).filter(function(r){return r.running;});
     if (running.length === 0) {
+      // No runtime detected. Keep the panel hidden by default to avoid
+      // cluttering the page for users who only use cloud APIs. The
+      // 'shouldShowEmptyHint' logic could be added later (e.g. only
+      // show after the user clicks 'Rescan' explicitly).
       panel.style.display = 'none';
       return;
     }
@@ -1758,6 +1778,29 @@ function applyLocalRuntime(runtimeId, port) {
       showToast(data.error || '\u4fdd\u5b58\u5931\u8d25', 'error');
     }
   }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+}
+
+// Show local-model help when user clicks the 本地 filter chip but
+// no runtime is currently detected. Reuses the localPanel for hints.
+function showLocalModelHints() {
+  var panel = document.getElementById('localPanel');
+  var listEl = document.getElementById('localRuntimes');
+  if (!panel || !listEl) return;
+  panel.style.display = 'block';
+  listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.82em;font-family:var(--font-mono);line-height:1.7;">' +
+    '<div style="margin-bottom:8px;">未检测到本地模型运行。安装并启动以下任一工具后点 <strong>重新扫描</strong>：</div>' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;">' +
+      '<a href="https://ollama.com/" target="_blank" style="color:var(--emerald);">Ollama →</a>' +
+      '<a href="https://lmstudio.ai/" target="_blank" style="color:var(--emerald);">LM Studio →</a>' +
+      '<a href="https://gpt4all.io/" target="_blank" style="color:var(--emerald);">GPT4All →</a>' +
+      '<a href="https://github.com/janhq/jan" target="_blank" style="color:var(--emerald);">Jan.ai →</a>' +
+      '<a href="https://github.com/oobabooga/text-generation-webui" target="_blank" style="color:var(--emerald);">Text Gen WebUI →</a>' +
+      '<a href="https://github.com/LostRuins/koboldcpp" target="_blank" style="color:var(--emerald);">KoboldCpp →</a>' +
+      '<a href="https://github.com/ggerganov/llama.cpp" target="_blank" style="color:var(--emerald);">llama.cpp →</a>' +
+      '<a href="https://docs.vllm.ai/" target="_blank" style="color:var(--emerald);">vLLM →</a>' +
+      '<a href="https://github.com/xorbitsai/inference" target="_blank" style="color:var(--emerald);">XInference →</a>' +
+      '<a href="https://localai.io/" target="_blank" style="color:var(--emerald);">LocalAI →</a>' +
+    '</div></div>';
 }
 
 // ===== INIT =====

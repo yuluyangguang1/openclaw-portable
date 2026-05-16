@@ -927,12 +927,22 @@ const server = http.createServer((req, res) => {
   // so the UI gets a fast 'auto-discovery' of locally-running models.
   if (req.url === '/api/local/scan' && req.method === 'GET') {
     (async () => {
+      // Probes are run in parallel (Promise.all) so the order here is
+      // only the order they appear in the response — the user's UI
+      // shows whichever runtimes are actually running.
+      // Port 8080 is shared between llama.cpp and LocalAI; we keep
+      // a single probe and report whichever responded.
       const probes = [
-        { id: 'ollama',    name: 'Ollama',    port: 11434, path: '/api/tags',   listKey: 'models', extract: (j) => (j.models || []).map(m => m.name) },
-        { id: 'lmstudio',  name: 'LM Studio', port: 1234,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
-        { id: 'vllm',      name: 'vLLM',      port: 8000,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
-        { id: 'jan',       name: 'Jan.ai',    port: 1337,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
-        { id: 'llamacpp',  name: 'llama.cpp', port: 8080,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'ollama',    name: 'Ollama',          port: 11434, path: '/api/tags',  extract: (j) => (j.models || []).map(m => m.name) },
+        { id: 'lmstudio',  name: 'LM Studio',       port: 1234,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'vllm',      name: 'vLLM',            port: 8000,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'jan',       name: 'Jan.ai',          port: 1337,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'llamacpp',  name: 'llama.cpp/LocalAI', port: 8080, path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'gpt4all',   name: 'GPT4All',         port: 4891,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'tgwebui',   name: 'Text Gen WebUI',  port: 5000,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'kobold',    name: 'KoboldCpp',       port: 5001,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'xinf',      name: 'XInference',      port: 9997,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'mlx',       name: 'MLX Server',      port: 8081,  path: '/v1/models', extract: (j) => (j.data || []).map(m => m.id) },
       ];
       const probe = async (p) => {
         const url = 'http://127.0.0.1:' + p.port + p.path;
