@@ -112,10 +112,14 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path data/.openclaw | Out-Null
           '{"gateway":{"mode":"local","auth":{"token":"openclaw"}}}' | Out-File -Encoding ascii data/.openclaw/openclaw.json
-          $proc = Start-Process -FilePath node -ArgumentList "config-server/server.js" -NoNewWindow -PassThru -RedirectStandardOutput server.out -RedirectStandardError server.err
-          "PID=$($proc.Id)" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          # Use cmd.exe start /B so the child detaches from the current
+          # shell (Start-Process -NoNewWindow keeps a handle that
+          # GitHub Actions kills when the step ends; child died before
+          # the next step ran).
+          $logFile = Join-Path $PWD "server.log"
+          Start-Process -FilePath "cmd.exe" -ArgumentList "/c","start","/B","node","config-server/server.js",">$logFile","2>&1" -NoNewWindow -Wait
           $ok = $false
-          for ($i = 1; $i -le 30; $i++) {
+          for ($i = 1; $i -le 60; $i++) {
             try {
               $r = Invoke-WebRequest -Uri "http://127.0.0.1:18788/api/heartbeat" -TimeoutSec 2 -UseBasicParsing
               if ($r.StatusCode -eq 200) { $ok = $true; Write-Host "OK: heartbeat after ${i}s"; break }
@@ -123,9 +127,8 @@ jobs:
             Start-Sleep -Seconds 1
           }
           if (-not $ok) {
-            Write-Host "FAIL: server did not respond in 30s"
-            Get-Content server.out, server.err -ErrorAction SilentlyContinue
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            Write-Host "FAIL: server did not respond in 60s"
+            if (Test-Path $logFile) { Get-Content $logFile -Tail 80 }
             exit 1
           }
 
@@ -133,23 +136,39 @@ jobs:
         if: runner.os != 'Windows'
         shell: bash
         run: |
+          # Disable pipefail. `curl -fsS ... | grep -q` exits 23 when
+          # grep -q closes the pipe early; combined with pipefail this
+          # would mask successes as failures.
           set -e
-          curl -fsS http://127.0.0.1:18788/api/version | grep -q '"portable"'
+          set +o pipefail
+
+          R=$(curl -fsS http://127.0.0.1:18788/api/version)
+          echo "$R" | grep -q '"portable"' || { echo "FAIL: /api/version: $R"; exit 1; }
           echo "OK: /api/version"
-          curl -fsS http://127.0.0.1:18788/api/config | grep -q '"gateway"'
+
+          R=$(curl -fsS http://127.0.0.1:18788/api/config)
+          echo "$R" | grep -q '"gateway"' || { echo "FAIL: /api/config GET: $R"; exit 1; }
           echo "OK: /api/config GET"
+
           PAYLOAD='{"gateway":{"mode":"local","auth":{"token":"openclaw"}},"models":{"providers":{"deepseek":{"baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-test","api":"openai-completions","models":[{"id":"deepseek-chat","name":"deepseek-chat"}]}}},"agents":{"defaults":{"model":{"primary":"deepseek/deepseek-chat"}}}}'
-          RESP=$(curl -fsS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" http://127.0.0.1:18788/api/config)
-          echo "$RESP" | grep -q '"ok":true'
+          R=$(curl -fsS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" http://127.0.0.1:18788/api/config)
+          echo "$R" | grep -q '"ok":true' || { echo "FAIL: /api/config POST: $R"; exit 1; }
           echo "OK: /api/config POST"
-          curl -fsS http://127.0.0.1:18788/api/config | grep -q '"deepseek"'
+
+          R=$(curl -fsS http://127.0.0.1:18788/api/config)
+          echo "$R" | grep -q '"deepseek"' || { echo "FAIL: config not persisted: $R"; exit 1; }
           echo "OK: config persisted"
-          curl -fsS -X POST -H "Content-Type: application/json" \
+
+          R=$(curl -fsS -X POST -H "Content-Type: application/json" \
             -d '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' \
-            http://127.0.0.1:18788/api/key/test --max-time 15 | grep -q '"ok"'
+            --max-time 15 http://127.0.0.1:18788/api/key/test)
+          echo "$R" | grep -q '"ok"' || { echo "FAIL: /api/key/test: $R"; exit 1; }
           echo "OK: /api/key/test responds"
-          curl -fsS http://127.0.0.1:18788/ | grep -q "OpenClaw Portable"
+
+          R=$(curl -fsS http://127.0.0.1:18788/)
+          echo "$R" | grep -q "OpenClaw Portable" || { echo "FAIL: index.html missing brand"; exit 1; }
           echo "OK: index.html served"
+
           # --path-as-is keeps curl from collapsing '..' before sending,
           # and %2e%2e ensures even pedantic clients pass the literal dots.
           STATUS=$(curl -s --path-as-is -o /dev/null -w "%{http_code}" "http://127.0.0.1:18788/%2e%2e/server.js")
@@ -223,5 +242,11 @@ jobs:
         if: always() && runner.os == 'Windows'
         shell: pwsh
         run: |
-          if ($env:PID) { Stop-Process -Id $env:PID -Force -ErrorAction SilentlyContinue }
-          Get-Content server.out, server.err -ErrorAction SilentlyContinue | Select-Object -Last 50
+          # Kill whatever process is bound to 18788 (we don't track the
+          # child PID across steps; killing by listening port is
+          # reliable on Windows runners).
+          $conns = Get-NetTCPConnection -LocalPort 18788 -State Listen -ErrorAction SilentlyContinue
+          if ($conns) {
+            $conns | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+          }
+          if (Test-Path server.log) { Get-Content server.log -Tail 50 }
