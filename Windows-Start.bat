@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 setlocal EnableDelayedExpansion
 chcp 65001 >nul 2>&1
 title OpenClaw Portable - Portable AI Agent

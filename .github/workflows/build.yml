@@ -84,6 +84,34 @@ jobs:
           du -sh .
           du -sh app/runtime/*/
 
+      - name: Enforce UTF-8 BOM + CRLF on .bat files
+        run: |
+          # cmd.exe on CN Windows parses .bat source as CP936 (system
+          # ANSI), not UTF-8. Without a BOM, our Chinese strings get
+          # mangled into garbage commands. Enforce BOM + CRLF for any
+          # .bat that contains non-ASCII bytes; pure-ASCII .bat files
+          # don't need it.
+          python3 - <<'PY'
+          import os, glob, sys
+          BOM = b"\xef\xbb\xbf"
+          changed = []
+          for p in sorted(glob.glob("*.bat")):
+              data = open(p, "rb").read()
+              try:
+                  data.decode("ascii")
+                  continue  # pure ASCII, skip
+              except UnicodeDecodeError:
+                  pass
+              body = data[3:] if data.startswith(BOM) else data
+              text = body.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n")
+              out = BOM + text.encode("utf-8")
+              if out != data:
+                  open(p, "wb").write(out)
+                  changed.append(p)
+          for p in changed:
+              print(f"Normalized: {p}")
+          PY
+
       - name: Restore exec bits
         run: |
           # upload-artifact loses exec bits; set them before zipping
