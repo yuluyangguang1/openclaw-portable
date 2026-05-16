@@ -922,6 +922,47 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // API: Scan localhost for known local model runtimes.
+  // Probes 5 well-known ports in parallel with a short timeout each
+  // so the UI gets a fast 'auto-discovery' of locally-running models.
+  if (req.url === '/api/local/scan' && req.method === 'GET') {
+    (async () => {
+      const probes = [
+        { id: 'ollama',    name: 'Ollama',    port: 11434, path: '/api/tags',   listKey: 'models', extract: (j) => (j.models || []).map(m => m.name) },
+        { id: 'lmstudio',  name: 'LM Studio', port: 1234,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'vllm',      name: 'vLLM',      port: 8000,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'jan',       name: 'Jan.ai',    port: 1337,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
+        { id: 'llamacpp',  name: 'llama.cpp', port: 8080,  path: '/v1/models',  listKey: 'data',   extract: (j) => (j.data || []).map(m => m.id) },
+      ];
+      const probe = async (p) => {
+        const url = 'http://127.0.0.1:' + p.port + p.path;
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 1500);
+        try {
+          const r = await fetch(url, { signal: ctrl.signal });
+          clearTimeout(t);
+          if (!r.ok) return { id: p.id, name: p.name, port: p.port, running: false };
+          const j = await r.json();
+          let models;
+          try { models = p.extract(j); } catch (_) { models = []; }
+          return { id: p.id, name: p.name, port: p.port, running: true, models: models.slice(0, 50) };
+        } catch (e) {
+          clearTimeout(t);
+          return { id: p.id, name: p.name, port: p.port, running: false };
+        }
+      };
+      try {
+        const results = await Promise.all(probes.map(probe));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true, runtimes: results }));
+      } catch (err) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message, runtimes: [] }));
+      }
+    })();
+    return;
+  }
+
   // API: Test API Key validity (lightweight model list request)
   if (req.url === '/api/key/test' && req.method === 'POST') {
     let body = '';

@@ -497,7 +497,7 @@
 <!-- Step 1 -->
 <div class="step-section active" id="step1"><div style="padding:24px;">
   <h2>选择模型平台</h2>
-  <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">28</span> 个平台。</p>
+  <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">33</span> 个平台。</p>
 
   <!-- 搜索 + 标签筛选 -->
   <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
@@ -521,6 +521,15 @@
     <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.78em;">一键 DeepSeek</button>
     <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4')" style="font-size:0.78em;">一键 OpenRouter</button>
     <button class="io-btn" onclick="applyPreset('gemini','gemini-2.5-flash')" style="font-size:0.78em;">一键 Gemini (免费)</button>
+  </div>
+
+  <!-- 本地模型自动检测 (auto-discovery) -->
+  <div id="localPanel" style="display:none;margin-bottom:18px;padding:14px 16px;background:var(--secondary);border:1px solid var(--emerald-dim);border-radius:8px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85em;font-weight:600;">检测到本地模型运行</span>
+      <button class="io-btn" onclick="scanLocalModels()" style="font-size:0.72em;padding:4px 10px;">重新扫描</button>
+    </div>
+    <div id="localRuntimes"></div>
   </div>
 
   <div class="model-grid" id="providerGrid"></div>
@@ -646,6 +655,11 @@ const PROVIDERS = [
   {id:'openrouter',name:'OpenRouter',tags:['hot'],desc:'\u6a21\u578b\u805a\u5408\u5e73\u53f0',base:'https://openrouter.ai/api/v1',models:['anthropic/claude-sonnet-4','openai/gpt-4.1','google/gemini-2.5-pro'],link:'https://openrouter.ai/'},
   {id:'together',name:'Together',tags:['cheap'],desc:'\u5f00\u6e90\u6a21\u578b\u6258\u7ba1',base:'https://api.together.xyz/v1',models:['meta-llama/Llama-3.3-70B-Instruct-Turbo','Qwen/Qwen2.5-72B-Instruct-Turbo'],link:'https://api.together.xyz/'},
   {id:'fireworks',name:'Fireworks',tags:['fast'],desc:'\u9ad8\u901f\u63a8\u7406',base:'https://api.fireworks.ai/inference/v1',models:['accounts/fireworks/models/llama-v3p3-70b-instruct'],link:'https://fireworks.ai/'},
+  {id:'deepinfra',name:'DeepInfra',tags:['cheap'],desc:'\u6781\u4f4e\u4ef7\u5f00\u6e90\u6a21\u578b',base:'https://api.deepinfra.com/v1/openai',models:['meta-llama/Llama-3.3-70B-Instruct','deepseek-ai/DeepSeek-V3','Qwen/Qwen2.5-72B-Instruct'],link:'https://deepinfra.com/'},
+  {id:'replicate',name:'Replicate',tags:[],desc:'\u5f00\u6e90\u751f\u6001\u805a\u5408',base:'https://api.replicate.com/v1',models:['meta/meta-llama-3.1-405b-instruct','meta/meta-llama-3.3-70b-instruct'],link:'https://replicate.com/'},
+  {id:'novita',name:'Novita',tags:['cn','cheap'],desc:'\u56fd\u5185\u8bbf\u95ee\u5feb',base:'https://api.novita.ai/v3/openai',models:['meta-llama/llama-3.3-70b-instruct','deepseek/deepseek-v3'],link:'https://novita.ai/'},
+  {id:'hyperbolic',name:'Hyperbolic',tags:['cn','cheap'],desc:'DeepSeek / Qwen \u955c\u50cf',base:'https://api.hyperbolic.xyz/v1',models:['deepseek-ai/DeepSeek-V3','Qwen/Qwen2.5-72B-Instruct'],link:'https://app.hyperbolic.xyz/'},
+  {id:'cerebras',name:'Cerebras',tags:['fast','free'],desc:'1500 tok/s \u6781\u901f\u63a8\u7406',base:'https://api.cerebras.ai/v1',models:['llama3.3-70b','llama3.1-8b'],link:'https://cloud.cerebras.ai/'},
   {id:'custom',name:'\u81ea\u5b9a\u4e49/\u4e2d\u8f6c\u7ad9',tags:[],desc:'\u81ea\u5b9a\u4e49API\u7aef\u70b9',base:'',models:[],link:'',isCustom:true},
   {id:'lmstudio',name:'LM Studio',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:1234/v1',models:[],link:'https://lmstudio.ai/',isLocal:true},
   {id:'ollama',name:'Ollama',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:11434/v1',models:[],link:'https://ollama.com/',isLocal:true}
@@ -1659,9 +1673,98 @@ function fetchT(url, opts) {
   });
 }
 
+// ===== LOCAL MODEL AUTO-DETECT =====
+function scanLocalModels() {
+  var panel = document.getElementById('localPanel');
+  var listEl = document.getElementById('localRuntimes');
+  if (!panel || !listEl) return;
+  listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.8em;font-family:var(--font-mono);">扫描中...</div>';
+  panel.style.display = 'block';
+  fetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
+    var running = (data.runtimes || []).filter(function(r){return r.running;});
+    if (running.length === 0) {
+      panel.style.display = 'none';
+      return;
+    }
+    listEl.innerHTML = running.map(function(rt){
+      var modelsHtml;
+      if (!rt.models || rt.models.length === 0) {
+        modelsHtml = '<span style="color:var(--fg-muted);font-size:0.78em;">运行中但未拉取到模型 — 在 ' + rt.name + ' 里下载一个模型后点重新扫描</span>';
+      } else {
+        var opts = rt.models.map(function(m){return '<option value="' + m + '">' + m + '</option>';}).join('');
+        modelsHtml =
+          '<select id="local-' + rt.id + '-model" style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78em;">' + opts + '</select>' +
+          '<button class="btn btn-sm" onclick="applyLocalRuntime(\'' + rt.id + '\',' + rt.port + ')" style="font-size:0.74em;">使用</button>';
+      }
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+        '<span style="color:var(--fg);font-family:var(--font-mono);font-size:0.82em;min-width:90px;">' + rt.name + '</span>' +
+        '<span style="color:var(--fg-muted);font-family:var(--font-mono);font-size:0.72em;min-width:60px;">:' + rt.port + '</span>' +
+        modelsHtml +
+        '</div>';
+    }).join('');
+  }).catch(function(){
+    panel.style.display = 'none';
+  });
+}
+
+function applyLocalRuntime(runtimeId, port) {
+  var sel = document.getElementById('local-' + runtimeId + '-model');
+  if (!sel || !sel.value) return;
+  var modelName = sel.value;
+  // The OpenAI-compatible base URL pattern. Ollama uses /v1, others use /v1.
+  var base = 'http://127.0.0.1:' + port + '/v1';
+  // Build a config payload similar to what saveConfig does for cloud providers.
+  // Local models don't need an API key (we send a placeholder).
+  var providerKey = 'local-' + runtimeId;
+  var providers = {};
+  providers[providerKey] = {
+    baseUrl: base,
+    apiKey: 'local-no-key',
+    api: 'openai-completions',
+    models: [{
+      id: modelName, name: modelName, reasoning: false,
+      input: ['text'],
+      cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+      contextWindow: 32768, maxTokens: 8192
+    }]
+  };
+  var cfg = {
+    gateway: { mode: 'local', auth: { mode: 'token', token: 'openclaw' } },
+    commands: { native: 'auto', nativeSkills: 'auto', restart: true, ownerDisplay: 'raw' },
+    models: { mode: 'merge', providers: providers },
+    agents: { defaults: { model: { primary: providerKey + '/' + modelName } } }
+  };
+  configData = cfg;
+  fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(cfg)
+  }).then(function(r){return r.json();}).then(function(data){
+    if (data.ok) {
+      showToast('\u672c\u5730\u6a21\u578b \u5df2\u8bbe\u7f6e: ' + modelName + '\uff0c\u91cd\u542f\u4e2d...', 'success');
+      goStep(2);
+      showConfigSummary(cfg);
+      fetch('/api/restart', { method: 'POST' }).then(function(){
+        var waitCount = 0;
+        var waitReady = setInterval(function(){
+          waitCount++;
+          if (waitCount > 30) { clearInterval(waitReady); return; }
+          findGatewayPort().then(function(p){
+            if (p) { clearInterval(waitReady); checkGateway(); }
+          });
+        }, 2000);
+      }).catch(function(){});
+    } else {
+      showToast(data.error || '\u4fdd\u5b58\u5931\u8d25', 'error');
+    }
+  }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+}
+
 // ===== INIT =====
 (function init() {
   loadVersion();
+  // Auto-scan local model runtimes on load — silent if nothing is running.
+  setTimeout(scanLocalModels, 200);
   // Check gateway
   checkGateway();
   setInterval(checkGateway, 15000);
