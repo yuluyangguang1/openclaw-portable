@@ -4,7 +4,15 @@
 # Double-click to start / 双击启动
 # ============================================================
 
-UCLAW_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Resolve the portable root, tolerating placement either at the
+# repo root (dev mode) or in a system/ subdirectory (release zip
+# layout, where the user-facing root only contains launchers + docs).
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ "$(basename "$_SCRIPT_DIR")" = "system" ]; then
+    UCLAW_DIR="$(dirname "$_SCRIPT_DIR")"
+else
+    UCLAW_DIR="$_SCRIPT_DIR"
+fi
 APP_DIR="$UCLAW_DIR/app"
 CORE_DIR="$APP_DIR/core"
 DATA_DIR="$UCLAW_DIR/data"
@@ -78,7 +86,12 @@ fi
 # config integrity) and exits with one consolidated diagnosis if
 # anything is wrong. This catches ~80% of "打不开" support issues
 # at the source.
-if [ -f "$UCLAW_DIR/lib/preflight.sh" ]; then
+# preflight lives next to the launcher (so when the launcher is in
+# system/, preflight is in system/lib/). Fall back to root/lib/.
+if [ -f "$_SCRIPT_DIR/lib/preflight.sh" ]; then
+    # shellcheck disable=SC1091
+    source "$_SCRIPT_DIR/lib/preflight.sh"
+elif [ -f "$UCLAW_DIR/lib/preflight.sh" ]; then
     # shellcheck disable=SC1091
     source "$UCLAW_DIR/lib/preflight.sh"
     if ! preflight_run; then

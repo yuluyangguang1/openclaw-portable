@@ -6,7 +6,12 @@ Set fso = CreateObject("Scripting.FileSystemObject")
 Set sh  = CreateObject("Shell.Application")
 
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
-batPath   = scriptDir & "\Windows-Start.bat"
+' Prefer system\ subdirectory layout (release zip), fall back to root.
+If fso.FileExists(scriptDir & "\system\Windows-Start.bat") Then
+    batPath = scriptDir & "\system\Windows-Start.bat"
+Else
+    batPath = scriptDir & "\Windows-Start.bat"
+End If
 
 If Not fso.FileExists(batPath) Then
     MsgBox "OpenClaw: Windows-Start.bat not found." & vbCrLf & "Looking for: " & batPath, 16, "OpenClaw"

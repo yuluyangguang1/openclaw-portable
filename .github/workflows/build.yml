@@ -121,6 +121,36 @@ jobs:
             [ -d "$bindir" ] && find "$bindir" -type f -exec chmod +x {} +
           done
 
+      - name: Move scripts into system/ subdirectory
+        run: |
+          # End-user zip layout: only OpenClaw.app / .vbs / .desktop +
+          # the manual + README + version files at the root. Everything
+          # else (raw launcher scripts, menu/diagnose helpers, lib/,
+          # default-config) goes into system/ so casual users can't
+          # accidentally double-click the wrong file.
+          set -e
+          mkdir -p system/lib
+          # Launchers (Start) — moved here, the .app/.vbs/.desktop shims
+          # know to look in system/ first.
+          mv Mac-Start.command   system/
+          mv Linux-Start.sh      system/
+          mv Windows-Start.bat   system/
+          # Menu + Diagnose — advanced users can still find them
+          mv Mac-Menu.command Mac-Diagnose.command   system/
+          mv Linux-Menu.sh    Linux-Diagnose.sh      system/
+          mv Windows-Menu.bat Windows-Diagnose.bat   system/
+          # Helpers
+          mv lib/preflight.sh    system/lib/preflight.sh
+          mv lib/maintain.sh     system/lib/maintain.sh
+          rmdir lib
+          # default-config.json is read by the launchers/server when
+          # creating an initial config; not user-facing.
+          mv default-config.json system/
+          # The .app, .vbs, .desktop shims (already at root from
+          # 'Lift app shells to zip root') stay at root.
+          echo "Root after move:"
+          ls -1 | head -20
+
       - name: Create zip
         run: |
           set -e

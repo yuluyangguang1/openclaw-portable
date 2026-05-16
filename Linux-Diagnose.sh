@@ -4,7 +4,12 @@
 # bash Linux-Diagnose.sh
 # ============================================================
 
-UCLAW_DIR="$(cd "$(dirname "$0")" && pwd)"
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ "$(basename "$_SCRIPT_DIR")" = "system" ]; then
+    UCLAW_DIR="$(dirname "$_SCRIPT_DIR")"
+else
+    UCLAW_DIR="$_SCRIPT_DIR"
+fi
 LOG_FILE="$UCLAW_DIR/diagnostic-log.txt"
 
 GREEN='\033[0;32m'

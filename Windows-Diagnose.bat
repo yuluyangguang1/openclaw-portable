@@ -3,7 +3,14 @@ setlocal EnableDelayedExpansion
 chcp 65001 >nul 2>&1
 title OpenClaw Portable - Diagnostic Tool
 
-set "UCLAW_DIR=%~dp0"
+set "_SCRIPT_DIR=%~dp0"
+if "!_SCRIPT_DIR:~-1!"=="\" set "_SCRIPT_DIR=!_SCRIPT_DIR:~0,-1!"
+for %%I in ("!_SCRIPT_DIR!") do set "_SCRIPT_PARENT=%%~nI"
+if /I "!_SCRIPT_PARENT!"=="system" (
+    for %%I in ("!_SCRIPT_DIR!\..") do set "UCLAW_DIR=%%~fI\"
+) else (
+    set "UCLAW_DIR=%~dp0"
+)
 set "LOG_FILE=%UCLAW_DIR%diagnostic-log.txt"
 
 echo.

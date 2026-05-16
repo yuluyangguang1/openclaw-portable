@@ -4,7 +4,7 @@ Type=Application
 Name=OpenClaw
 Comment=Portable AI agent — data lives where this app lives
 GenericName=AI Agent
-Exec=bash -c 'cd "$(dirname "%k")" && bash Linux-Start.sh'
+Exec=bash -c 'D="$(dirname "%k")"; if [ -f "$D/system/Linux-Start.sh" ]; then bash "$D/system/Linux-Start.sh"; else bash "$D/Linux-Start.sh"; fi'
 Path=
 Icon=openclaw
 Terminal=true

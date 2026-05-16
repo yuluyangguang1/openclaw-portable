@@ -24,13 +24,15 @@
 
 启动：
 
-| 平台 | 推荐 | 备用 |
-|------|------|------|
-| macOS | 双击 `OpenClaw.app` | 双击 `Mac-Start.command` |
-| Windows | 双击 `OpenClaw.vbs` | 双击 `Windows-Start.bat` |
-| Linux | 双击 `OpenClaw.desktop` | `bash Linux-Start.sh` |
+| 平台 | 启动方式 |
+|------|------|
+| macOS | 双击 `OpenClaw.app` |
+| Windows | 双击 `OpenClaw.vbs` |
+| Linux | 双击 `OpenClaw.desktop` |
 
-`OpenClaw.app` / `.vbs` / `.desktop` 是带图标的便携启动器，把整个解压目录拖到 U 盘后，双击启动器即可，所有数据（API Key、对话历史、配置）都跟随 U 盘走，不污染主机。
+发布包根目录只保留这三个启动器和使用说明，方便用户。底层的 launcher 脚本、菜单、诊断工具等放在 `system/` 子目录里，避免误操作。
+
+所有数据（API Key、对话历史、配置）都跟随 U 盘走，不污染主机。
 
 启动后自动打开浏览器配置页面，选择模型平台 → 填写 API Key → 保存 → 打开聊天。
 
@@ -51,28 +53,36 @@ Windows 用户用 `setup.bat` 或 `setup.ps1`。
 
 ## 目录结构
 
+发布包解压后看到的根目录（用户视角，干净）：
+
 ```
-openclaw-portable/
-├── Mac-Start.command        # macOS 启动器
-├── Mac-Menu.command         # macOS 菜单（更新/诊断）
-├── Windows-Start.bat        # Windows 启动器
-├── Windows-Menu.bat         # Windows 菜单
-├── Linux-Start.sh           # Linux 启动器
-├── Linux-Menu.sh            # Linux 菜单
-├── config-server/           # 配置中心（Web UI + API）
-│   ├── server.js
-│   └── public/index.html
-├── app/
-│   ├── core/                # OpenClaw 核心 + node_modules
-│   └── runtime/             # Node.js 运行时（各平台）
+OpenClawPortable/
+├── OpenClaw.app             # macOS 启动器（带图标）
+├── OpenClaw.vbs             # Windows 启动器
+├── OpenClaw.desktop         # Linux 启动器
+├── 使用说明.html             # 用户手册
+├── README.md
+├── OPENCLAW_VERSION         # 上游版本号
+├── PORTABLE_VERSION         # Portable 版本号
+├── data/                    # 用户数据（API Key、对话历史等）
+├── app/                     # Node.js 运行时 + OpenClaw 核心
+├── config-server/           # 配置中心 Web UI + API
 ├── skills-cn/               # 中文技能包
-├── data/                    # 运行时数据（启动后生成）
-│   └── .openclaw/
-│       └── openclaw.json    # 用户配置
-├── setup.sh                 # 构建脚本（macOS/Linux）
-├── setup.bat                # 构建脚本（Windows）
-└── OPENCLAW_VERSION         # 锁定的上游版本号
+└── system/                  # 底层脚本（用户通常不需要碰）
+    ├── Mac-Start.command    # 启动脚本（双击 OpenClaw.app 时调用）
+    ├── Mac-Menu.command     # 菜单（更新/诊断/重置）
+    ├── Mac-Diagnose.command
+    ├── Linux-Start.sh
+    ├── Linux-Menu.sh
+    ├── Linux-Diagnose.sh
+    ├── Windows-Start.bat
+    ├── Windows-Menu.bat
+    ├── Windows-Diagnose.bat
+    ├── default-config.json
+    └── lib/                 # preflight / maintain 帮助库
 ```
+
+源码仓库的根目录则把 `system/` 里的文件放在最外层（dev 模式），CI 在打包时移到 `system/` 下。
 
 ## 配置中心
 

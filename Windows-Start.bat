@@ -41,7 +41,18 @@ if defined ESC (
 )
 echo.
 
-set "UCLAW_DIR=%~dp0"
+REM Resolve the portable root, tolerating placement either at the
+REM repo root (dev mode) or in a system\ subdirectory (release zip
+REM layout, where the user-facing root only contains launchers + docs).
+REM %~dp0 ends with a trailing backslash; strip it to get the dirname.
+set "_SCRIPT_DIR=%~dp0"
+if "!_SCRIPT_DIR:~-1!"=="\" set "_SCRIPT_DIR=!_SCRIPT_DIR:~0,-1!"
+for %%I in ("!_SCRIPT_DIR!") do set "_SCRIPT_PARENT=%%~nI"
+if /I "!_SCRIPT_PARENT!"=="system" (
+    for %%I in ("!_SCRIPT_DIR!\..") do set "UCLAW_DIR=%%~fI\"
+) else (
+    set "UCLAW_DIR=%~dp0"
+)
 set "APP_DIR=!UCLAW_DIR!app"
 
 REM Migration shim: rename old core-win to core for existing USB users

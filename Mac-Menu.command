@@ -2,7 +2,12 @@
 # OpenClaw Portable Menu - Portable AI Agent
 # macOS version
 
-UCLAW_DIR="$(cd "$(dirname "$0")" && pwd)"
+_SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ "$(basename "$_SCRIPT_DIR")" = "system" ]; then
+    UCLAW_DIR="$(dirname "$_SCRIPT_DIR")"
+else
+    UCLAW_DIR="$_SCRIPT_DIR"
+fi
 APP_DIR="$UCLAW_DIR/app"
 
 # Migration shim: rename old core-mac to core for existing USB users
@@ -41,7 +46,11 @@ export OPENCLAW_CONFIG_PATH="$CONFIG_PATH"
 mkdir -p "$STATE_DIR" "$DATA_DIR/memory" "$DATA_DIR/backups" "$DATA_DIR/logs"
 
 # Load maintenance functions
-source "$UCLAW_DIR/lib/maintain.sh"
+if [ -f "$_SCRIPT_DIR/lib/maintain.sh" ]; then
+    source "$_SCRIPT_DIR/lib/maintain.sh"
+else
+    source "$UCLAW_DIR/lib/maintain.sh"
+fi
 
 # Remove macOS quarantine (check any file, not just NODE_BIN)
 if xattr -lr "$UCLAW_DIR" 2>/dev/null | grep -qm1 "com.apple.quarantine"; then

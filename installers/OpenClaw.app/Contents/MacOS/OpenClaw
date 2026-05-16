@@ -32,7 +32,13 @@ BIN_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 # Portable root = BIN_DIR/../../..
 PORTABLE_ROOT="$(cd "$BIN_DIR/../../.." && pwd)"
 
-LAUNCHER="$PORTABLE_ROOT/Mac-Start.command"
+# Prefer the system/ subdirectory layout (release zip), fall back to
+# the launcher being at the portable root (dev mode).
+if [ -f "$PORTABLE_ROOT/system/Mac-Start.command" ]; then
+    LAUNCHER="$PORTABLE_ROOT/system/Mac-Start.command"
+else
+    LAUNCHER="$PORTABLE_ROOT/Mac-Start.command"
+fi
 
 if [ ! -f "$LAUNCHER" ]; then
   /usr/bin/osascript -e "display dialog \"OpenClaw 启动失败：找不到 Mac-Start.command\n\n请把 OpenClaw.app 放在 OpenClawPortable 目录下（与 Mac-Start.command 同级），不要单独移动。\n\n查找路径：\n$LAUNCHER\" buttons {\"OK\"} default button 1 with icon stop with title \"OpenClaw\""
