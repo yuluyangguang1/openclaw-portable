@@ -205,6 +205,14 @@ echo.
 
 cd /d "!CORE_DIR!"
 set "OPENCLAW_MJS=!CORE_DIR!\node_modules\openclaw\openclaw.mjs"
+
+REM Persist the actual gateway port so /api/restart re-launches on the
+REM same port instead of the hardcoded default.
+set "_JS=%TEMP%\oc-write-port-%RANDOM%.js"
+>>"!_JS!" echo var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}
+"!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" !PORT! >nul 2>&1
+del "!_JS!" 2>nul
+
 "!NODE_BIN!" "!OPENCLAW_MJS!" gateway run --allow-unconfigured --force --port !PORT!
 
 REM Gateway exited — clean up config-server (W6 fix)

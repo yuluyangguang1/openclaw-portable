@@ -172,6 +172,9 @@ echo ""
 
 cd "$CORE_DIR"
 OPENCLAW_MJS="$CORE_DIR/node_modules/openclaw/openclaw.mjs"
+# Persist the actual gateway port so the config-server's /api/restart
+# endpoint can re-launch on the same port instead of the hardcoded default.
+"$NODE_BIN" -e "var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}" "$RUNTIME_JSON" "$PORT" 2>/dev/null || true
 "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
 GW_PID=$!
 

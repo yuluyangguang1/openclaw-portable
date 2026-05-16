@@ -563,7 +563,9 @@ const server = http.createServer((req, res) => {
         // 3. Extract (skip data/ and app/runtime/ to preserve user data and node runtime)
         console.log('Update: extracting...');
         const extractDir = path.join(require('os').tmpdir(), 'openclaw-portable-extract');
-        execSync(`rm -rf "${extractDir}" && mkdir -p "${extractDir}"`);
+        // Use Node's fs API instead of shell (rm -rf / mkdir -p don't exist on Windows cmd.exe)
+        try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch(e) {}
+        fs.mkdirSync(extractDir, { recursive: true });
 
         if (process.platform === 'win32') {
           execSync(`powershell -Command "Expand-Archive -Force '${tmpZip}' '${extractDir}'"`, { timeout: 60000 });
@@ -738,10 +740,35 @@ const server = http.createServer((req, res) => {
       const coreDir = path.join(__dirname, '../app/core');
       const openclawMjs = path.join(coreDir, 'node_modules/openclaw/openclaw.mjs');
       const nodeBin = process.execPath; // same node that's running us
+
+      // Detect the actual gateway port the launcher chose. Falls back
+      // to 18789 only when runtime.json is missing or unreadable.
+      // Hardcoding 18789 broke restart whenever the launcher had to
+      // bump to 18790+ because port 18789 was taken.
+      let gwPort = '18789';
+      try {
+        if (fs.existsSync(RUNTIME_PATH)) {
+          const rt = JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8'));
+          if (rt && rt.gatewayPort && /^\d+$/.test(String(rt.gatewayPort))) {
+            gwPort = String(rt.gatewayPort);
+          }
+        }
+      } catch (e) { /* fall back to default */ }
+
       if (fs.existsSync(openclawMjs)) {
-        const child = spawn(nodeBin, [openclawMjs, 'gateway', 'run', '--allow-unconfigured', '--force', '--port', '18789'], {
+        // Inherit launcher-set env (OPENCLAW_HOME, OPENCLAW_STATE_DIR,
+        // OPENCLAW_DISABLE_BONJOUR, etc.) and only fill in values that
+        // are missing. Previously OPENCLAW_HOME was unconditionally
+        // overwritten with __dirname/../data which is wrong when the
+        // user runs from /Volumes (USB) or ~/.openclaw-portable.
+        const env = { ...process.env };
+        if (!env.OPENCLAW_HOME) env.OPENCLAW_HOME = path.join(__dirname, '../data');
+        if (!env.OPENCLAW_STATE_DIR) env.OPENCLAW_STATE_DIR = OPENCLAW_DIR;
+        if (!env.OPENCLAW_CONFIG_PATH) env.OPENCLAW_CONFIG_PATH = CONFIG_PATH;
+        if (!env.OPENCLAW_DISABLE_BONJOUR) env.OPENCLAW_DISABLE_BONJOUR = '1';
+        const child = spawn(nodeBin, [openclawMjs, 'gateway', 'run', '--allow-unconfigured', '--force', '--port', gwPort], {
           cwd: coreDir,
-          env: { ...process.env, OPENCLAW_HOME: path.join(__dirname, '../data'), OPENCLAW_STATE_DIR: OPENCLAW_DIR, OPENCLAW_CONFIG_PATH: CONFIG_PATH },
+          env,
           detached: true,
           stdio: 'ignore',
         });
