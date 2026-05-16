@@ -61,18 +61,33 @@ function atomicWriteConfig(config) {
 
   // Backup current file (if any) BEFORE we overwrite, so the most-recent
   // good config is always retrievable.
+  //
+  // Critical: only back up files that PARSE. If safeReadConfig had to
+  // recover from an older backup because the main file was corrupt,
+  // that corrupt file is still on disk. Backing it up would push a
+  // good backup out of the rolling 5-version window. Validate parse
+  // before copying.
   try {
     if (fs.existsSync(CONFIG_PATH)) {
-      fs.mkdirSync(CONFIG_BACKUP_DIR, { recursive: true });
-      const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      const backupPath = path.join(CONFIG_BACKUP_DIR, `openclaw-${ts}.json`);
-      fs.copyFileSync(CONFIG_PATH, backupPath);
-      // Prune old backups beyond CONFIG_BACKUP_KEEP
-      const old = fs.readdirSync(CONFIG_BACKUP_DIR)
-        .filter(f => f.startsWith('openclaw-') && f.endsWith('.json'))
-        .sort();
-      while (old.length > CONFIG_BACKUP_KEEP) {
-        try { fs.unlinkSync(path.join(CONFIG_BACKUP_DIR, old.shift())); } catch (_) {}
+      let mainParsesOk = false;
+      try {
+        JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+        mainParsesOk = true;
+      } catch (_) {
+        console.warn('[config] skipping pre-write backup: main file is corrupt');
+      }
+      if (mainParsesOk) {
+        fs.mkdirSync(CONFIG_BACKUP_DIR, { recursive: true });
+        const ts = new Date().toISOString().replace(/[:.]/g, '-');
+        const backupPath = path.join(CONFIG_BACKUP_DIR, `openclaw-${ts}.json`);
+        fs.copyFileSync(CONFIG_PATH, backupPath);
+        // Prune old backups beyond CONFIG_BACKUP_KEEP
+        const old = fs.readdirSync(CONFIG_BACKUP_DIR)
+          .filter(f => f.startsWith('openclaw-') && f.endsWith('.json'))
+          .sort();
+        while (old.length > CONFIG_BACKUP_KEEP) {
+          try { fs.unlinkSync(path.join(CONFIG_BACKUP_DIR, old.shift())); } catch (_) {}
+        }
       }
     }
   } catch (e) {

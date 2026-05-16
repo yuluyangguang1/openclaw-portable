@@ -251,7 +251,14 @@ del "!_JS!" 2>nul
 
 REM ── Gateway watchdog: auto-restart on crash, up to 3 times ──────
 REM cmd has no `wait` equivalent; we run gateway in foreground and
-REM check %errorlevel% afterwards. Exit code 0 = clean, others = crash.
+REM check %errorlevel% afterwards. Stop conditions:
+REM   0          — clean exit
+REM   130, 143   — POSIX-style (rare on Windows, kept for safety)
+REM   -1073741510 (0xC000013A) — STATUS_CONTROL_C_EXIT (Ctrl+C from console)
+REM   1          — taskkill /F sets this; almost always means a deliberate
+REM                kill (e.g. /api/restart asked a sibling Node to spawn a
+REM                detached replacement). Restarting from here would race
+REM                the replacement and crash on port 18789 already in use.
 set /a GW_RESTARTS=0
 :gw_loop
 "!NODE_BIN!" "!OPENCLAW_MJS!" gateway run --allow-unconfigured --force --port !PORT!
@@ -259,6 +266,14 @@ set GW_EXIT=!errorlevel!
 if !GW_EXIT! equ 0 goto gw_done
 if !GW_EXIT! equ 130 goto gw_done
 if !GW_EXIT! equ 143 goto gw_done
+if !GW_EXIT! equ 1 goto gw_done
+if !GW_EXIT! equ -1073741510 goto gw_done
+REM Sanity: if our port is now busy (someone else is the gateway), don\'t fight
+netstat -an 2>nul | findstr ":!PORT! " | findstr "LISTENING" >nul 2>&1
+if !errorlevel!==0 (
+    echo   Gateway 端口 !PORT! 已被其他进程占用，停止自愈（可能是 /api/restart 的副本^）
+    goto gw_done
+)
 set /a GW_RESTARTS+=1
 if !GW_RESTARTS! geq 3 (
     echo.
