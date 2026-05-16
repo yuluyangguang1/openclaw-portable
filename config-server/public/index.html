@@ -1219,7 +1219,7 @@ function showModal(title, body, btns) {
     var btn = document.createElement('button');
     btn.className = b.cls || 'modal-btn-cancel';
     btn.textContent = b.text;
-    btn.onclick = function() { eval(b.action); };
+    btn.onclick = function() { try { (new Function(b.action))(); } catch(e) { console.error('modal action error', e); } };
     btnDiv.appendChild(btn);
   });
   overlay.classList.add('show');
@@ -1539,11 +1539,17 @@ function fetchT(url, opts) {
   var _hbFails = 0;
   setInterval(function() {
     fetch('/api/heartbeat').then(function(r) {
-      if (r.ok) { _hbFails = 0; return; }
+      if (r.ok) {
+        _hbFails = 0;
+        var ov = document.getElementById('disconnectOverlay');
+        if (ov && ov.style.display === 'flex') ov.style.display = 'none';
+        return;
+      }
       _hbFails++;
     }).catch(function() { _hbFails++; });
     if (_hbFails >= 3) {
-      document.getElementById('disconnectOverlay').style.display = 'flex';
+      var ov2 = document.getElementById('disconnectOverlay');
+      if (ov2) ov2.style.display = 'flex';
     }
   }, 5000);
 })();

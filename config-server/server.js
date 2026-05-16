@@ -957,4 +957,17 @@ function listenWithFallback(port) {
   });
 }
 
+// Crash-safety: log instead of dying on unexpected errors so the
+// config server stays responsive (the main launcher cannot recover from a crash).
+process.on('uncaughtException', (err) => {
+  try {
+    console.error('[config-server] uncaughtException:', err && err.stack ? err.stack : err);
+  } catch (_) {}
+});
+process.on('unhandledRejection', (reason) => {
+  try {
+    console.error('[config-server] unhandledRejection:', reason);
+  } catch (_) {}
+});
+
 listenWithFallback(PORT_RANGE_START);
