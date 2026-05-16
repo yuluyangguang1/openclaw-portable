@@ -90,18 +90,24 @@ preflight_run() {
     fi
 
     # ── 8. node_modules integrity (USB sticks corrupt files silently) ──
-    # Cheapest test: try requiring the openclaw entry point. If a .node
-    # native binary or a critical JS file got truncated, this fails
-    # immediately. We keep the test offline — no network, no reinstall.
-    if [ -f "$NODE_BIN" ] && [ -f "$CORE_DIR/node_modules/openclaw/openclaw.mjs" ]; then
+    # Cheapest synchronous test: parse openclaw's package.json. If a
+    # USB FAT32 volume truncated the file, JSON.parse throws and Node
+    # exits non-zero with a stderr message we capture. We deliberately
+    # use require/readFileSync (sync) rather than dynamic import() —
+    # import() returns a promise and would always succeed silently.
+    if [ -f "$NODE_BIN" ] && [ -f "$CORE_DIR/node_modules/openclaw/package.json" ]; then
         local NM_TEST
-        NM_TEST=$("$NODE_BIN" --experimental-vm-modules -e "
+        NM_TEST=$("$NODE_BIN" -e "
             try {
-              import('$CORE_DIR/node_modules/openclaw/package.json', { with: { type: 'json' } });
+              const pkg = JSON.parse(require('fs').readFileSync('$CORE_DIR/node_modules/openclaw/package.json', 'utf8'));
+              if (!pkg.name || !pkg.version) throw new Error('package.json missing name/version');
+              if (!require('fs').existsSync('$CORE_DIR/node_modules/openclaw/' + (pkg.main || 'openclaw.mjs'))) {
+                throw new Error('main entry missing: ' + pkg.main);
+              }
             } catch (e) {
-              process.stdout.write('FAIL:' + (e.message || 'unknown'));
+              process.stdout.write('FAIL:' + (e.message || String(e)));
             }
-        " 2>&1 || true)
+        " 2>/dev/null || true)
         if [[ "$NM_TEST" == FAIL:* ]]; then
             FAILS+=("OpenClaw 模块完整性检查失败: ${NM_TEST#FAIL:}")
             FAILS+=("  → U 盘文件可能损坏，请重新下载发布包")

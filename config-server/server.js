@@ -82,6 +82,7 @@ function atomicWriteConfig(config) {
   // Atomic write: .tmp → fsync → rename
   const tmp = CONFIG_PATH + '.tmp';
   const json = JSON.stringify(config, null, 2);
+  const wasFirstWrite = !fs.existsSync(CONFIG_PATH);
   let fd = null;
   try {
     fd = fs.openSync(tmp, 'w');
@@ -91,6 +92,20 @@ function atomicWriteConfig(config) {
     if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
   }
   fs.renameSync(tmp, CONFIG_PATH);
+
+  // Seed backup on first ever save: backups/ would otherwise stay empty
+  // (we only back up before *overwriting* an existing file). Without a
+  // seed, a USB yank right after the first save leaves recovery with
+  // nothing to roll back to.
+  if (wasFirstWrite) {
+    try {
+      fs.mkdirSync(CONFIG_BACKUP_DIR, { recursive: true });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-');
+      fs.copyFileSync(CONFIG_PATH, path.join(CONFIG_BACKUP_DIR, `openclaw-${ts}.json`));
+    } catch (e) {
+      console.warn('[config] seed backup failed (non-fatal):', e.message);
+    }
+  }
 }
 
 // ── WeChat Login State ──────────────────────────────────────────────────────
