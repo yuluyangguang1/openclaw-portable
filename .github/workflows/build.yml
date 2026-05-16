@@ -70,7 +70,7 @@ jobs:
           # on any supported platform. setup.* scripts and CI config
           # are kept in the repo (for rebuilding) but stripped from the
           # user-facing zip.
-          rm -rf .git .github .gitignore desktop
+          rm -rf .git .github .gitignore
           # Build-only tooling: users don't rebuild from the zip —
           # they run the launcher directly. setup.* would only confuse
           # them, and Install scripts violate the zero-trace promise by
