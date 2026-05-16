@@ -1,0 +1,227 @@
+name: Smoke Test
+
+# Verifies that the config-server starts, responds to /api/heartbeat,
+# saves+reads /api/config, and that critical files are syntactically valid
+# on all three platforms. Runs without the heavy `setup.sh --all-platforms`
+# step so it finishes in ~3 minutes per OS.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Static checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Node syntax check
+        run: |
+          node --check config-server/server.js
+          echo "OK: server.js parses"
+
+      - name: Bash syntax check
+        run: |
+          for f in Mac-Start.command Linux-Start.sh setup.sh lib/maintain.sh; do
+            bash -n "$f" && echo "OK: $f"
+          done
+
+      - name: HTML structural sanity
+        run: |
+          python3 - <<'PY'
+          import re, io
+          P = "config-server/public/index.html"
+          s = io.open(P, "r", encoding="utf-8").read()
+          op = len(re.findall(r"<div\b", s))
+          cl = s.count("</div>")
+          assert op == cl, f"div imbalance: open={op} close={cl}"
+          declared = set(re.findall(r'\bid="([^"]+)"', s))
+          referenced = set(re.findall(r"getElementById\(['\"]([^'\"]+)['\"]\)", s))
+          missing = referenced - declared
+          assert not missing, f"JS references missing IDs: {sorted(missing)}"
+          onclicks = set(re.findall(r'onclick="([A-Za-z_][\w]*)\s*\(', s))
+          fns = set(re.findall(r'function\s+([A-Za-z_]\w*)\s*\(', s))
+          missing_fn = onclicks - fns - {"event"}
+          assert not missing_fn, f"onclick refs not defined: {sorted(missing_fn)}"
+          print(f"OK: {op}/{cl} divs balanced, {len(declared)} ids declared, {len(onclicks)} onclicks resolved")
+          PY
+
+      - name: JSON validity
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('default-config.json','utf8'))" && echo "OK: default-config.json"
+
+  runtime:
+    name: Runtime smoke (${{ matrix.os }})
+    needs: static
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Boot config-server (POSIX)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p data/.openclaw
+          echo '{"gateway":{"mode":"local","auth":{"token":"openclaw"}}}' > data/.openclaw/openclaw.json
+          node config-server/server.js > server.log 2>&1 &
+          PID=$!
+          echo "PID=$PID" >> $GITHUB_ENV
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18788/api/heartbeat > /dev/null 2>&1; then
+              echo "OK: heartbeat after ${i}s"
+              break
+            fi
+            if [ $i = 30 ]; then
+              echo "FAIL: server did not respond in 30s"
+              cat server.log
+              kill $PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Boot config-server (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path data/.openclaw | Out-Null
+          '{"gateway":{"mode":"local","auth":{"token":"openclaw"}}}' | Out-File -Encoding ascii data/.openclaw/openclaw.json
+          $proc = Start-Process -FilePath node -ArgumentList "config-server/server.js" -NoNewWindow -PassThru -RedirectStandardOutput server.out -RedirectStandardError server.err
+          "PID=$($proc.Id)" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
+          $ok = $false
+          for ($i = 1; $i -le 30; $i++) {
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:18788/api/heartbeat" -TimeoutSec 2 -UseBasicParsing
+              if ($r.StatusCode -eq 200) { $ok = $true; Write-Host "OK: heartbeat after ${i}s"; break }
+            } catch {}
+            Start-Sleep -Seconds 1
+          }
+          if (-not $ok) {
+            Write-Host "FAIL: server did not respond in 30s"
+            Get-Content server.out, server.err -ErrorAction SilentlyContinue
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            exit 1
+          }
+
+      - name: API smoke (POSIX)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -e
+          curl -fsS http://127.0.0.1:18788/api/version | grep -q '"portable"'
+          echo "OK: /api/version"
+          curl -fsS http://127.0.0.1:18788/api/config | grep -q '"gateway"'
+          echo "OK: /api/config GET"
+          PAYLOAD='{"gateway":{"mode":"local","auth":{"token":"openclaw"}},"models":{"providers":{"deepseek":{"baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-test","api":"openai-completions","models":[{"id":"deepseek-chat","name":"deepseek-chat"}]}}},"agents":{"defaults":{"model":{"primary":"deepseek/deepseek-chat"}}}}'
+          RESP=$(curl -fsS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" http://127.0.0.1:18788/api/config)
+          echo "$RESP" | grep -q '"ok":true'
+          echo "OK: /api/config POST"
+          curl -fsS http://127.0.0.1:18788/api/config | grep -q '"deepseek"'
+          echo "OK: config persisted"
+          curl -fsS -X POST -H "Content-Type: application/json" \
+            -d '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' \
+            http://127.0.0.1:18788/api/key/test --max-time 15 | grep -q '"ok"'
+          echo "OK: /api/key/test responds"
+          curl -fsS http://127.0.0.1:18788/ | grep -q "OpenClaw Portable"
+          echo "OK: index.html served"
+          # --path-as-is keeps curl from collapsing '..' before sending,
+          # and %2e%2e ensures even pedantic clients pass the literal dots.
+          STATUS=$(curl -s --path-as-is -o /dev/null -w "%{http_code}" "http://127.0.0.1:18788/%2e%2e/server.js")
+          if [ "$STATUS" = "403" ] || [ "$STATUS" = "404" ]; then
+            echo "OK: path traversal blocked (HTTP $STATUS)"
+          else
+            echo "FAIL: path traversal returned $STATUS"
+            exit 1
+          fi
+
+      - name: API smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $base = "http://127.0.0.1:18788"
+          $v = Invoke-RestMethod "$base/api/version"
+          if (-not $v.portable) { throw "version missing" }
+          Write-Host "OK: /api/version"
+
+          $c = Invoke-RestMethod "$base/api/config"
+          if (-not $c.gateway) { throw "config missing gateway" }
+          Write-Host "OK: /api/config GET"
+
+          $payload = @{
+            gateway = @{ mode = "local"; auth = @{ token = "openclaw" } }
+            models = @{ providers = @{ deepseek = @{ baseUrl = "https://api.deepseek.com/v1"; apiKey = "sk-test"; api = "openai-completions"; models = @(@{ id = "deepseek-chat"; name = "deepseek-chat" }) } } }
+            agents = @{ defaults = @{ model = @{ primary = "deepseek/deepseek-chat" } } }
+          } | ConvertTo-Json -Depth 6
+          $r = Invoke-RestMethod "$base/api/config" -Method Post -Body $payload -ContentType "application/json"
+          if (-not $r.ok) { throw "POST /api/config not ok" }
+          Write-Host "OK: /api/config POST"
+
+          $c2 = Invoke-RestMethod "$base/api/config"
+          if (-not $c2.models.providers.deepseek) { throw "config not persisted" }
+          Write-Host "OK: config persisted"
+
+          $kt = Invoke-RestMethod "$base/api/key/test" -Method Post -Body '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' -ContentType "application/json" -TimeoutSec 15
+          if ($null -eq $kt.ok) { throw "key/test missing 'ok' field" }
+          Write-Host "OK: /api/key/test responds"
+
+          $idx = Invoke-WebRequest "$base/" -UseBasicParsing
+          if ($idx.Content -notmatch "OpenClaw Portable") { throw "index.html missing brand" }
+          Write-Host "OK: index.html served"
+
+          # PowerShell normalizes URIs and would collapse '..' before sending.
+          # Use System.Net.HttpWebRequest with a custom-built URI that bypasses the normalizer
+          # by using percent-encoded dots.
+          $req = [System.Net.HttpWebRequest]::Create("$base/%2e%2e/server.js")
+          $req.Method = "GET"
+          try {
+            $resp = $req.GetResponse()
+            $code = [int]$resp.StatusCode
+            $resp.Close()
+          } catch [System.Net.WebException] {
+            if ($_.Exception.Response) { $code = [int]$_.Exception.Response.StatusCode } else { $code = 0 }
+          }
+          if ($code -eq 403 -or $code -eq 404) {
+            Write-Host "OK: path traversal blocked (HTTP $code)"
+          } else {
+            throw "path traversal returned $code"
+          }
+
+      - name: Cleanup (POSIX)
+        if: always() && runner.os != 'Windows'
+        shell: bash
+        run: |
+          if [ -n "$PID" ]; then kill $PID 2>/dev/null || true; fi
+          [ -f server.log ] && tail -50 server.log || true
+
+      - name: Cleanup (Windows)
+        if: always() && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if ($env:PID) { Stop-Process -Id $env:PID -Force -ErrorAction SilentlyContinue }
+          Get-Content server.out, server.err -ErrorAction SilentlyContinue | Select-Object -Last 50
