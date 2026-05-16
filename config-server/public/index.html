@@ -1265,10 +1265,19 @@ function openGateway() {
 
 var _gwOfflineCount = 0;
 var _gwEverOnline = false;
+var _gwCheckBusy = false;
 async function checkGateway() {
+  // Re-entrancy guard: setInterval fires every 15s but findGatewayPort
+  // can take longer on slow systems. Skipping overlapping calls keeps
+  // _gwOfflineCount monotonic so the UI doesn't flicker.
+  if (_gwCheckBusy) return;
+  _gwCheckBusy = true;
   var dot = document.getElementById('statusDot');
   var text = document.getElementById('statusText');
-  var port = await findGatewayPort();
+  var port;
+  try { port = await findGatewayPort(); }
+  catch (e) { port = null; }
+  finally { _gwCheckBusy = false; }
   if (port) {
     _gwOfflineCount = 0;
     _gwEverOnline = true;
