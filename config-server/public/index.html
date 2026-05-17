@@ -591,6 +591,244 @@
     .y-hero { padding: 40px 16px 28px; }
     .y-term-b { font-size: 0.72rem; padding: 14px 12px; }
   }
+
+
+  /* ─────── yu.ai-aligned re-skin of functional widgets ─────── */
+
+  /* Status bar — rectangular, no rounded corner, subtle border like .y-cell */
+  .container > .status-bar {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 14px 18px;
+    margin: 24px 0 0;
+    font-family: var(--font-mono);
+  }
+  .status-text { font-family: var(--font-mono); letter-spacing: 0.04em; opacity: 0.85; }
+
+  /* Step indicators — flat label-style, not pill */
+  .steps { gap: 0; margin: 28px 0 18px; border: 1px solid var(--border); }
+  .step-ind {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    border-right: 1px solid var(--border);
+    padding: 16px 18px;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    transition: color 0.2s;
+  }
+  .steps > .step-ind:last-child { border-right: none; }
+  .step-ind .num {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--fg-muted);
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    width: 22px; height: 22px;
+    font-size: 0.7rem;
+    margin-right: 10px;
+  }
+  .step-ind:hover { color: var(--fg); }
+  .step-ind.active {
+    background: rgba(255,230,203,0.04);
+    color: var(--fg);
+    border-color: transparent;
+  }
+  .step-ind.active .num {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+  .step-ind.done { color: var(--fg-muted); }
+  .step-ind.done .num { background: transparent; border-color: var(--accent); color: var(--accent); }
+
+  /* Step section frame — borderless, content area */
+  .step-section { border: none; }
+  .step-section > div[style*="padding"] { padding: 24px 0 !important; }
+  .step-section h2 {
+    font-family: var(--font-serif);
+    font-weight: 700;
+    font-size: 1.6rem;
+    letter-spacing: -0.005em;
+    color: var(--fg);
+    mix-blend-mode: plus-lighter;
+    margin-bottom: 8px;
+  }
+  .step-section h3 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--fg);
+    opacity: 0.85;
+  }
+  .step-section .desc {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    opacity: 0.55;
+    margin-bottom: 22px;
+  }
+
+  /* Provider / channel cards — flatter, hover gets accent border */
+  .provider-card, .channel-card {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .provider-card:hover, .channel-card:hover {
+    border-color: var(--accent);
+    background: rgba(255,230,203,0.02);
+  }
+  .provider-card.selected, .channel-card.selected {
+    border-color: var(--accent);
+    background: rgba(0,255,200,0.04);
+  }
+  .provider-card .provider-name, .channel-card .channel-name {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--fg);
+    opacity: 1;
+  }
+  .provider-card .provider-desc {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.04em;
+    opacity: 0.55;
+  }
+
+  /* Filter chips — flatter, accent on active */
+  .filter-chip {
+    border-radius: 0;
+    padding: 6px 14px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .filter-chip.active {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+  }
+
+  /* Tag chips inside cards */
+  .tag {
+    border-radius: 0;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.62rem;
+  }
+
+  /* Buttons — primary CTA mirrors the y-hero CTA pattern */
+  .btn, .btn-primary, .io-btn, .btn-launch {
+    border-radius: 0 !important;
+    font-family: var(--font-mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: normal;
+  }
+  .btn-launch {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+    transition: all 0.2s;
+    padding: 14px 28px;
+    font-size: 0.78rem;
+  }
+  .btn-launch:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .btn-primary {
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+  }
+  .btn-primary:hover { background: var(--accent); color: var(--bg); }
+  .btn-primary:disabled {
+    border-color: var(--border);
+    color: var(--fg-muted);
+    background: transparent;
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .io-btn {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--fg);
+    font-size: 0.7rem;
+  }
+  .io-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-icon { border-radius: 0; }
+  .btn-sm { border-radius: 0; }
+
+  /* Inputs / selects — flatter with mono font */
+  .input, .step-section input.input, .step-section select.input {
+    border-radius: 0 !important;
+    font-family: var(--font-mono);
+    background: transparent !important;
+    border-color: var(--border);
+  }
+  .input:focus { border-color: var(--accent); outline: none; }
+
+  /* Command grid — borderless cards, label/icon style */
+  .cmd-grid { gap: 0 !important; border: 1px solid var(--border); margin: 24px 0; }
+  .cmd-card {
+    border-radius: 0 !important;
+    border: none !important;
+    border-right: 1px solid var(--border) !important;
+    background: transparent !important;
+    padding: 18px 14px;
+  }
+  .cmd-grid > .cmd-card:last-child { border-right: none !important; }
+  .cmd-card:hover { background: rgba(255,230,203,0.04) !important; }
+  .cmd-card .cmd-icon {
+    font-family: var(--font-mono);
+    color: var(--accent);
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+  }
+  .cmd-card .cmd-name {
+    font-family: var(--font-serif);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .cmd-card .cmd-desc {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.05em;
+    opacity: 0.5;
+  }
+
+  /* Container = no extra max-width inside y-page (y-page already has 1100) */
+  .container { max-width: none; padding: 0 24px 28px; }
+
+  /* Wrap the entire functional content in a 1px border row that
+     visually anchors it to the yu.ai grid lines from the nav above. */
+  .container > .status-bar { border-top: none; }
+
+  /* Tabs styling for parity if present */
+  .tab {
+    border-radius: 0;
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  /* Toast container fits below nav */
+  .toast-container { z-index: 1000; }
+
 </style>
 </head>
 <body>
