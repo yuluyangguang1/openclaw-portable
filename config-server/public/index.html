@@ -890,6 +890,19 @@
   .toast-item.error { border-color: var(--destructive) !important; }
   .toast-item.warning { border-color: var(--warning) !important; }
 
+
+
+  /* Step section panel — was a filled card; flatten to match yu.ai */
+  .step-section {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+  }
+  /* Both step1 and step2 also have inline `padding:24px / 28px 24px`
+     on their inner wrapper div — keep the padding but make sure no
+     residual fills come from the inner wrapper either. */
+  #step1 > div, #step2 > div { background: transparent !important; }
+
 </style>
 </head>
 <body>
