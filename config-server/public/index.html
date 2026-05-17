@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenClaw Portable — 配置中心</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23041c1c'/%3E%3Cg fill='none' stroke='%23ffe6cb' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#041c1c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f0e8" media="(prefers-color-scheme: light)">
 <style>
   :root {
+    /* Existing OpenClaw variables (preserved for class compatibility) */
     --bg: #041c1c;
     --card: #062424;
     --secondary: #0a2e2e;
@@ -21,8 +25,40 @@
     --warning: #ffbd38;
     --success: #4ade80;
     --destructive: #fb2c36;
-    --font-sans: 'Mondwest', Arial, sans-serif;
-    --font-mono: 'Courier Prime', 'Courier New', monospace;
+    /* yu.ai-aligned aliases */
+    --mid: var(--fg);
+    --dim: var(--fg-muted);
+    /* Font stack matched to yu.ai (system fallbacks for cross-platform) */
+    --font-sans: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    --font-serif: Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif;
+    --font-mono: 'Courier New', 'Menlo', monospace;
+  }
+  /* Light theme — invert dark colors, keep accent recognizable */
+  [data-theme="light"] {
+    --bg: #f5f0e8;
+    --card: #ebe5db;
+    --secondary: #ebe5db;
+    --muted: #d8d2c6;
+    --fg: #3d3a35;
+    --fg-muted: #736e63;
+    --border: rgba(61,58,53,0.14);
+    --accent: #02966a;
+    --emerald: #02966a;
+    --emerald-dim: #028a60;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f5f0e8;
+      --card: #ebe5db;
+      --secondary: #ebe5db;
+      --muted: #d8d2c6;
+      --fg: #3d3a35;
+      --fg-muted: #736e63;
+      --border: rgba(61,58,53,0.14);
+      --accent: #02966a;
+      --emerald: #02966a;
+      --emerald-dim: #028a60;
+    }
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -46,6 +82,41 @@
     mix-blend-mode: lighten;
     opacity: 0.22;
     background: radial-gradient(ellipse at 0% 0%, rgba(255,189,56,0) 60%, rgba(255,189,56,0.35) 100%);
+  }
+
+  /* yu.ai ink-wash background layer (loaded async, hidden if 404) */
+  .bg-i {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+  }
+  .bg-i img {
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    opacity: 0.06;
+    filter: grayscale(1) brightness(0.7);
+    object-position: center bottom;
+  }
+  [data-theme="light"] .bg-i img,
+  body[data-theme="light"] .bg-i img {
+    opacity: 0.04; filter: grayscale(1) brightness(1.5);
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) .bg-i img {
+      opacity: 0.04; filter: grayscale(1) brightness(1.5);
+    }
+  }
+  /* In light mode, weaken the existing grain + warm glow */
+  [data-theme="light"] body::before,
+  body[data-theme="light"]::before {
+    opacity: 0.06 !important;
+  }
+  [data-theme="light"] body::after,
+  body[data-theme="light"]::after {
+    opacity: 0.015 !important;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) body::before { opacity: 0.06 !important; }
+    :root:not([data-theme="dark"]) body::after { opacity: 0.015 !important; }
   }
 
   /* grain overlay */
@@ -460,6 +531,7 @@
 </style>
 </head>
 <body>
+<div class="bg-i" aria-hidden="true"><img alt="" src="https://yu.ai/egret-ink.jpg" width="1920" height="1080" loading="lazy" decoding="async" onerror="this.parentNode.style.display='none'"></div>
 
 <div class="hero">
   <svg class="logo" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
