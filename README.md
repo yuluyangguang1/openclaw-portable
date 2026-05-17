@@ -7,14 +7,14 @@
 - **零安装** — 自带 Node.js 运行时，双击启动
 - **跨平台** — macOS (ARM/Intel)、Linux x64、Windows x64
 - **可视化配置中心** — 两步流程：选模型填 Key → 启动
-- **27 个模型平台** — 国产 13 个 + 国际 8 个 + 聚合 3 个 + 自定义中转 + 本地（LM Studio/Ollama）
+- **32 个模型平台** — 国产 13 + 国际 8 + 聚合 5 + 自定义中转 + 本地 10 个运行时（Ollama / LM Studio / vLLM / GPT4All / Jan / KoboldCpp / Text Gen WebUI / XInference / MLX / llama.cpp）
 - **12 个聊天渠道** — Telegram/QQ/飞书/企微/Discord/Slack/WhatsApp/Signal/LINE/Google Chat/MS Teams/微信
 - **自动更新** — 从 GitHub Releases 一键下载更新（带备份回滚）
 - **运行日志** — 配置中心可查看 Gateway 实时日志
 - **配置导入导出** — JSON 格式备份/恢复
 - **中文技能包** — 内置搜索、翻译、天气、小红书/知乎/微博/B站等写作助手
 - **数据本地** — API Key 和聊天记录只存在 U 盘上，不上传
-- **HermesAgent 风格 UI** — 深绿色调，复古打字机字体，统一设计语言
+- **yu.ai 风格 UI** — 深绿色调，衬线大标题 + mono 终端，与 [yu.ai](https://yu.ai/) 全站一致
 
 ## 快速开始
 

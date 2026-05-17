@@ -236,9 +236,9 @@ a:hover{text-decoration:underline}
   <table>
     <thead><tr><th>功能</th><th>说明</th></tr></thead>
     <tbody>
-      <tr><td>AI 对话</td><td>27 个平台：DeepSeek、Kimi、Claude、GPT、Gemini 等</td></tr>
+      <tr><td>AI 对话</td><td>32 个平台：DeepSeek、Kimi、Claude、GPT、Gemini、Cerebras、DeepInfra 等</td></tr>
       <tr><td>聊天平台接入</td><td>微信 / 飞书 / QQ / Telegram / Discord / Slack 等 12 个渠道</td></tr>
-      <tr><td>本地模型</td><td>llama.cpp / LM Studio / Ollama 离线可用</td></tr>
+      <tr><td>本地模型</td><td>10 个本地 runtime（Ollama / LM Studio / vLLM / GPT4All / Jan / KoboldCpp 等），自动检测端口</td></tr>
       <tr><td>技能市场</td><td>13,000+ AI Skills 浏览和安装</td></tr>
       <tr><td>配置持久化</td><td>配置保存在 <code>data/</code> 目录，跨系统共享</td></tr>
     </tbody>
@@ -250,10 +250,11 @@ a:hover{text-decoration:underline}
   <div class="section-header"><div class="section-icon">→</div><h2>快速开始（三步上手）</h2></div>
   <p>根据你的系统选择对应平台：</p>
   <div class="platform-grid">
-    <div class="platform-card"><div class="icon">&#x1F5A5;</div><strong>Windows</strong><span>双击 <code>Windows-Start.bat</code></span></div>
-    <div class="platform-card"><div class="icon">&#x1F34E;</div><strong>macOS</strong><span>双击 <code>Mac-Start.command</code></span></div>
-    <div class="platform-card"><div class="icon">&#x1F427;</div><strong>Linux</strong><span>终端运行 <code>bash Linux-Start.sh</code></span></div>
+    <div class="platform-card"><div class="icon">&#x1F5A5;</div><strong>Windows</strong><span>双击 <code>OpenClaw.vbs</code></span></div>
+    <div class="platform-card"><div class="icon">&#x1F34E;</div><strong>macOS</strong><span>双击 <code>OpenClaw.app</code></span></div>
+    <div class="platform-card"><div class="icon">&#x1F427;</div><strong>Linux</strong><span>双击 <code>OpenClaw.desktop</code></span></div>
   </div>
+  <p style="opacity:0.6;font-size:0.92rem;margin-top:8px"><strong>v0.8.x 起新增带图标的桌面启动器</strong>。底层脚本（<code>Mac-Start.command</code>、<code>Windows-Start.bat</code>、<code>Linux-Start.sh</code>）放在 <code>system/</code> 子目录，需要时仍可手动调用。</p>
   <h3>接下来会发生什么</h3>
   <div class="steps">
     <div class="step"><span class="step-num">1</span><span class="step-content"><strong>启动器弹出终端窗口</strong>，自动安装依赖（首次约 10-30 秒，后续秒开）。</span></div>
@@ -429,7 +430,7 @@ a:hover{text-decoration:underline}
 
   <div class="faq-item">
     <div class="faq-q">Mac 提示"无法打开，因为无法验证开发者"怎么办？</div>
-    <div class="faq-a">右键点击 <code>Mac-Start.command</code>，选择"打开"，在弹窗中再次点击"打开"即可。此操作只需一次。</div>
+    <div class="faq-a">右键点击 <code>OpenClaw.app</code>，选择"打开"，在弹窗中再次点击"打开"即可。此操作只需一次。</div>
   </div>
 
   <div class="faq-item">
