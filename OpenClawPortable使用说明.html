@@ -218,7 +218,7 @@ a:hover{text-decoration:underline}
           <span class="term-label">openclaw</span>
         </div>
         <div class="term-b"><span class="p">$ ./openclaw start</span>
-<span class="t">  🦞 openclaw portable v0.8.6</span>
+<span class="t">  🦞 openclaw portable v0.8.7</span>
 <span class="t">  ✓ gateway ready on :18789</span>
 <span class="t">  ✓ config center on :18788</span><span class="blink"></span></div>
       </div>
@@ -376,8 +376,8 @@ a:hover{text-decoration:underline}
     <thead><tr><th>Provider</th><th>特点</th><th>启动方式</th></tr></thead>
     <tbody>
       <tr><td><strong>LM Studio</strong></td><td>官方推荐，GUI 管理</td><td>安装 LM Studio → 加载模型 → 开启服务</td></tr>
-      <tr><td><strong>llama.cpp</strong></td><td>便携版内置（仅 Windows）</td><td>双击 <code>Start-LocalLLM.bat</code></td></tr>
       <tr><td><strong>Ollama</strong></td><td>一条命令装模型</td><td><code>ollama run qwen2.5</code></td></tr>
+      <tr><td><strong>llama.cpp</strong></td><td>命令行最轻量</td><td>自行编译 / 下载，<code>llama-server</code> 起服务</td></tr>
       <tr><td><strong>vLLM</strong></td><td>高性能 GPU 推理</td><td>需要 NVIDIA 显卡</td></tr>
     </tbody>
   </table>
@@ -393,7 +393,7 @@ a:hover{text-decoration:underline}
       <tr><td><code>18789</code></td><td>AI 对话</td><td>主服务，自动检测 18789-18799</td></tr>
       <tr><td><code>18788</code></td><td>配置中心</td><td>Web 配置界面（详见下方）</td></tr>
       <tr><td><code>1234</code></td><td>LM Studio</td><td>本地 LLM</td></tr>
-      <tr><td><code>8080</code></td><td>llama.cpp</td><td>本地 LLM（内置，仅 Windows）</td></tr>
+      <tr><td><code>8080</code></td><td>llama.cpp</td><td>本地 LLM（自行启动）</td></tr>
       <tr><td><code>11434</code></td><td>Ollama</td><td>本地 LLM</td></tr>
     </tbody>
   </table>
@@ -430,7 +430,7 @@ a:hover{text-decoration:underline}
 
   <div class="faq-item">
     <div class="faq-q">本地模型需要什么硬件配置？</div>
-    <div class="faq-a">llama.cpp（便携版内置，仅 Windows）需 8GB+ 内存；LM Studio / Ollama 各平台通用，7B 模型建议 8GB 内存；vLLM 需要独立显卡（NVIDIA GPU 8GB+ 显存）。</div>
+    <div class="faq-a">LM Studio / Ollama 各平台通用，7B 模型建议 8GB 内存；llama.cpp 命令行最轻，但需自行编译或下载二进制；vLLM 需要独立显卡（NVIDIA GPU 8GB+ 显存）。</div>
   </div>
 
   <div class="faq-item">
