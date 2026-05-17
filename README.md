@@ -1,13 +1,13 @@
 # OpenClaw Portable
 
-把 [OpenClaw](https://github.com/nicepkg/openclaw)（开源 AI 助手）打包成便携版，插上 U 盘就能在任意电脑上运行，无需安装任何依赖。
+把 [OpenClaw](https://github.com/openclaw/openclaw)（开源 AI 助手）打包成便携版，插上 U 盘就能在任意电脑上运行，无需安装任何依赖。
 
 ## 特性
 
 - **零安装** — 自带 Node.js 运行时，双击启动
 - **跨平台** — macOS (ARM/Intel)、Linux x64、Windows x64
 - **可视化配置中心** — 两步流程：选模型填 Key → 启动
-- **32 个模型平台** — 国产 13 + 国际 8 + 聚合 5 + 自定义中转 + 本地 10 个运行时（Ollama / LM Studio / vLLM / GPT4All / Jan / KoboldCpp / Text Gen WebUI / XInference / MLX / llama.cpp）
+- **32 个模型平台** — 国产 15 + 国际 8 + 聚合 5 + 加速 1 + 自定义中转 1 + 本地 2（Ollama / LM Studio）。LM Studio / Ollama 自动检测；其他本地 runtime（vLLM / GPT4All / Jan / KoboldCpp / Text Gen WebUI / XInference / MLX / llama.cpp / LocalAI）按 OpenAI-compatible 接口接入即可
 - **12 个聊天渠道** — Telegram/QQ/飞书/企微/Discord/Slack/WhatsApp/Signal/LINE/Google Chat/MS Teams/微信
 - **自动更新** — 从 GitHub Releases 一键下载更新（带备份回滚）
 - **运行日志** — 配置中心可查看 Gateway 实时日志

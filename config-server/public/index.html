@@ -937,7 +937,7 @@
       <span class="y-label-xs y-op-7" style="letter-spacing:.15rem">openclaw portable · config</span>
       <h1 class="y-display">openclaw</h1>
       <p class="y-sub">便携 AI 助手 · 配置模型 · 一键启动</p>
-      <span class="y-label-xs y-op-5" id="hero-version">v0.8.9 · 零安装 · 跨平台</span>
+      <span class="y-label-xs y-op-5" id="hero-version">v0.8.10 · 零安装 · 跨平台</span>
       <div class="y-term" aria-hidden="true">
         <div class="y-term-h">
           <span class="y-td"></span><span class="y-td"></span><span class="y-td"></span>
@@ -1084,7 +1084,7 @@
   <div class="c"><span class="y-label y-op-7">yu.ai</span></div>
   <div class="c"><a class="y-label" href="https://yu.ai/" style="opacity:.7;color:inherit;text-decoration:none">home ↗</a></div>
   <div class="c"><a class="y-label" href="https://github.com/yuluyangguang1/openclaw-portable" target="_blank" rel="noopener" style="opacity:.7;color:inherit;text-decoration:none">github ↗</a></div>
-  <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v0.8.9</span></div>
+  <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v0.8.10</span></div>
   <div class="c"><span class="y-label y-op-5" style="color:var(--accent)">openclaw config</span></div>
 </footer>
 
@@ -1271,7 +1271,7 @@ function renderProviders() {
         '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
         '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
         '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">显示</button></div>' +
-        '<a href="' + p.link + '" target="_blank" class="buy-link">获取 Key →</a> ' +
+        '<a href="' + p.link + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
         '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+p.id+'\')">' +
         '测试 Key</button><span id="keytest-'+p.id+'" style="margin-left:8px;font-size:0.78em;"></span></div>';
     }
@@ -1949,7 +1949,7 @@ async function checkGateway() {
     // 大按钮加在线指示
     var launchBtn = document.querySelector('.btn-launch');
     if (launchBtn) launchBtn.style.borderColor = 'var(--emerald)';
-    text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank">\u6253\u5f00\u804a\u5929</a>';
+    text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank" rel="noopener">\u6253\u5f00\u804a\u5929</a>';
     _setLiveStatus('p', '  ✓ gateway running on :' + port);
   } else {
     _gwOfflineCount++;
@@ -2284,16 +2284,16 @@ function showLocalModelHints() {
   listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.82em;font-family:var(--font-mono);line-height:1.7;">' +
     '<div style="margin-bottom:8px;">未检测到本地模型运行。安装并启动以下任一工具后点 <strong>重新扫描</strong>：</div>' +
     '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;">' +
-      '<a href="https://ollama.com/" target="_blank" style="color:var(--emerald);">Ollama →</a>' +
-      '<a href="https://lmstudio.ai/" target="_blank" style="color:var(--emerald);">LM Studio →</a>' +
-      '<a href="https://gpt4all.io/" target="_blank" style="color:var(--emerald);">GPT4All →</a>' +
-      '<a href="https://github.com/janhq/jan" target="_blank" style="color:var(--emerald);">Jan.ai →</a>' +
-      '<a href="https://github.com/oobabooga/text-generation-webui" target="_blank" style="color:var(--emerald);">Text Gen WebUI →</a>' +
-      '<a href="https://github.com/LostRuins/koboldcpp" target="_blank" style="color:var(--emerald);">KoboldCpp →</a>' +
-      '<a href="https://github.com/ggerganov/llama.cpp" target="_blank" style="color:var(--emerald);">llama.cpp →</a>' +
-      '<a href="https://docs.vllm.ai/" target="_blank" style="color:var(--emerald);">vLLM →</a>' +
-      '<a href="https://github.com/xorbitsai/inference" target="_blank" style="color:var(--emerald);">XInference →</a>' +
-      '<a href="https://localai.io/" target="_blank" style="color:var(--emerald);">LocalAI →</a>' +
+      '<a href="https://ollama.com/" target="_blank" rel="noopener" style="color:var(--emerald);">Ollama →</a>' +
+      '<a href="https://lmstudio.ai/" target="_blank" rel="noopener" style="color:var(--emerald);">LM Studio →</a>' +
+      '<a href="https://gpt4all.io/" target="_blank" rel="noopener" style="color:var(--emerald);">GPT4All →</a>' +
+      '<a href="https://github.com/janhq/jan" target="_blank" rel="noopener" style="color:var(--emerald);">Jan.ai →</a>' +
+      '<a href="https://github.com/oobabooga/text-generation-webui" target="_blank" rel="noopener" style="color:var(--emerald);">Text Gen WebUI →</a>' +
+      '<a href="https://github.com/LostRuins/koboldcpp" target="_blank" rel="noopener" style="color:var(--emerald);">KoboldCpp →</a>' +
+      '<a href="https://github.com/ggerganov/llama.cpp" target="_blank" rel="noopener" style="color:var(--emerald);">llama.cpp →</a>' +
+      '<a href="https://docs.vllm.ai/" target="_blank" rel="noopener" style="color:var(--emerald);">vLLM →</a>' +
+      '<a href="https://github.com/xorbitsai/inference" target="_blank" rel="noopener" style="color:var(--emerald);">XInference →</a>' +
+      '<a href="https://localai.io/" target="_blank" rel="noopener" style="color:var(--emerald);">LocalAI →</a>' +
     '</div></div>';
 }
 
