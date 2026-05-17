@@ -570,6 +570,10 @@
   .y-term-b { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.85; padding: 18px 16px; white-space: pre-wrap; min-height: 100px; word-break: break-word; text-align: left; }
   .y-term-b .p { color: var(--accent); }
   .y-term-b .t { opacity: 0.6; }
+  .y-term-b .w { color: var(--warning); }
+  .y-term-b .e { color: var(--destructive); }
+  /* Terminal line clickable when gateway is up — turn cursor on */
+  .y-term-b a { color: var(--accent); text-decoration: underline; }
 
   .y-footer { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 28px; }
   .y-footer .c { padding: 16px; border-right: 1px solid var(--border); display: flex; align-items: center; }
@@ -869,10 +873,8 @@
           <span class="y-td"></span><span class="y-td"></span><span class="y-td"></span>
           <span class="y-term-label">openclaw</span>
         </div>
-        <div class="y-term-b"><span class="p">$ ./openclaw start</span>
-<span class="t">  🦞 openclaw portable</span>
-<span class="t">  ✓ gateway ready on :18789</span>
-<span class="t">  ✓ config center on :18788</span><span class="y-blink"></span></div>
+        <div class="y-term-b" id="liveTerm"><span class="p">$ ./openclaw start</span>
+<span class="t" id="liveStatusLine">  · checking gateway…</span><span class="y-blink"></span></div>
       </div>
     </div>
   </div>
@@ -880,7 +882,7 @@
 
 <div class="container">
 
-<div class="status-bar">
+<div class="status-bar" style="display:none">
   <div class="dot" id="statusDot"></div>
   <div class="status-text" id="statusText">检测中...</div>
 </div>
@@ -1860,6 +1862,16 @@ async function checkGateway() {
   try { port = await findGatewayPort(); }
   catch (e) { port = null; }
   finally { _gwCheckBusy = false; }
+  // Helper: write a single status line into the hero terminal.
+  // Class controls color: 'p' = accent green, 't' = subtle dim,
+  // 'w' = warning amber, 'e' = error red.
+  function _setLiveStatus(cls, text) {
+    var line = document.getElementById('liveStatusLine');
+    if (!line) return;
+    line.className = cls;
+    line.textContent = text;
+  }
+
   if (port) {
     _gwOfflineCount = 0;
     _gwEverOnline = true;
@@ -1868,18 +1880,20 @@ async function checkGateway() {
     var launchBtn = document.querySelector('.btn-launch');
     if (launchBtn) launchBtn.style.borderColor = 'var(--emerald)';
     text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank">\u6253\u5f00\u804a\u5929</a>';
+    _setLiveStatus('p', '  ✓ gateway running on :' + port);
   } else {
     _gwOfflineCount++;
     if (_gwOfflineCount >= 2) {
       if (!_gwEverOnline && _gwOfflineCount < 40) {
-        // 首次启动：Gateway 还在安装插件，显示等待提示
         dot.className = 'dot off';
         dot.style.background = 'var(--warning)';
         text.innerHTML = 'Gateway \u542f\u52a8\u4e2d\u2026 \u9996\u6b21\u542f\u52a8\u9700\u8981 2-5 \u5206\u949f\u5b89\u88c5\u63d2\u4ef6';
+        _setLiveStatus('t', '  · gateway starting… (first run takes 2–5 min)');
       } else {
         dot.className = 'dot off';
         dot.style.background = '';
         text.innerHTML = 'Gateway \u672a\u542f\u52a8 \u00b7 \u8bf7\u8fd0\u884c\u542f\u52a8\u811a\u672c';
+        _setLiveStatus('t', '  · gateway not running — start the launcher');
       }
     }
   }
