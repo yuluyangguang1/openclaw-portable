@@ -1105,6 +1105,20 @@
   </div>
 </div>
 <script>
+// ===== AUTH BOOTSTRAP =====
+// The config server requires X-OpenClaw-Token on all write endpoints
+// to prevent CSRF and local-process abuse. We fetch the token once at
+// page load from /api/bootstrap (which only responds to same-origin).
+var _serverToken = '';
+
+// Wrapper: automatically attaches the auth token to API calls.
+function apiFetch(url, opts) {
+  opts = opts || {};
+  if (!opts.headers) opts.headers = {};
+  if (_serverToken) opts.headers['X-OpenClaw-Token'] = _serverToken;
+  return fetch(url, opts);
+}
+
 // ===== PROVIDERS =====
 const PROVIDERS = [
   {id:'minimax',name:'MiniMax',tags:['hot','cn'],desc:'M2.7 / M2.5 \u7f16\u7801\u4e0e Agent',base:'https://api.minimax.chat/v1',models:['MiniMax-M2.7','MiniMax-M2.7-highspeed','MiniMax-M2.5','MiniMax-M2.5-highspeed','MiniMax-M2'],link:'https://platform.minimaxi.com/'},
@@ -1462,7 +1476,7 @@ function testChannel(e, type) {
   const inputs = card.querySelectorAll('[data-channel="' + type + '"]');
   const creds = {};
   inputs.forEach(inp => { creds[inp.dataset.key] = inp.value; });
-  fetch('/api/channel/test', {
+  apiFetch('/api/channel/test', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({type: type, config: creds})
@@ -1480,7 +1494,7 @@ function startWeChatLogin(e) {
   const statusEl = document.getElementById('wechat-status');
   const qrEl = document.getElementById('wechat-qr');
   if (statusEl) statusEl.textContent = '\u6b63\u5728\u542f\u52a8...';
-  fetch('/api/wechat/start', {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
+  apiFetch('/api/wechat/start', {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
     if (data.qrcodeUrl) {
       wechatSession = data.sessionKey;
       qrEl.innerHTML = '<img src="' + data.qrcodeUrl + '" style="max-width:180px;border-radius:8px;">';
@@ -1497,7 +1511,7 @@ function startWeChatLogin(e) {
 function pollWeChatStatus() {
   if (wechatPollTimer) clearInterval(wechatPollTimer);
   wechatPollTimer = setInterval(() => {
-    fetch('/api/wechat/status?session=' + encodeURIComponent(wechatSession || '')).then(function(r){return r.json();}).then(function(data) {
+    apiFetch('/api/wechat/status?session=' + encodeURIComponent(wechatSession || '')).then(function(r){return r.json();}).then(function(data) {
       const statusEl = document.getElementById('wechat-status');
       const qrEl = document.getElementById('wechat-qr');
       // Server returns: 'wait' | 'refreshed' | 'confirmed' | 'expired' | 'error'
@@ -1537,7 +1551,7 @@ function testKey(providerId) {
   if (!key || key.length < 6) { showToast('请先填写 API Key', 'error'); return; }
   var resultEl = document.getElementById('keytest-'+providerId);
   if (resultEl) resultEl.innerHTML = '<span style="color:var(--warning);">测试中...</span>';
-  fetch('/api/key/test', {
+  apiFetch('/api/key/test', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({provider: providerId, baseUrl: p.base, apiKey: key})
@@ -1651,13 +1665,13 @@ function quickSwitchModel() {
     }
   }
   // 保存并重启
-  fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configData)})
+  apiFetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configData)})
     .then(function(r){return r.json();})
     .then(function(data){
       if (data.ok) {
         showToast('\u5df2\u5207\u6362\u5230 ' + sel.value + '\uff0c\u91cd\u542f\u4e2d...', 'success');
         showConfigSummary(configData);
-        fetch('/api/restart', {method:'POST'}).then(function(){
+        apiFetch('/api/restart', {method:'POST'}).then(function(){
           setTimeout(checkGateway, 4000);
         });
       }
@@ -1724,7 +1738,7 @@ function saveConfig() {
   const cfg = buildConfig(selectedProvider, base, model, apiKey);
   configData = cfg;
 
-  fetch('/api/config', {
+  apiFetch('/api/config', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(cfg)
@@ -1737,7 +1751,7 @@ function saveConfig() {
       showConfigSummary(cfg);
       populateQuickSwitch(cfg);
       // 自动重启 Gateway 使新配置生效
-      fetch('/api/restart', {method:'POST'}).then(function(){
+      apiFetch('/api/restart', {method:'POST'}).then(function(){
         showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
         var waitCount = 0;
         var waitReady = setInterval(function(){
@@ -1786,9 +1800,9 @@ function saveChannelsAndOpen() {
   }
 
   // 先获取最新配置再合并，避免清空已有 models 字段
-  fetch('/api/config').then(function(r){return r.json();}).then(function(existing){
+  apiFetch('/api/config').then(function(r){return r.json();}).then(function(existing){
     var payload = Object.assign({}, existing || {}, {channels: channels});
-    return fetch('/api/config', {
+    return apiFetch('/api/config', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
@@ -1796,7 +1810,7 @@ function saveChannelsAndOpen() {
   }).then(r => r.json()).then(data => {
     if (data.ok) {
       showToast('\u6e20\u9053\u5df2\u4fdd\u5b58\uff0c\u91cd\u542f Gateway...', 'success');
-      fetch('/api/restart', {method:'POST'}).then(function(){
+      apiFetch('/api/restart', {method:'POST'}).then(function(){
         setTimeout(function(){ openGateway(); }, 5000);
       });
     } else {
@@ -1816,10 +1830,10 @@ function resetConfig() {
 function doReset() {
   closeModal();
   var defaultCfg = {gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}}};
-  fetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaultCfg)}).then(function(r){return r.json();}).then(function(data) {
+  apiFetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaultCfg)}).then(function(r){return r.json();}).then(function(data) {
     if (data.ok) {
       showToast('\u5df2\u91cd\u7f6e\uff0c\u91cd\u542f Gateway...', 'success');
-      fetch('/api/restart', {method:'POST'}).catch(function(){});
+      apiFetch('/api/restart', {method:'POST'}).catch(function(){});
       selectedProvider = null;
       selectedBase = '';
       selectedModel = '';
@@ -1973,7 +1987,7 @@ async function checkGateway() {
 function runCmd(cmd) {
   if (cmd === 'update') {
     showToast('\u6b63\u5728\u68c0\u67e5\u66f4\u65b0...', 'info');
-    fetch('/api/update/check').then(function(r){return r.json();}).then(function(data){
+    apiFetch('/api/update/check').then(function(r){return r.json();}).then(function(data){
       if (!data.ok) { showToast(data.error || '\u68c0\u67e5\u5931\u8d25', 'error'); return; }
       if (!data.isNewer) { showToast('\u5df2\u662f\u6700\u65b0\u7248\u672c ('+data.current+')', 'success'); return; }
       showModal('\u53d1\u73b0\u65b0\u7248\u672c',
@@ -1987,7 +2001,7 @@ function runCmd(cmd) {
     }).catch(function(e){ showToast('\u68c0\u67e5\u5931\u8d25: '+e.message, 'error'); });
   } else if (cmd === 'restart') {
     showToast('\u6b63\u5728\u91cd\u542f...', 'info');
-    fetch('/api/restart', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
+    apiFetch('/api/restart', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
       showToast('\u91cd\u542f\u6307\u4ee4\u5df2\u53d1\u9001', 'success');
       document.getElementById('restartBanner').style.display = 'none';
       setTimeout(checkGateway, 4000);
@@ -2008,7 +2022,7 @@ function doUpdate() {
   _updateInProgress = true;
   closeModal();
   showToast('\u6b63\u5728\u4e0b\u8f7d\u66f4\u65b0\uff0c\u8bf7\u7a0d\u5019...', 'info');
-  fetch('/api/update/apply', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
+  apiFetch('/api/update/apply', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
     if (data.ok) {
       showToast('\u66f4\u65b0\u5df2\u542f\u52a8\uff0c\u5b8c\u6210\u540e\u9875\u9762\u4f1a\u81ea\u52a8\u5237\u65b0', 'success');
       // Poll for server restart
@@ -2028,7 +2042,7 @@ function doUpdate() {
             [{text:'\u624b\u52a8\u91cd\u542f\u542f\u52a8\u5668', cls:'btn btn-primary', action:'closeModal()'}]);
           return;
         }
-        fetch('/api/heartbeat').then(function(r){
+        apiFetch('/api/heartbeat').then(function(r){
           if (r.ok) { clearInterval(poll); _updateInProgress = false; location.reload(); }
         }).catch(function(){});
       }, 3000);
@@ -2068,7 +2082,7 @@ setTimeout(loadSkills, 100);
 
 // ===== EXPORT / IMPORT CONFIG =====
 function exportConfig() {
-  fetch('/api/config').then(r => r.json()).then(data => {
+  apiFetch('/api/config').then(r => r.json()).then(data => {
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2093,7 +2107,7 @@ function doImport(event) {
   reader.onload = function(e) {
     try {
       const cfg = JSON.parse(e.target.result);
-      fetch('/api/config', {
+      apiFetch('/api/config', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify(cfg)
@@ -2113,7 +2127,7 @@ function doImport(event) {
 }
 
 function viewConfig() {
-  fetch('/api/config').then(r => r.json()).then(data => {
+  apiFetch('/api/config').then(r => r.json()).then(data => {
     const json = JSON.stringify(data, null, 2);
     showModal('\u5f53\u524d\u914d\u7f6e', '<pre style="background:#0d1117;padding:12px;border-radius:8px;overflow:auto;max-height:400px;color:#e6edf3;font-size:12px;">' + json.replace(/</g,'&lt;') + '</pre>', [
       {text:'\u5173\u95ed',cls:'btn',action:'closeModal()'},
@@ -2136,7 +2150,7 @@ function toggleLogs() {
 function refreshLogs() {
   var el = document.getElementById('logContent');
   el.textContent = '加载中...';
-  fetch('/api/logs').then(function(r){return r.json();}).then(function(data){
+  apiFetch('/api/logs').then(function(r){return r.json();}).then(function(data){
     if (data.lines && data.lines.length) {
       el.textContent = data.lines.join('\n');
       el.scrollTop = el.scrollHeight;
@@ -2148,7 +2162,7 @@ function refreshLogs() {
 
 // ===== VERSION =====
 function loadVersion() {
-  fetch('/api/version').then(function(r){return r.json();}).then(function(data){
+  apiFetch('/api/version').then(function(r){return r.json();}).then(function(data){
     if (data.portable) {
       var verEl = document.querySelector('.hero .version');
       if (verEl) verEl.textContent = 'v' + data.portable + ' · 零安装 · 跨平台';
@@ -2180,7 +2194,7 @@ function scanLocalModels(opts) {
   listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.8em;font-family:var(--font-mono);">扫描中...</div>';
   panel.style.display = 'block';
   if (titleEl) titleEl.textContent = '本地模型 — 扫描中';
-  fetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
+  apiFetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
     var running = (data.runtimes || []).filter(function(r){return r.running;});
     if (running.length === 0) {
       // No runtime detected. Show install hints if explicitly requested
@@ -2248,7 +2262,7 @@ function applyLocalRuntime(runtimeId, port) {
     agents: { defaults: { model: { primary: providerKey + '/' + modelName } } }
   };
   configData = cfg;
-  fetch('/api/config', {
+  apiFetch('/api/config', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(cfg)
@@ -2257,7 +2271,7 @@ function applyLocalRuntime(runtimeId, port) {
       showToast('\u672c\u5730\u6a21\u578b \u5df2\u8bbe\u7f6e: ' + modelName + '\uff0c\u91cd\u542f\u4e2d...', 'success');
       goStep(2);
       showConfigSummary(cfg);
-      fetch('/api/restart', { method: 'POST' }).then(function(){
+      apiFetch('/api/restart', { method: 'POST' }).then(function(){
         var waitCount = 0;
         var waitReady = setInterval(function(){
           waitCount++;
@@ -2299,6 +2313,17 @@ function showLocalModelHints() {
 
 // ===== INIT =====
 (function init() {
+  // Bootstrap auth token from server (required for write endpoints).
+  // This is a same-origin GET that only responds to localhost requests.
+  fetch('/api/bootstrap').then(function(r) {
+    return r.ok ? r.json() : {};
+  }).then(function(data) {
+    if (data && data.token) _serverToken = data.token;
+  }).catch(function() {
+    // If bootstrap fails, writes will get 401 — user sees error toast.
+    console.warn('[auth] bootstrap failed, write operations will be rejected');
+  });
+
   loadVersion();
   // Auto-scan local model runtimes on load — silent if nothing is running.
   setTimeout(scanLocalModels, 200);
@@ -2307,7 +2332,7 @@ function showLocalModelHints() {
   setInterval(checkGateway, 15000);
 
   // Load existing config to auto-advance
-  fetch('/api/config').then(function(r){
+  apiFetch('/api/config').then(function(r){
     // Surface recovery: server sets X-OpenClaw-Recovery when main config
     // file was unreadable and a backup was used instead.
     var recoverySource = r.headers.get('X-OpenClaw-Recovery');
@@ -2350,7 +2375,7 @@ function showLocalModelHints() {
   // Heartbeat - show disconnect overlay after 3 consecutive failures
   var _hbFails = 0;
   setInterval(function() {
-    fetch('/api/heartbeat').then(function(r) {
+    apiFetch('/api/heartbeat').then(function(r) {
       if (r.ok) {
         _hbFails = 0;
         var ov = document.getElementById('disconnectOverlay');

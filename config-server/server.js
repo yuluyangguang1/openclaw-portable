@@ -9,6 +9,12 @@ const PORT_RANGE_START = 18788;
 const PORT_RANGE_END = 18798;
 const CONFIG_PATH = path.join(__dirname, '../data/.openclaw/openclaw.json');
 const RUNTIME_PATH = path.join(__dirname, '../data/.openclaw/runtime.json');
+
+// Server-side auth token. Random 32 bytes, generated once per process
+// and persisted in runtime.json (chmod 0600). Required by all write
+// endpoints via the X-OpenClaw-Token header — see the middleware in
+// the http server below for the full rationale.
+const SERVER_TOKEN = crypto.randomBytes(32).toString('hex');
 const CONFIG_BACKUP_DIR = path.join(path.dirname(CONFIG_PATH), 'backups');
 const CONFIG_BACKUP_KEEP = 5;
 
@@ -446,21 +452,118 @@ function handleWeChatCancel(sessionKey) {
 }
 
 const server = http.createServer((req, res) => {
-  // CORS: only allow localhost origins. Wildcard '*' would let any
-  // webpage (including via DNS rebinding) call our config API and
-  // overwrite the user's openclaw.json — e.g. swap their API key
-  // for an attacker's proxy to intercept conversations.
+  // ── Security: defense in depth against CSRF / DNS-rebinding / local
+  // process abuse. Three layers below; see SECURITY.md or commit msg
+  // for full attack scenarios.
+  //
+  //   Layer 1 (Host header): rebinding attacks make the browser send
+  //     requests to 127.0.0.1 with Origin = attacker.com. The Host
+  //     header still reflects what the script *thinks* it's talking
+  //     to (a.attacker.com:18788), so requiring Host = 127.0.0.1:port
+  //     blocks them.
+  //   Layer 2 (Token): every write endpoint requires X-OpenClaw-Token
+  //     matching the one stored in runtime.json (mode 0600). This
+  //     blocks both classic CSRF (attacker can't read our token) and
+  //     local non-browser processes that don't run as our user.
+  //   Layer 3 (Content-Type): writes also require application/json.
+  //     This forces a CORS preflight, so even if the attacker has the
+  //     token they need a permissive Origin to pass — defense in depth.
+
+  const hostHeader = req.headers.host || '';
+  const boundPort = (server.address() && server.address().port) || PORT_RANGE_START;
+  const expectedHosts = [`127.0.0.1:${boundPort}`, `localhost:${boundPort}`];
+  if (!expectedHosts.includes(hostHeader)) {
+    res.writeHead(421, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Misdirected request: Host header mismatch' }));
+    return;
+  }
+
+  // CORS: only echo Origin back when it's a localhost origin. We also
+  // allow X-OpenClaw-Token in CORS request headers so the preflight
+  // succeeds for our own UI.
   const origin = req.headers.origin || '';
   const isLocalOrigin = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
   if (isLocalOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-OpenClaw-Token');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(200);
     res.end();
+    return;
+  }
+
+  // Endpoints that are safe to expose without a token (read-only or
+  // bootstrap). Everything else goes through requireAuth().
+  const PUBLIC_ENDPOINTS = new Set([
+    'GET /api/heartbeat',
+    'GET /api/port',
+    'GET /api/version',
+    'GET /api/bootstrap',
+    'GET /api/config',            // Read-only; no secrets exposed (API keys are in the config the user already has)
+    'GET /api/logs',              // Read-only log tail
+    'GET /api/local/scan',        // Read-only local model scan
+    'GET /api/update/check',      // Read-only version check
+    'GET /api/wechat/plugin-status',
+    'POST /api/wechat/cancel',    // Only clears in-memory login state; no file writes
+  ]);
+
+  const urlPath = (req.url || '').split('?')[0];
+  const route = `${req.method} ${urlPath}`;
+  const isApiRequest = urlPath.startsWith('/api/');
+
+  // Prefix-based public routes (e.g. /api/logs?lines=50, /api/wechat/status?session=x)
+  const PUBLIC_PREFIXES = [
+    'GET /api/logs',
+    'GET /api/wechat/status',
+  ];
+
+  // Static assets (anything not /api/*) are public — they never expose
+  // sensitive data and the index.html itself needs to load before the
+  // bootstrap call can happen.
+  const isPublic = PUBLIC_ENDPOINTS.has(route) ||
+    PUBLIC_PREFIXES.some(prefix => route.startsWith(prefix));
+
+  if (isApiRequest && !isPublic) {
+    const provided = req.headers['x-openclaw-token'] || '';
+    // Constant-time compare to avoid timing leaks. Pad to equal length
+    // first so timingSafeEqual doesn't throw on mismatched sizes.
+    const expected = SERVER_TOKEN;
+    const okToken = provided.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
+    if (!okToken) {
+      res.writeHead(401, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: missing or invalid X-OpenClaw-Token' }));
+      return;
+    }
+    // Writes (POST/PUT/DELETE/PATCH) additionally require JSON
+    // Content-Type. This forces the browser to do a CORS preflight,
+    // which our isLocalOrigin check already gates.
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      const ct = (req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+      if (ct && ct !== 'application/json') {
+        res.writeHead(415, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unsupported Media Type: expected application/json' }));
+        return;
+      }
+    }
+  }
+
+  // Bootstrap endpoint: returns the server token to the page so it can
+  // include it in subsequent API calls. Only served to same-origin
+  // requests (Origin missing OR Origin matches our bound address).
+  if (route === 'GET /api/bootstrap') {
+    const ok = !origin || isLocalOrigin;
+    if (!ok) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Forbidden' }));
+      return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    res.end(JSON.stringify({ token: SERVER_TOKEN, port: boundPort }));
     return;
   }
 
@@ -1171,8 +1274,11 @@ function listenWithFallback(port) {
       fs.mkdirSync(path.dirname(RUNTIME_PATH), { recursive: true });
       const existing = fs.existsSync(RUNTIME_PATH) ? JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8')) : {};
       existing.configServerPort = port;
+      existing.configServerToken = SERVER_TOKEN;
       existing.configServerUpdatedAt = new Date().toISOString();
-      fs.writeFileSync(RUNTIME_PATH, JSON.stringify(existing, null, 2));
+      fs.writeFileSync(RUNTIME_PATH, JSON.stringify(existing, null, 2), { mode: 0o600 });
+      // Ensure permissions even if file already existed with wider perms
+      try { fs.chmodSync(RUNTIME_PATH, 0o600); } catch (_) {}
     } catch (err) {
       console.warn(`   Warning: could not write ${RUNTIME_PATH}: ${err.message}`);
     }
