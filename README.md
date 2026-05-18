@@ -161,7 +161,10 @@ Portable 版本的工作：
 | macOS | Apple Silicon (M1/M2/M3/M4) | ✅ |
 | macOS | Intel x64 | ✅ |
 | Linux | x64 | ✅ |
+| Linux | ARM64 | ✅ |
 | Windows | x64 | ✅ |
+
+> **macOS 版本说明**：Node.js 24 官方标注最低 macOS 13.5（Ventura），但实测 macOS 12+ 可正常运行。如遇启动失败请升级 macOS。
 
 ## License
 

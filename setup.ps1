@@ -11,7 +11,7 @@ $runtimeDir = Join-Path $appDir "runtime"
 
 $mirror = "https://registry.npmmirror.com"
 $nodeMirror = "https://npmmirror.com/mirrors/node"
-$nodeVersion = "v22.22.1"
+$nodeVersion = "v24.15.0"
 
 function Write-Step {
     param(
