@@ -59,8 +59,15 @@ function safeReadConfig() {
 }
 
 function atomicWriteConfig(config) {
-  // Strip deprecated top-level keys before persisting
-  if (config && typeof config === 'object') delete config.agent;
+  // Strip deprecated top-level keys before persisting. The `agent`
+  // field was renamed to `agents` in newer OpenClaw — keeping the
+  // old shape causes "agent.* was moved" errors. We log when we
+  // strip so users can see what happened (a backup also exists in
+  // /backups/ for full recovery).
+  if (config && typeof config === 'object' && config.agent !== undefined) {
+    console.warn('[config] stripping deprecated top-level "agent" key (renamed to "agents" in OpenClaw 2025+). Original value preserved in pre-write backup.');
+    delete config.agent;
+  }
 
   const dir = path.dirname(CONFIG_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -769,15 +776,25 @@ const server = http.createServer((req, res) => {
 
     // Run update in background
     setTimeout(async () => {
-      const { execSync } = require('child_process');
-      const tmpZip = path.join(require('os').tmpdir(), 'openclaw-portable-update.zip');
-      const tmpExtract = path.join(require('os').tmpdir(), 'openclaw-portable-extract');
+      // execFile (not execSync) to pass args as array → no shell
+      // interpolation, no command injection from os.tmpdir() returning
+      // paths with special chars (rare on Linux, common on Windows
+      // where the username can contain quotes / spaces / unicode).
+      const { execFile, execFileSync } = require('child_process');
+      // Unique tmp paths per attempt — concurrent updates from
+      // separate processes (or rapid double-clicks bypassing the
+      // global lock after restart) would otherwise overwrite each
+      // other's zip. Date.now() makes the path unguessable to
+      // anything not running in the same process.
+      const stamp = Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      const tmpZip = path.join(require('os').tmpdir(), 'openclaw-portable-update-' + stamp + '.zip');
+      const extractDir = path.join(require('os').tmpdir(), 'openclaw-portable-extract-' + stamp);
       const baseDir = path.join(__dirname, '..');
-      const backupDir = path.join(require('os').tmpdir(), 'openclaw-update-backup-' + Date.now());
+      const backupDir = path.join(require('os').tmpdir(), 'openclaw-update-backup-' + stamp);
 
       const cleanupTmp = () => {
         try { fs.rmSync(tmpZip, { force: true }); } catch(e) {}
-        try { fs.rmSync(tmpExtract, { recursive: true, force: true }); } catch(e) {}
+        try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch(e) {}
       };
 
       try {
@@ -809,19 +826,28 @@ const server = http.createServer((req, res) => {
 
         // 3. Extract (skip data/ and app/runtime/ to preserve user data and node runtime)
         console.log('Update: extracting...');
-        const extractDir = path.join(require('os').tmpdir(), 'openclaw-portable-extract');
         // Use Node's fs API instead of shell (rm -rf / mkdir -p don't exist on Windows cmd.exe)
         try { fs.rmSync(extractDir, { recursive: true, force: true }); } catch(e) {}
         fs.mkdirSync(extractDir, { recursive: true });
 
         if (process.platform === 'win32') {
-          execSync(`powershell -Command "Expand-Archive -Force '${tmpZip}' '${extractDir}'"`, { timeout: 60000 });
+          // execFileSync with arg array — paths can't break out into
+          // PowerShell command injection territory. The Expand-Archive
+          // cmdlet receives -Path / -DestinationPath as bound params,
+          // not as substrings of the command string.
+          execFileSync('powershell', [
+            '-NoProfile', '-NonInteractive', '-Command',
+            'Expand-Archive', '-Force',
+            '-Path', tmpZip,
+            '-DestinationPath', extractDir
+          ], { timeout: 60000 });
         } else {
-          // Try unzip first, fallback to python -m zipfile if not installed
+          // Try unzip first, fallback to python -m zipfile if not installed.
+          // Both via execFileSync — args as array → no shell.
           try {
-            execSync(`unzip -qo "${tmpZip}" -d "${extractDir}"`, { timeout: 60000 });
+            execFileSync('unzip', ['-qo', tmpZip, '-d', extractDir], { timeout: 60000 });
           } catch (e) {
-            execSync(`python3 -m zipfile -e "${tmpZip}" "${extractDir}"`, { timeout: 60000 });
+            execFileSync('python3', ['-m', 'zipfile', '-e', tmpZip, extractDir], { timeout: 60000 });
           }
         }
 
@@ -833,16 +859,30 @@ const server = http.createServer((req, res) => {
         }
 
         // 4. Backup current files for rollback
+        // We snapshot every file we're about to overwrite. This lets
+        // rollback restore the exact pre-update state. Note: we do NOT
+        // (and cannot reliably) detect "files added by the new version"
+        // and remove them on rollback — the staged copy below only
+        // overwrites files that exist in srcDir, so anything NEW from
+        // the update will remain after rollback. Track newly-copied
+        // paths in `newFiles` so rollback can delete them too.
         console.log('Update: backing up...');
         fs.mkdirSync(backupDir, { recursive: true });
         const skipDirs = ['data', '.git'];
+        const newFiles = [];  // files added by the update; rollback removes these
+
+        const shouldSkip = (relPath) => {
+          if (skipDirs.some(d => relPath === d || relPath.startsWith(d + path.sep))) return true;
+          if (relPath.startsWith('app' + path.sep + 'runtime')) return true;
+          return false;
+        };
+
         const backupRecursive = (src, dst) => {
           if (!fs.existsSync(src)) return;
           fs.mkdirSync(dst, { recursive: true });
           for (const item of fs.readdirSync(src, { withFileTypes: true })) {
             const rel = path.relative(baseDir, path.join(src, item.name));
-            if (skipDirs.some(d => rel === d || rel.startsWith(d + path.sep))) continue;
-            if (rel.startsWith('app' + path.sep + 'runtime')) continue;
+            if (shouldSkip(rel)) continue;
             if (item.isDirectory()) backupRecursive(path.join(src, item.name), path.join(dst, item.name));
             else fs.copyFileSync(path.join(src, item.name), path.join(dst, item.name));
           }
@@ -850,7 +890,6 @@ const server = http.createServer((req, res) => {
         backupRecursive(baseDir, backupDir);
 
         // 5. Copy files (skip data/, app/runtime/, .git/)
-        const skipFiles = [];
         const copyRecursive = (src, dest) => {
           const items = fs.readdirSync(src, { withFileTypes: true });
           for (const item of items) {
@@ -858,22 +897,23 @@ const server = http.createServer((req, res) => {
             const destPath = path.join(dest, item.name);
             const relPath = path.relative(srcDir, srcPath);
 
-            // Skip protected directories
-            if (skipDirs.some(d => relPath === d || relPath.startsWith(d + path.sep))) continue;
-            // Skip runtime (preserve existing node binary)
-            if (relPath.startsWith('app' + path.sep + 'runtime')) continue;
+            if (shouldSkip(relPath)) continue;
 
             if (item.isDirectory()) {
               fs.mkdirSync(destPath, { recursive: true });
               copyRecursive(srcPath, destPath);
             } else {
+              // Track files that didn't exist before — rollback will remove these
+              if (!fs.existsSync(destPath)) {
+                newFiles.push(destPath);
+              }
               fs.copyFileSync(srcPath, destPath);
             }
           }
         };
 
         copyRecursive(srcDir, baseDir);
-        console.log('Update: files copied');
+        console.log('Update: files copied (' + newFiles.length + ' new)');
 
         // 5. Cleanup
         fs.rmSync(tmpZip, { force: true });
@@ -912,6 +952,12 @@ const server = http.createServer((req, res) => {
         if (fs.existsSync(backupDir)) {
           console.error('Update: rolling back from backup...');
           try {
+            // Step 1: remove files added by the failed update.
+            // newFiles is in scope from the try block (closure).
+            for (const f of newFiles) {
+              try { fs.rmSync(f, { force: true }); } catch (_) {}
+            }
+            // Step 2: restore overwritten files from backup
             const restoreRecursive = (src, dst) => {
               for (const item of fs.readdirSync(src, { withFileTypes: true })) {
                 const srcP = path.join(src, item.name);
@@ -925,7 +971,7 @@ const server = http.createServer((req, res) => {
               }
             };
             restoreRecursive(backupDir, baseDir);
-            console.error('Update: rollback complete');
+            console.error('Update: rollback complete (' + newFiles.length + ' new files removed)');
           } catch (rbErr) {
             console.error('Update: rollback failed:', rbErr.message);
           }

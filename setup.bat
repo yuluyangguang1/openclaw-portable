@@ -122,8 +122,18 @@ set "OPENCLAW_VERSION=2026.4.29"
 if exist "%OPENCLAW_VERSION_FILE%" (
     for /f "usebackq delims=" %%v in ("%OPENCLAW_VERSION_FILE%") do set "OPENCLAW_VERSION=%%v"
 )
+REM Strip UTF-8 BOM if present (CI sometimes writes OPENCLAW_VERSION with BOM)
+if defined OPENCLAW_VERSION (
+    if "!OPENCLAW_VERSION:~0,1!"=="ï" set "OPENCLAW_VERSION=!OPENCLAW_VERSION:~3!"
+)
 if not exist "%CORE_DIR%\package.json" (
-    echo { "name": "openclaw-portable-core", "version": "1.0.0", "private": true, "dependencies": { "openclaw": "%OPENCLAW_VERSION%" } } > "%CORE_DIR%\package.json"
+    REM Use node (already extracted) to write valid UTF-8 JSON.
+    REM cmd's `echo > file` writes in OEM/ANSI encoding which corrupts
+    REM non-ASCII chars; node's fs.writeFileSync defaults to UTF-8.
+    set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
+    >"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+    "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
+    del "!_JS!" 2>nul
 )
 
 cd /d "%CORE_DIR%"
