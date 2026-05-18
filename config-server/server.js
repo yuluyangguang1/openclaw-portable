@@ -945,16 +945,21 @@ const server = http.createServer((req, res) => {
         fs.mkdirSync(extractDir, { recursive: true });
 
         if (process.platform === 'win32') {
-          // execFileSync with arg array — paths can't break out into
-          // PowerShell command injection territory. The Expand-Archive
-          // cmdlet receives -Path / -DestinationPath as bound params,
-          // not as substrings of the command string.
+          // execFileSync arg array — but PowerShell -Command joins
+          // the remaining argv with spaces, so paths with spaces
+          // would still split incorrectly. Pass a single -Command
+          // string that uses environment variables we set; the env
+          // values are PowerShell-string-safe even with spaces or
+          // unicode. Avoids both shell injection AND the space-split
+          // problem.
           execFileSync('powershell', [
-            '-NoProfile', '-NonInteractive', '-Command',
-            'Expand-Archive', '-Force',
-            '-Path', tmpZip,
-            '-DestinationPath', extractDir
-          ], { timeout: 60000 });
+            '-NoProfile', '-NonInteractive',
+            '-Command',
+            'Expand-Archive -Force -Path $env:_OC_ZIP -DestinationPath $env:_OC_DST'
+          ], {
+            timeout: 60000,
+            env: { ...process.env, _OC_ZIP: tmpZip, _OC_DST: extractDir }
+          });
         } else {
           // Try unzip first, fallback to python -m zipfile if not installed.
           // Both via execFileSync — args as array → no shell.
@@ -1215,7 +1220,9 @@ const server = http.createServer((req, res) => {
           const r = await fetch(url, { signal: ctrl.signal });
           clearTimeout(t);
           if (!r.ok) return { id: p.id, name: p.name, port: p.port, running: false };
-          const j = await r.json();
+          // Bound the response — a misbehaving local server could
+          // stream gigabytes of JSON and OOM us.
+          const j = await readJsonBounded(r, 512 * 1024);
           let models;
           try { models = p.extract(j); } catch (_) { models = []; }
           return { id: p.id, name: p.name, port: p.port, running: true, models: models.slice(0, 50) };
@@ -1437,11 +1444,41 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Serve static files
+  // Serve static files. Strip query string and fragment first;
+  // fs treats them as part of the filename which leads to confusing
+  // 404s. Also reject URL bytes that could canonicalize differently
+  // on Windows (backslash) before we hit path.join.
+  const rawUrl = req.url || '/';
+  // Reject backslash entirely — Windows treats / and \ interchangeably
+  // for path separators; an attacker could try '..\..\server.js' and
+  // path.join might honor the backslash.
+  if (rawUrl.includes('\\')) {
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
+  const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(cleanUrl);
+  } catch (_) {
+    // Malformed percent-encoding (e.g. '%ZZ')
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
+  // Re-check after decoding — '%2e%2e%2fserver.js' decodes to '../server.js'
+  // which path.join will collapse, but the check below still catches it.
+  // Also re-reject backslash that was percent-encoded.
+  if (decodedPath.includes('\\') || decodedPath.includes('\0')) {
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
   const publicDir = path.join(__dirname, 'public');
-  const filePath = req.url === '/'
+  const filePath = decodedPath === '/'
     ? path.join(publicDir, 'index.html')
-    : path.join(publicDir, req.url);
+    : path.join(publicDir, decodedPath);
 
   // Path traversal defence: resolved path must stay inside public/
   const resolved = path.resolve(filePath);
