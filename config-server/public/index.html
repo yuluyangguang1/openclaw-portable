@@ -1464,8 +1464,20 @@ function testLocal(providerId) {
   if (!card) return;
   const portInput = card.querySelector('[data-field="port"]');
   const port = portInput ? portInput.value : '11434';
+  // Validate port is a number to avoid URL injection
+  if (!/^\d{1,5}$/.test(String(port))) {
+    showToast('端口号无效', 'error');
+    return;
+  }
   const base = 'http://127.0.0.1:' + port + '/v1';
-  fetch(base + '/models').then(r => r.json()).then(data => {
+  // Timeout: local model server may be starting up or hanging.
+  // Without this the spinner could hang for minutes.
+  const ctrl = new AbortController();
+  const tt = setTimeout(function(){ ctrl.abort(); }, 5000);
+  fetch(base + '/models', { signal: ctrl.signal }).then(r => {
+    clearTimeout(tt);
+    return r.json();
+  }).then(data => {
     if (data && data.data) {
       showToast('\u5df2\u8fde\u63a5\uff0c\u53d1\u73b0 ' + data.data.length + ' \u4e2a\u6a21\u578b', 'success');
       // Auto-fill model select if empty
@@ -1478,7 +1490,8 @@ function testLocal(providerId) {
       showToast('\u5df2\u8fde\u63a5\u4f46\u672a\u52a0\u8f7d\u6a21\u578b', 'warning');
     }
   }).catch(err => {
-    showToast('\u8fde\u63a5\u5931\u8d25: ' + err.message, 'error');
+    clearTimeout(tt);
+    showToast('\u8fde\u63a5\u5931\u8d25: ' + (err.name === 'AbortError' ? '超时' : err.message), 'error');
   });
 }
 
@@ -2351,11 +2364,17 @@ function showLocalModelHints() {
 (function init() {
   // Bootstrap auth token from server (required for write endpoints).
   // This is a same-origin GET that only responds to localhost requests.
-  fetch('/api/bootstrap').then(function(r) {
+  // Timeout: if server is unreachable at boot, fail fast and let GET
+  // calls succeed without a token (they're public anyway).
+  var bootCtrl = new AbortController();
+  var bootTimer = setTimeout(function(){ bootCtrl.abort(); }, 5000);
+  fetch('/api/bootstrap', { signal: bootCtrl.signal }).then(function(r) {
+    clearTimeout(bootTimer);
     return r.ok ? r.json() : {};
   }).then(function(data) {
     if (data && data.token) _serverToken = data.token;
   }).catch(function() {
+    clearTimeout(bootTimer);
     // If bootstrap fails, writes will get 401 — user sees error toast.
     console.warn('[auth] bootstrap failed, write operations will be rejected');
   });
