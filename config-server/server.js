@@ -1050,8 +1050,13 @@ const server = http.createServer((req, res) => {
         cleanupTmp();
         try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
 
-        // 8. Restart self by spawning new node process and exiting
+        // 8. Restart self by spawning new node process and exiting.
+        // Critical: only exit if the spawn actually succeeded. If spawn
+        // throws (fork limit, missing binary, USB write still flushing),
+        // we must STAY ALIVE so the user keeps a working config-server.
+        // Otherwise they see "update success" and a dead UI.
         setTimeout(() => {
+          let spawned = false;
           try {
             const { spawn } = require('child_process');
             const child = spawn(process.execPath, [__filename], {
@@ -1060,9 +1065,26 @@ const server = http.createServer((req, res) => {
               cwd: __dirname,
               env: process.env,
             });
+            // spawn() resolves async — wait briefly for the child to
+            // either confirm or error out. unref() lets parent exit
+            // independently, but we still need to know spawn worked.
+            child.on('error', (e) => {
+              console.error('Update: respawn failed:', e.message);
+            });
             child.unref();
-          } catch(e) { console.error('Failed to respawn:', e.message); }
-          setTimeout(() => process.exit(0), 500);
+            spawned = true;
+          } catch (e) {
+            console.error('Update: failed to spawn replacement:', e.message);
+          }
+          if (spawned) {
+            // Give the child 500ms to bind 18788 (it'll bump to 18789
+            // if we're still listening), then exit gracefully.
+            setTimeout(() => process.exit(0), 500);
+          } else {
+            // Spawn failed — keep running so the user has SOMETHING.
+            console.error('Update: keeping current process alive (spawn failed). Restart launcher manually.');
+            global._updateInProgress = false;
+          }
         }, 1000);
       } catch (err) {
         console.error('Update failed:', err.message);
@@ -1543,6 +1565,30 @@ process.on('uncaughtException', (err) => {
   try {
     console.error('[config-server] uncaughtException:', err && err.stack ? err.stack : err);
   } catch (_) {}
+});
+
+// Clean up orphaned update tmp files from prior crashes. Without this,
+// every aborted update leaves ~100 MB in os.tmpdir() forever — eventually
+// fills the user's drive. Match only our prefix; never touch the OS's
+// own tmp files. Run on next tick so server boot isn't delayed.
+setImmediate(() => {
+  try {
+    const tmpdir = require('os').tmpdir();
+    const cutoff = Date.now() - 24 * 3600_000; // older than 24h
+    for (const name of fs.readdirSync(tmpdir)) {
+      if (!name.startsWith('openclaw-portable-update-') &&
+          !name.startsWith('openclaw-portable-extract-') &&
+          !name.startsWith('openclaw-update-backup-')) continue;
+      const p = path.join(tmpdir, name);
+      try {
+        const st = fs.statSync(p);
+        if (st.mtimeMs < cutoff) {
+          if (st.isDirectory()) fs.rmSync(p, { recursive: true, force: true });
+          else fs.rmSync(p, { force: true });
+        }
+      } catch (_) {}
+    }
+  } catch (_) { /* tmpdir may be unreadable on some setups */ }
 });
 process.on('unhandledRejection', (reason) => {
   try {
