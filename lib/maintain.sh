@@ -294,10 +294,10 @@ do_update() {
 
     echo -e "  ${DIM}正在查询最新版本...${NC}"
 
-    # Get current version
+    # Get current version (path-injection safe via process.argv[1])
     local CUR_VER=""
     if [ -f "$CORE_DIR/node_modules/openclaw/package.json" ]; then
-        CUR_VER=$("$NODE_BIN" -e "console.log(require('$CORE_DIR/node_modules/openclaw/package.json').version)" 2>/dev/null)
+        CUR_VER=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}" "$CORE_DIR/node_modules/openclaw/package.json" 2>/dev/null)
     fi
 
     if [ -z "$CUR_VER" ]; then
@@ -334,7 +334,7 @@ do_update() {
     echo -e "  ${CYAN}正在升级...${NC}"
     cd "$CORE_DIR"
     "$NPM_BIN" install openclaw@latest --registry=https://registry.npmmirror.com 2>&1
-    local NEW_VER=$("$NODE_BIN" -e "console.log(require('./node_modules/openclaw/package.json').version)" 2>/dev/null)
+    local NEW_VER=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}" "$CORE_DIR/node_modules/openclaw/package.json" 2>/dev/null)
     echo ""
     echo -e "  ${GREEN}升级完成！${NC} $CUR_VER → $NEW_VER"
 }
