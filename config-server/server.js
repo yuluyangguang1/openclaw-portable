@@ -18,6 +18,109 @@ const SERVER_TOKEN = crypto.randomBytes(32).toString('hex');
 const CONFIG_BACKUP_DIR = path.join(path.dirname(CONFIG_PATH), 'backups');
 const CONFIG_BACKUP_KEEP = 5;
 
+// ── Network safety helpers ──────────────────────────────────────────────────
+//
+// Every outbound fetch needs a timeout: the config-server ships in a
+// portable USB context where users may be behind captive portals,
+// corporate proxies, or simply offline. A bare `await fetch(...)`
+// will hang the request forever, and worse, can deadlock state
+// machines like _updateInProgress.
+//
+// fetchWithTimeout wraps fetch with an AbortController. Default 15s
+// is long enough for slow GitHub responses but short enough that
+// the user notices and can retry.
+//
+// MAX_RESPONSE_BYTES caps how much we'll read from a third-party JSON
+// body. Without this, a hijacked DNS could feed us infinite JSON.
+const DEFAULT_FETCH_TIMEOUT_MS = 15000;
+const MAX_RESPONSE_BYTES = 5 * 1024 * 1024; // 5 MB; release JSON is normally <100 KB
+
+async function fetchWithTimeout(url, opts) {
+  opts = opts || {};
+  const ms = opts.timeout || DEFAULT_FETCH_TIMEOUT_MS;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function readJsonBounded(response, max) {
+  // Read response body in chunks; abort if we exceed `max` bytes.
+  // Using response.body (web stream) keeps memory bounded — calling
+  // response.json() on a 1 GB stream would buffer the whole thing.
+  const limit = max || MAX_RESPONSE_BYTES;
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > limit) {
+      try { reader.cancel(); } catch (_) {}
+      throw new Error('Response exceeds max size (' + limit + ' bytes)');
+    }
+    chunks.push(value);
+  }
+  const buf = Buffer.concat(chunks.map(c => Buffer.from(c)));
+  return JSON.parse(buf.toString('utf8'));
+}
+
+// ── Request body collection helper ──────────────────────────────────────────
+//
+// Centralizes the "collect POST body up to N bytes, parse JSON, send 413
+// on overflow" pattern. Replaces ad-hoc req.on('data'/'end') handlers
+// scattered across endpoints. Benefits:
+//   - One place to fix bugs (e.g. body-too-large path used to leak
+//     into 'end' handler and double-respond)
+//   - Consistent error responses across endpoints
+//   - Auto-rejects non-JSON content-type before reading
+function readBoundedJsonBody(req, res, max) {
+  return new Promise((resolve) => {
+    const limit = max || 100_000;
+    let body = '';
+    let exceeded = false;
+    let settled = false;
+    const settle = (val) => {
+      if (settled) return;
+      settled = true;
+      resolve(val);
+    };
+    req.on('data', (chunk) => {
+      if (exceeded) return;
+      body += chunk;
+      if (body.length > limit) {
+        exceeded = true;
+        // Send 413 once, then drain — destroying the req sometimes
+        // races the 'end' handler so we use the `exceeded` guard.
+        if (!res.headersSent) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request body too large (max ' + limit + ' bytes)' }));
+        }
+        try { req.destroy(); } catch (_) {}
+        settle(null);
+      }
+    });
+    req.on('end', () => {
+      if (exceeded) return settle(null);
+      if (!body) return settle({});
+      try {
+        settle(JSON.parse(body));
+      } catch (e) {
+        if (!res.headersSent) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON: ' + e.message }));
+        }
+        settle(null);
+      }
+    });
+    req.on('error', () => settle(null));
+  });
+}
+
 // ── Config persistence: atomic write + auto-recovery ────────────────────────
 //
 // USB-stick reality: the user can yank the drive at any moment, the file
@@ -270,12 +373,14 @@ function renderQrPngDataUrl(input) {
 async function fetchWeChatQrCode(apiBaseUrl) {
   const base = apiBaseUrl.endsWith('/') ? apiBaseUrl : apiBaseUrl + '/';
   const url = base + 'ilink/bot/get_bot_qrcode?bot_type=' + encodeURIComponent(DEFAULT_ILINK_BOT_TYPE);
-  const response = await fetch(url);
+  // Timeout prevents the WeChat login UI from hanging forever when
+  // ilinkai.weixin.qq.com is unreachable (firewall, DNS, captive portal).
+  const response = await fetchWithTimeout(url, { timeout: 15000 });
   if (!response.ok) {
     const body = await response.text().catch(() => '');
     throw new Error('Failed to fetch QR: ' + response.status + ' ' + body);
   }
-  return await response.json();
+  return await readJsonBounded(response);
 }
 
 async function pollWeChatQrStatus(apiBaseUrl, qrcode) {
@@ -611,20 +716,17 @@ const server = http.createServer((req, res) => {
 
   // API: WeChat cancel
   if (req.url === '/api/wechat/cancel' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > 10_000) { req.destroy(); return; }
-    });
-    req.on('end', () => {
+    readBoundedJsonBody(req, res, 10_000).then((data) => {
+      if (data === null) return;  // already responded (413/400)
       try {
-        const data = body ? JSON.parse(body) : {};
-        handleWeChatCancel(data.session);
+        handleWeChatCancel(data && data.session);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
       }
     });
     return;
@@ -661,21 +763,17 @@ const server = http.createServer((req, res) => {
 
   // API: Save config
   if (req.url === '/api/config' && req.method === 'POST') {
-    let body = '';
-    const MAX_BODY = 1_000_000; // 1 MB — config files are tiny
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > MAX_BODY) { req.destroy(); return; }
-    });
-    req.on('end', () => {
+    readBoundedJsonBody(req, res, 1_000_000).then((config) => {
+      if (config === null) return;  // already responded with 413/400
       try {
-        const config = JSON.parse(body);
         atomicWriteConfig(config);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
       }
     });
     return;
@@ -722,11 +820,14 @@ const server = http.createServer((req, res) => {
   if (req.url === '/api/update/check' && req.method === 'GET') {
     (async () => {
       try {
-        const r = await fetch('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
-          headers: { 'User-Agent': 'OpenClawPortable' }
+        // 15s timeout + 5 MB cap protects us from network hangs and
+        // hostile DNS rerouting api.github.com to a slow-loris peer.
+        const r = await fetchWithTimeout('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
+          headers: { 'User-Agent': 'OpenClawPortable' },
+          timeout: 15000
         });
         if (!r.ok) throw new Error('GitHub API error: ' + r.status);
-        const release = await r.json();
+        const release = await readJsonBounded(r);
         const latestTag = release.tag_name || '';
         const currentVer = fs.existsSync(path.join(__dirname, '../PORTABLE_VERSION'))
           ? fs.readFileSync(path.join(__dirname, '../PORTABLE_VERSION'), 'utf8').trim()
@@ -800,10 +901,11 @@ const server = http.createServer((req, res) => {
       try {
 
         // 1. Get latest release download URL
-        const r = await fetch('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
-          headers: { 'User-Agent': 'OpenClawPortable' }
+        const r = await fetchWithTimeout('https://api.github.com/repos/yuluyangguang1/openclaw-portable/releases/latest', {
+          headers: { 'User-Agent': 'OpenClawPortable' },
+          timeout: 15000
         });
-        const release = await r.json();
+        const release = await readJsonBounded(r);
         const downloadUrl = release.assets && release.assets[0] ? release.assets[0].browser_download_url : null;
         if (!downloadUrl) { console.error('Update: no download URL found'); return; }
 
@@ -811,15 +913,27 @@ const server = http.createServer((req, res) => {
         console.log('Update: downloading from ' + downloadUrl);
         const https = require('https');
         await new Promise((resolve, reject) => {
+          // Per-request timeout: if the download stalls (slow USB, flaky
+          // network), abort instead of hanging forever. 5 minutes is a
+          // generous upper bound for a ~200 MB zip on a slow link.
+          const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
           const doRequest = (u) => {
-            https.get(u, { headers: { 'User-Agent': 'OpenClawPortable' } }, (res) => {
-              if (res.statusCode === 301 || res.statusCode === 302) return doRequest(res.headers.location);
+            const req = https.get(u, { headers: { 'User-Agent': 'OpenClawPortable' } }, (res) => {
+              if (res.statusCode === 301 || res.statusCode === 302) {
+                req.destroy();
+                return doRequest(res.headers.location);
+              }
               if (res.statusCode !== 200) return reject(new Error('HTTP ' + res.statusCode));
               const file = fs.createWriteStream(tmpZip);
               res.pipe(file);
               file.on('finish', () => file.close(resolve));
               file.on('error', reject);
-            }).on('error', reject);
+              res.on('error', reject);
+            });
+            req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
+              req.destroy(new Error('Download timeout (' + DOWNLOAD_TIMEOUT_MS + 'ms)'));
+            });
+            req.on('error', reject);
           };
           doRequest(downloadUrl);
         });
@@ -831,16 +945,21 @@ const server = http.createServer((req, res) => {
         fs.mkdirSync(extractDir, { recursive: true });
 
         if (process.platform === 'win32') {
-          // execFileSync with arg array — paths can't break out into
-          // PowerShell command injection territory. The Expand-Archive
-          // cmdlet receives -Path / -DestinationPath as bound params,
-          // not as substrings of the command string.
+          // execFileSync arg array — but PowerShell -Command joins
+          // the remaining argv with spaces, so paths with spaces
+          // would still split incorrectly. Pass a single -Command
+          // string that uses environment variables we set; the env
+          // values are PowerShell-string-safe even with spaces or
+          // unicode. Avoids both shell injection AND the space-split
+          // problem.
           execFileSync('powershell', [
-            '-NoProfile', '-NonInteractive', '-Command',
-            'Expand-Archive', '-Force',
-            '-Path', tmpZip,
-            '-DestinationPath', extractDir
-          ], { timeout: 60000 });
+            '-NoProfile', '-NonInteractive',
+            '-Command',
+            'Expand-Archive -Force -Path $env:_OC_ZIP -DestinationPath $env:_OC_DST'
+          ], {
+            timeout: 60000,
+            env: { ...process.env, _OC_ZIP: tmpZip, _OC_DST: extractDir }
+          });
         } else {
           // Try unzip first, fallback to python -m zipfile if not installed.
           // Both via execFileSync — args as array → no shell.
@@ -1101,7 +1220,9 @@ const server = http.createServer((req, res) => {
           const r = await fetch(url, { signal: ctrl.signal });
           clearTimeout(t);
           if (!r.ok) return { id: p.id, name: p.name, port: p.port, running: false };
-          const j = await r.json();
+          // Bound the response — a misbehaving local server could
+          // stream gigabytes of JSON and OOM us.
+          const j = await readJsonBounded(r, 512 * 1024);
           let models;
           try { models = p.extract(j); } catch (_) { models = []; }
           return { id: p.id, name: p.name, port: p.port, running: true, models: models.slice(0, 50) };
@@ -1124,61 +1245,84 @@ const server = http.createServer((req, res) => {
 
   // API: Test API Key validity (lightweight model list request)
   if (req.url === '/api/key/test' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk; if (body.length > 10000) req.destroy(); });
-    req.on('end', async () => {
+    readBoundedJsonBody(req, res, 10_000).then(async (parsed) => {
+      if (parsed === null) return;
       try {
-        const { provider, baseUrl, apiKey } = JSON.parse(body);
+        const { provider, baseUrl, apiKey } = parsed;
         if (!baseUrl || !apiKey) {
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({ok: false, error: 'Missing baseUrl or apiKey'}));
           return;
         }
-        // Try to list models (most OpenAI-compatible APIs support GET /models)
-        const url = baseUrl.replace(/\/+$/, '') + '/models';
+        // Validate scheme — must be http(s). Blocks file://, ftp://,
+        // gopher:// SSRF gadgets and the like.
+        let parsedUrl;
+        try {
+          parsedUrl = new URL(baseUrl.replace(/\/+$/, '') + '/models');
+        } catch (_) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: 'Invalid baseUrl'}));
+          return;
+        }
+        if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: 'Only http(s) URLs are supported'}));
+          return;
+        }
+        const url = parsedUrl.toString();
         const https = require('https');
         const http = require('http');
-        const mod = url.startsWith('https') ? https : http;
+        const mod = parsedUrl.protocol === 'https:' ? https : http;
         const headers = { 'Authorization': 'Bearer ' + apiKey, 'User-Agent': 'OpenClawPortable' };
         // Special case: zhipu uses different auth
         if (provider === 'zai') {
           headers['Authorization'] = 'Bearer ' + apiKey;
         }
-        const reqOpts = new URL(url);
+        // Single-write guard: timeout / error / end can race in failure
+        // modes (e.g. resp.destroy() from the size cap fires both
+        // 'aborted' and 'end'). Without this we double-write headers
+        // and crash with ERR_HTTP_HEADERS_SENT.
+        let responded = false;
+        const respond = (payload) => {
+          if (responded) return;
+          responded = true;
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify(payload));
+        };
         const testReq = mod.get({
-          hostname: reqOpts.hostname,
-          port: reqOpts.port,
-          path: reqOpts.pathname + reqOpts.search,
+          hostname: parsedUrl.hostname,
+          port: parsedUrl.port,
+          path: parsedUrl.pathname + parsedUrl.search,
           headers: headers,
           timeout: 10000,
         }, (resp) => {
           let data = '';
           resp.on('data', c => { data += c; if (data.length > 50000) resp.destroy(); });
           resp.on('end', () => {
-            res.writeHead(200, {'Content-Type':'application/json'});
             if (resp.statusCode >= 200 && resp.statusCode < 300) {
               let modelCount = 0;
               try { modelCount = JSON.parse(data).data ? JSON.parse(data).data.length : 0; } catch(e) {}
-              res.end(JSON.stringify({ok: true, models: modelCount, status: resp.statusCode}));
+              respond({ok: true, models: modelCount, status: resp.statusCode});
             } else if (resp.statusCode === 401 || resp.statusCode === 403) {
-              res.end(JSON.stringify({ok: false, error: 'Key 无效或已过期 (HTTP ' + resp.statusCode + ')'}));
+              respond({ok: false, error: 'Key 无效或已过期 (HTTP ' + resp.statusCode + ')'});
             } else {
-              res.end(JSON.stringify({ok: false, error: 'HTTP ' + resp.statusCode}));
+              respond({ok: false, error: 'HTTP ' + resp.statusCode});
             }
           });
+          resp.on('error', () => respond({ok: false, error: '响应中断'}));
         });
         testReq.on('error', (err) => {
-          res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ok: false, error: '连接失败: ' + err.message}));
+          respond({ok: false, error: '连接失败: ' + err.message});
         });
         testReq.on('timeout', () => {
           testReq.destroy();
-          res.writeHead(200, {'Content-Type':'application/json'});
-          res.end(JSON.stringify({ok: false, error: '连接超时 (10s)'}));
+          respond({ok: false, error: '连接超时 (10s)'});
         });
       } catch(err) {
-        res.writeHead(200, {'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok: false, error: err.message}));
+        if (!res.headersSent) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: err.message}));
+        }
       }
     });
     return;
@@ -1186,38 +1330,43 @@ const server = http.createServer((req, res) => {
 
     // API: Channel connectivity test (lightweight fetch-based)
   if (req.url === '/api/channel/test' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > 100_000) { req.destroy(); return; }
-    });
-    req.on('end', async () => {
+    readBoundedJsonBody(req, res, 100_000).then(async (data) => {
+      if (data === null) return;
       try {
-        const data = JSON.parse(body);
         const {type, config} = data;
         let result = {ok:false, error:'Unsupported channel'};
 
         if (type === 'telegram' && config.token) {
-          const r = await fetch('https://api.telegram.org/bot'+config.token+'/getMe');
-          const j = await r.json();
-          if (j.ok) result = {ok:true, info:'@'+j.result.username};
-          else result = {error:j.description||'Telegram API error'};
+          // Validate token format before using in URL — Telegram bot
+          // tokens are <number>:<base64ish>. Reject anything with
+          // path-breaking chars to avoid surprising URL injection
+          // (api.telegram.org/bot<TOKEN>/getMe → if TOKEN has '/'
+          // we'd hit an unintended endpoint).
+          if (!/^\d+:[A-Za-z0-9_-]+$/.test(String(config.token))) {
+            result = { error: 'Invalid Telegram token format' };
+          } else {
+            const r = await fetchWithTimeout('https://api.telegram.org/bot'+config.token+'/getMe', { timeout: 10000 });
+            const j = await readJsonBounded(r);
+            if (j.ok) result = {ok:true, info:'@'+j.result.username};
+            else result = {error:j.description||'Telegram API error'};
+          }
         } else if (type === 'discord' && config.token) {
-          const r = await fetch('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot '+config.token}});
-          if (r.ok) {const j=await r.json();result={ok:true,info:'@'+(j.username||'bot')};}
+          const r = await fetchWithTimeout('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot '+config.token}, timeout: 10000});
+          if (r.ok) {const j=await readJsonBounded(r);result={ok:true,info:'@'+(j.username||'bot')};}
           else {const t=await r.text();result={error:t.slice(0,120)};}
         } else if (type === 'slack' && config.token) {
-          const r = await fetch('https://slack.com/api/auth.test',{headers:{Authorization:'Bearer '+config.token}});
-          const j = await r.json();
+          const r = await fetchWithTimeout('https://slack.com/api/auth.test',{headers:{Authorization:'Bearer '+config.token}, timeout: 10000});
+          const j = await readJsonBounded(r);
           if (j.ok) result = {ok:true,info:'@'+(j.user||'bot')};
           else result = {error:j.error||'Slack auth failed'};
         } else if (type === 'feishu' && config.appId && config.appSecret) {
-          const r = await fetch('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
+          const r = await fetchWithTimeout('https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({app_id: config.appId, app_secret: config.appSecret})
+            body: JSON.stringify({app_id: config.appId, app_secret: config.appSecret}),
+            timeout: 10000
           });
-          const j = await r.json();
+          const j = await readJsonBounded(r);
           if (j.code === 0) result = {ok:true, info:'App ID ' + config.appId.slice(0,12) + '…'};
           else result = {error: j.msg || 'Feishu auth failed'};
         } else if (!config || Object.keys(config).length === 0) {
@@ -1226,11 +1375,15 @@ const server = http.createServer((req, res) => {
           // QQ, Wecom — no simple test API
           result = {ok:false, error:'Saved — test on restart'};
         }
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify(result));
+        if (!res.headersSent) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify(result));
+        }
       } catch(err) {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:false, error:'Network error: '+err.message.slice(0,80)}));
+        if (!res.headersSent) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, error:'Network error: '+(err.message||'').slice(0,80)}));
+        }
       }
     });
     return;
@@ -1238,13 +1391,36 @@ const server = http.createServer((req, res) => {
 
   // API: Gateway runtime logs (tail)
   if (req.url && req.url.startsWith('/api/logs') && req.method === 'GET') {
+    // Bounded-memory tail: read at most LOG_TAIL_BYTES from the end
+    // of the file. fs.readFileSync would buffer GB-sized logs into
+    // memory and freeze the event loop for seconds — long enough that
+    // the heartbeat poll trips the disconnect overlay even though the
+    // server is fine.
+    const LOG_TAIL_BYTES = 256 * 1024;  // 256 KB → ~1000-3000 log lines
     const tailLog = (logPath, lines) => {
-      if (!fs.existsSync(logPath)) return [];
+      let stat;
+      try { stat = fs.statSync(logPath); } catch (_) { return []; }
+      if (!stat.isFile() || stat.size === 0) return [];
+      const readSize = Math.min(stat.size, LOG_TAIL_BYTES);
+      const start = stat.size - readSize;
+      let fd;
       try {
-        const content = fs.readFileSync(logPath, 'utf8');
-        const all = content.split('\n').filter(Boolean);
-        return lines ? all.slice(-lines) : all.slice(-100);
-      } catch(e) { return []; }
+        fd = fs.openSync(logPath, 'r');
+        const buf = Buffer.alloc(readSize);
+        fs.readSync(fd, buf, 0, readSize, start);
+        let text = buf.toString('utf8');
+        // If we sliced into the middle of a line, drop the partial first line
+        if (start > 0) {
+          const nl = text.indexOf('\n');
+          if (nl >= 0) text = text.slice(nl + 1);
+        }
+        const all = text.split('\n').filter(Boolean);
+        return all.slice(-(lines || 100));
+      } catch (_) {
+        return [];
+      } finally {
+        if (fd !== undefined) try { fs.closeSync(fd); } catch (_) {}
+      }
     };
     // Probe common log locations
     const logFiles = [
@@ -1268,11 +1444,41 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Serve static files
+  // Serve static files. Strip query string and fragment first;
+  // fs treats them as part of the filename which leads to confusing
+  // 404s. Also reject URL bytes that could canonicalize differently
+  // on Windows (backslash) before we hit path.join.
+  const rawUrl = req.url || '/';
+  // Reject backslash entirely — Windows treats / and \ interchangeably
+  // for path separators; an attacker could try '..\..\server.js' and
+  // path.join might honor the backslash.
+  if (rawUrl.includes('\\')) {
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
+  const cleanUrl = rawUrl.split('?')[0].split('#')[0];
+  let decodedPath;
+  try {
+    decodedPath = decodeURIComponent(cleanUrl);
+  } catch (_) {
+    // Malformed percent-encoding (e.g. '%ZZ')
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
+  // Re-check after decoding — '%2e%2e%2fserver.js' decodes to '../server.js'
+  // which path.join will collapse, but the check below still catches it.
+  // Also re-reject backslash that was percent-encoded.
+  if (decodedPath.includes('\\') || decodedPath.includes('\0')) {
+    res.writeHead(400);
+    res.end('Bad Request');
+    return;
+  }
   const publicDir = path.join(__dirname, 'public');
-  const filePath = req.url === '/'
+  const filePath = decodedPath === '/'
     ? path.join(publicDir, 'index.html')
-    : path.join(publicDir, req.url);
+    : path.join(publicDir, decodedPath);
 
   // Path traversal defence: resolved path must stay inside public/
   const resolved = path.resolve(filePath);

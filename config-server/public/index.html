@@ -1111,11 +1111,22 @@
 // page load from /api/bootstrap (which only responds to same-origin).
 var _serverToken = '';
 
-// Wrapper: automatically attaches the auth token to API calls.
+// Wrapper: automatically attaches the auth token to API calls and
+// applies a default 30s timeout via AbortController. A bare fetch
+// has no timeout — if the server hangs (slow USB, file lock, OS
+// pause), every UI action would hang forever.
 function apiFetch(url, opts) {
   opts = opts || {};
   if (!opts.headers) opts.headers = {};
   if (_serverToken) opts.headers['X-OpenClaw-Token'] = _serverToken;
+  // Don't override an explicitly-passed signal.
+  if (!opts.signal) {
+    var ms = opts.timeout || 30000;
+    var ctrl = new AbortController();
+    var timer = setTimeout(function(){ ctrl.abort(); }, ms);
+    opts.signal = ctrl.signal;
+    return fetch(url, opts).finally(function(){ clearTimeout(timer); });
+  }
   return fetch(url, opts);
 }
 
@@ -1946,6 +1957,9 @@ async function checkGateway() {
   // can take longer on slow systems. Skipping overlapping calls keeps
   // _gwOfflineCount monotonic so the UI doesn't flicker.
   if (_gwCheckBusy) return;
+  // Skip when tab is hidden — saves CPU/network and prevents burst
+  // requests when the tab is restored from a long sleep.
+  if (typeof document !== 'undefined' && document.hidden) return;
   _gwCheckBusy = true;
   var dot = document.getElementById('statusDot');
   var text = document.getElementById('statusText');
@@ -2394,22 +2408,36 @@ function showLocalModelHints() {
     if (wechatPollTimer) { clearInterval(wechatPollTimer); }
   });
 
-  // Heartbeat - show disconnect overlay after 3 consecutive failures
+  // Heartbeat — show disconnect overlay after 3 consecutive failures.
+  // Previously the failure check was synchronous (ran before fetch
+  // settled), so it always reflected the *previous* iteration's count.
+  // Now the check happens inside .then/.catch.
   var _hbFails = 0;
+  var _hbBusy = false;
+  function _showOverlay(show) {
+    var ov = document.getElementById('disconnectOverlay');
+    if (!ov) return;
+    ov.style.display = show ? 'flex' : 'none';
+  }
   setInterval(function() {
-    apiFetch('/api/heartbeat').then(function(r) {
+    // Skip when document is hidden — browser throttles intervals to
+    // ~1/min in background tabs; resuming would burst-fire stale
+    // pollers and falsely trip the offline overlay.
+    if (typeof document !== 'undefined' && document.hidden) return;
+    if (_hbBusy) return;  // skip overlapping requests on slow links
+    _hbBusy = true;
+    apiFetch('/api/heartbeat', { timeout: 3000 }).then(function(r) {
       if (r.ok) {
         _hbFails = 0;
-        var ov = document.getElementById('disconnectOverlay');
-        if (ov && ov.style.display === 'flex') ov.style.display = 'none';
-        return;
+        _showOverlay(false);
+      } else {
+        _hbFails++;
+        if (_hbFails >= 3) _showOverlay(true);
       }
+    }).catch(function() {
       _hbFails++;
-    }).catch(function() { _hbFails++; });
-    if (_hbFails >= 3) {
-      var ov2 = document.getElementById('disconnectOverlay');
-      if (ov2) ov2.style.display = 'flex';
-    }
+      if (_hbFails >= 3) _showOverlay(true);
+    }).finally(function(){ _hbBusy = false; });
   }, 5000);
 })();
 </script>

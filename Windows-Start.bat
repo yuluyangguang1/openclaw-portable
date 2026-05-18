@@ -224,10 +224,14 @@ if !errorlevel!==0 (
 echo   Starting OpenClaw on port !PORT!...
 echo.
 
-REM Start Config Server in background and record its PID for cleanup
+REM Start Config Server in background and record its PID for cleanup.
+REM Redirect stdout/stderr to a log file (>nul previously hid all
+REM startup errors; now users can find them in data\logs\).
 echo   Starting Config Center...
 set "CONFIG_SERVER=!PORTABLE_DIR!config-server"
-start /B "" "!NODE_BIN!" "!CONFIG_SERVER!\server.js" >nul 2>&1
+set "CONFIG_LOG=!DATA_DIR!\logs\config-server.log"
+if not exist "!DATA_DIR!\logs" mkdir "!DATA_DIR!\logs" 2>nul
+start /B "" cmd /c ""!NODE_BIN!" "!CONFIG_SERVER!\server.js" > "!CONFIG_LOG!" 2>&1"
 
 REM Wait for config server to write runtime.json (poll up to 15s for slow USB)
 set "RUNTIME_JSON=!STATE_DIR!\runtime.json"
