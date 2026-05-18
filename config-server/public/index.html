@@ -1177,6 +1177,9 @@ let selectedBase = '';
 let selectedModel = '';
 let currentStep = 1;
 let gatewayPort = null;
+// Gateway auth token. Read from openclaw.json on load (loadConfig
+// below). Defaults to 'openclaw' if user hasn't customized it.
+let _gatewayToken = 'openclaw';
 let wechatPollTimer = null;
 let wechatSession = null;
 let configData = null;
@@ -1925,10 +1928,14 @@ async function findGatewayPort() {
   return gatewayPort;
 }
 
-function gatewayUrl() { return 'http://127.0.0.1:'+(gatewayPort||18789)+'/#token=openclaw'; }
+function gatewayUrl() {
+  var t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
+  return 'http://127.0.0.1:'+(gatewayPort||18789)+'/#token='+encodeURIComponent(t);
+}
 
 function openGateway() {
-  window.open('http://127.0.0.1:'+(gatewayPort||18789)+'/#token=openclaw', '_blank');
+  var t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
+  window.open('http://127.0.0.1:'+(gatewayPort||18789)+'/#token='+encodeURIComponent(t), '_blank');
 }
 
 var _gwOfflineCount = 0;
@@ -1963,7 +1970,8 @@ async function checkGateway() {
     // 大按钮加在线指示
     var launchBtn = document.querySelector('.btn-launch');
     if (launchBtn) launchBtn.style.borderColor = 'var(--emerald)';
-    text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token=openclaw" target="_blank" rel="noopener">\u6253\u5f00\u804a\u5929</a>';
+    var _t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
+    text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token='+encodeURIComponent(_t)+'" target="_blank" rel="noopener">\u6253\u5f00\u804a\u5929</a>';
     _setLiveStatus('p', '  ✓ gateway running on :' + port);
   } else {
     _gwOfflineCount++;
@@ -2166,8 +2174,11 @@ function loadVersion() {
     if (data.portable) {
       var verEl = document.querySelector('.hero .version');
       if (verEl) verEl.textContent = 'v' + data.portable + ' · 零安装 · 跨平台';
-      var footEl = document.querySelector('footer');
-      if (footEl) footEl.textContent = 'OpenClaw Portable · v' + data.portable + ' · OpenClaw 核心 ' + (data.openclaw || '?');
+      // Update only the version cell in the structured footer.
+      // textContent on the whole <footer> would wipe the y-footer
+      // grid (links, labels, theme toggle).
+      var footYear = document.getElementById('footer-year');
+      if (footYear) footYear.textContent = 'openclaw v' + data.portable;
     }
   }).catch(function(){});
 }
@@ -2209,19 +2220,30 @@ function scanLocalModels(opts) {
       return;
     }
     if (titleEl) titleEl.textContent = '检测到本地模型运行';
+    // HTML-escape user-controllable strings (model names from local
+    // runtime APIs). A malicious local server (or one infected via
+    // a model name) could otherwise inject script via innerHTML.
+    var esc = function(s) {
+      return String(s).replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+      });
+    };
     listEl.innerHTML = running.map(function(rt){
       var modelsHtml;
       if (!rt.models || rt.models.length === 0) {
-        modelsHtml = '<span style="color:var(--fg-muted);font-size:0.78em;">运行中但未拉取到模型 — 在 ' + rt.name + ' 里下载一个模型后点重新扫描</span>';
+        modelsHtml = '<span style="color:var(--fg-muted);font-size:0.78em;">运行中但未拉取到模型 — 在 ' + esc(rt.name) + ' 里下载一个模型后点重新扫描</span>';
       } else {
-        var opts = rt.models.map(function(m){return '<option value="' + m + '">' + m + '</option>';}).join('');
+        var opts = rt.models.map(function(m){
+          var v = esc(m);
+          return '<option value="' + v + '">' + v + '</option>';
+        }).join('');
         modelsHtml =
-          '<select id="local-' + rt.id + '-model" style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78em;">' + opts + '</select>' +
-          '<button class="btn btn-sm" onclick="applyLocalRuntime(\'' + rt.id + '\',' + rt.port + ')" style="font-size:0.74em;">使用</button>';
+          '<select id="local-' + esc(rt.id) + '-model" style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78em;">' + opts + '</select>' +
+          '<button class="btn btn-sm" onclick="applyLocalRuntime(\'' + esc(rt.id) + '\',' + parseInt(rt.port,10) + ')" style="font-size:0.74em;">使用</button>';
       }
       return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
-        '<span style="color:var(--fg);font-family:var(--font-mono);font-size:0.82em;min-width:90px;">' + rt.name + '</span>' +
-        '<span style="color:var(--fg-muted);font-family:var(--font-mono);font-size:0.72em;min-width:60px;">:' + rt.port + '</span>' +
+        '<span style="color:var(--fg);font-family:var(--font-mono);font-size:0.82em;min-width:90px;">' + esc(rt.name) + '</span>' +
+        '<span style="color:var(--fg-muted);font-family:var(--font-mono);font-size:0.72em;min-width:60px;">:' + parseInt(rt.port,10) + '</span>' +
         modelsHtml +
         '</div>';
     }).join('');
@@ -2342,7 +2364,7 @@ function showLocalModelHints() {
     return r.json();
   }).then(function(data) {
     if (data && data.gateway && data.gateway.auth && data.gateway.auth.token) {
-      // has token config
+      _gatewayToken = data.gateway.auth.token;
     }
     var hasExisting = false;
     if (data && data.env && data.env.ZAI_API_KEY) hasExisting = true;

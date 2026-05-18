@@ -123,6 +123,12 @@ jobs:
           set -e
           set +o pipefail
 
+          # Bootstrap auth token (required for write endpoints since p10).
+          BOOTSTRAP=$(curl -fsS http://127.0.0.1:18788/api/bootstrap)
+          TOKEN=$(echo "$BOOTSTRAP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).token))")
+          [ -n "$TOKEN" ] && [ ${#TOKEN} -ge 32 ] || { echo "FAIL: no auth token from /api/bootstrap"; exit 1; }
+          echo "OK: bootstrap token (length=${#TOKEN})"
+
           R=$(curl -fsS http://127.0.0.1:18788/api/version)
           echo "$R" | grep -q '"portable"' || { echo "FAIL: /api/version: $R"; exit 1; }
           echo "OK: /api/version"
@@ -132,7 +138,7 @@ jobs:
           echo "OK: /api/config GET"
 
           PAYLOAD='{"gateway":{"mode":"local","auth":{"token":"openclaw"}},"models":{"providers":{"deepseek":{"baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-test","api":"openai-completions","models":[{"id":"deepseek-chat","name":"deepseek-chat"}]}}},"agents":{"defaults":{"model":{"primary":"deepseek/deepseek-chat"}}}}'
-          R=$(curl -fsS -X POST -H "Content-Type: application/json" -d "$PAYLOAD" http://127.0.0.1:18788/api/config)
+          R=$(curl -fsS -X POST -H "Content-Type: application/json" -H "X-OpenClaw-Token: $TOKEN" -d "$PAYLOAD" http://127.0.0.1:18788/api/config)
           echo "$R" | grep -q '"ok":true' || { echo "FAIL: /api/config POST: $R"; exit 1; }
           echo "OK: /api/config POST"
 
@@ -140,11 +146,16 @@ jobs:
           echo "$R" | grep -q '"deepseek"' || { echo "FAIL: config not persisted: $R"; exit 1; }
           echo "OK: config persisted"
 
-          R=$(curl -fsS -X POST -H "Content-Type: application/json" \
+          R=$(curl -fsS -X POST -H "Content-Type: application/json" -H "X-OpenClaw-Token: $TOKEN" \
             -d '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' \
             --max-time 15 http://127.0.0.1:18788/api/key/test)
           echo "$R" | grep -q '"ok"' || { echo "FAIL: /api/key/test: $R"; exit 1; }
           echo "OK: /api/key/test responds"
+
+          # Auth regression test: POST without token must return 401
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"x":1}' http://127.0.0.1:18788/api/config)
+          [ "$STATUS" = "401" ] || { echo "FAIL: unauthenticated POST should return 401, got $STATUS"; exit 1; }
+          echo "OK: unauthenticated POST blocked (401)"
 
           R=$(curl -fsS http://127.0.0.1:18788/)
           echo "$R" | grep -q "OpenClaw Portable" || { echo "FAIL: index.html missing brand"; exit 1; }
@@ -189,6 +200,14 @@ jobs:
             }
 
             $base = "http://127.0.0.1:18788"
+
+            # Bootstrap auth token (required for write endpoints since p10).
+            $bootstrap = Invoke-RestMethod "$base/api/bootstrap"
+            $token = $bootstrap.token
+            if (-not $token -or $token.Length -lt 32) { throw "no auth token from /api/bootstrap" }
+            Write-Host "OK: bootstrap token (length=$($token.Length))"
+            $authHeaders = @{ "X-OpenClaw-Token" = $token }
+
             $v = Invoke-RestMethod "$base/api/version"
             if (-not $v.portable) { throw "version missing" }
             Write-Host "OK: /api/version"
@@ -202,7 +221,7 @@ jobs:
               models = @{ providers = @{ deepseek = @{ baseUrl = "https://api.deepseek.com/v1"; apiKey = "sk-test"; api = "openai-completions"; models = @(@{ id = "deepseek-chat"; name = "deepseek-chat" }) } } }
               agents = @{ defaults = @{ model = @{ primary = "deepseek/deepseek-chat" } } }
             } | ConvertTo-Json -Depth 6
-            $r = Invoke-RestMethod "$base/api/config" -Method Post -Body $payload -ContentType "application/json"
+            $r = Invoke-RestMethod "$base/api/config" -Method Post -Body $payload -ContentType "application/json" -Headers $authHeaders
             if (-not $r.ok) { throw "POST /api/config not ok" }
             Write-Host "OK: /api/config POST"
 
@@ -210,9 +229,24 @@ jobs:
             if (-not $c2.models.providers.deepseek) { throw "config not persisted" }
             Write-Host "OK: config persisted"
 
-            $kt = Invoke-RestMethod "$base/api/key/test" -Method Post -Body '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' -ContentType "application/json" -TimeoutSec 15
+            $kt = Invoke-RestMethod "$base/api/key/test" -Method Post -Body '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' -ContentType "application/json" -Headers $authHeaders -TimeoutSec 15
             if ($null -eq $kt.ok) { throw "key/test missing 'ok' field" }
             Write-Host "OK: /api/key/test responds"
+
+            # Auth regression: POST without token must return 401.
+            try {
+              Invoke-RestMethod "$base/api/config" -Method Post -Body '{"x":1}' -ContentType "application/json" | Out-Null
+              throw "unauthenticated POST should have been rejected"
+            } catch [System.Net.WebException] {
+              $code = [int]$_.Exception.Response.StatusCode
+              if ($code -ne 401) { throw "expected 401 for unauthenticated POST, got $code" }
+              Write-Host "OK: unauthenticated POST blocked (401)"
+            } catch [Microsoft.PowerShell.Commands.HttpResponseException] {
+              # PowerShell 7's Invoke-RestMethod throws this for non-2xx
+              $code = [int]$_.Exception.Response.StatusCode
+              if ($code -ne 401) { throw "expected 401 for unauthenticated POST, got $code" }
+              Write-Host "OK: unauthenticated POST blocked (401)"
+            }
 
             $idx = Invoke-WebRequest "$base/" -UseBasicParsing
             if ($idx.Content -notmatch "OpenClaw Portable") { throw "index.html missing brand" }
