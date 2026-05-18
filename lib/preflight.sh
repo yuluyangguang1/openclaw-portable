@@ -83,7 +83,7 @@ preflight_run() {
     # ── 7. Detect previously-corrupt config and offer recovery ────
     local CONFIG_FILE="$STATE_DIR/openclaw.json"
     if [ -f "$CONFIG_FILE" ]; then
-        if ! "$NODE_BIN" -e "JSON.parse(require('fs').readFileSync('$CONFIG_FILE','utf8'))" 2>/dev/null; then
+        if ! "$NODE_BIN" -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$CONFIG_FILE" 2>/dev/null; then
             WARNS+=("配置文件 $CONFIG_FILE 解析失败")
             WARNS+=("  → 启动时配置中心会自动从备份恢复 (data/.openclaw/backups/)")
         fi
@@ -99,15 +99,16 @@ preflight_run() {
         local NM_TEST
         NM_TEST=$("$NODE_BIN" -e "
             try {
-              const pkg = JSON.parse(require('fs').readFileSync('$CORE_DIR/node_modules/openclaw/package.json', 'utf8'));
+              const pkg = JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'));
               if (!pkg.name || !pkg.version) throw new Error('package.json missing name/version');
-              if (!require('fs').existsSync('$CORE_DIR/node_modules/openclaw/' + (pkg.main || 'openclaw.mjs'))) {
-                throw new Error('main entry missing: ' + pkg.main);
+              const mainEntry = require('path').join(require('path').dirname(process.argv[1]), pkg.main || 'openclaw.mjs');
+              if (!require('fs').existsSync(mainEntry)) {
+                throw new Error('main entry missing: ' + (pkg.main || 'openclaw.mjs'));
               }
             } catch (e) {
               process.stdout.write('FAIL:' + (e.message || String(e)));
             }
-        " 2>/dev/null || true)
+        " "$CORE_DIR/node_modules/openclaw/package.json" 2>/dev/null || true)
         if [[ "$NM_TEST" == FAIL:* ]]; then
             FAILS+=("OpenClaw 模块完整性检查失败: ${NM_TEST#FAIL:}")
             FAILS+=("  → U 盘文件可能损坏，请重新下载发布包")

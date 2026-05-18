@@ -137,10 +137,18 @@ if not exist "%STATE_DIR%\openclaw.json" (
     (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )
 
-REM Read token from config
+REM Read token from config (encoding-safe: temp .js file pattern from P7)
 set "TOKEN=openclaw"
 if exist "%STATE_DIR%\openclaw.json" (
-    for /f "tokens=*" %%t in ('"%NODE_BIN%" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "%STATE_DIR%\openclaw.json"') do set "TOKEN=%%t"
+    set "_JS=%TEMP%\oc-menu-token-%RANDOM%.js"
+    set "_OUT=%TEMP%\oc-menu-token-%RANDOM%.out"
+    >"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
+    "!NODE_BIN!" "!_JS!" "%STATE_DIR%\openclaw.json" >"!_OUT!" 2>nul
+    if exist "!_OUT!" (
+        set /p TOKEN=<"!_OUT!"
+    )
+    del "!_JS!" 2>nul
+    del "!_OUT!" 2>nul
 )
 
 start /B "" cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:!PORT!/#token=!TOKEN!"
@@ -307,7 +315,15 @@ for /f "tokens=*" %%s in ('powershell -command "(Get-ChildItem '%PORTABLE_DIR%' 
 for /f "tokens=3" %%s in ('dir /-c "%PORTABLE_DIR%." 2^>nul ^| findstr /c:"bytes free"') do echo   Free:   %%s bytes
 echo.
 if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
-    for /f "tokens=*" %%v in ('"%NODE_BIN%" -e "console.log(require('%CORE_DIR:\=/%/node_modules/openclaw/package.json').version)"') do echo   OpenClaw: %%v
+    set "_JS=%TEMP%\oc-sysver-%RANDOM%.js"
+    set "_OUT=%TEMP%\oc-sysver-%RANDOM%.out"
+    >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('unknown')}
+    "!NODE_BIN!" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
+    if exist "!_OUT!" (
+        set /p _OC_VER=<"!_OUT!"
+        echo   OpenClaw: !_OC_VER!
+    )
+    del "!_JS!" 2>nul & del "!_OUT!" 2>nul
 )
 pause
 goto :menu
@@ -477,11 +493,25 @@ if not exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     goto :menu
 )
 echo   Checking...
-for /f "tokens=*" %%v in ('"%NODE_BIN%" -e "console.log(require('%CORE_DIR:\=/%/node_modules/openclaw/package.json').version)"') do set CUR_VER=%%v
-echo   Current version: %CUR_VER%
 
-echo   Fetching latest version...
-for /f "tokens=*" %%v in ('"%NODE_BIN%" -e "const https=require('https');https.get('https://registry.npmmirror.com/openclaw/latest',r=>{let d='';r.on('data',c=>d+=c);r.on('end',()=>{try{console.log(JSON.parse(d).version)}catch(e){console.log('error')}})})" 2^>nul') do set LATEST_VER=%%v
+REM Read current version (encoding-safe temp .js pattern)
+set "CUR_VER=unknown"
+set "_JS=%TEMP%\oc-curver-%RANDOM%.js"
+set "_OUT=%TEMP%\oc-curver-%RANDOM%.out"
+>"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('unknown')}
+"!NODE_BIN!" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
+if exist "!_OUT!" ( set /p CUR_VER=<"!_OUT!" )
+del "!_JS!" 2>nul & del "!_OUT!" 2>nul
+echo   Current version: !CUR_VER!
+
+REM Fetch latest version from npmmirror (encoding-safe temp .js pattern)
+set "LATEST_VER="
+set "_JS=%TEMP%\oc-latver-%RANDOM%.js"
+set "_OUT=%TEMP%\oc-latver-%RANDOM%.out"
+>"!_JS!" echo var https=require('https');https.get('https://registry.npmmirror.com/openclaw/latest',function(r){var d='';r.on('data',function(c){d+=c});r.on('end',function(){try{console.log(JSON.parse(d).version)}catch(e){console.log('error')}})}).on('error',function(){console.log('error')})
+"!NODE_BIN!" "!_JS!" >"!_OUT!" 2>nul
+if exist "!_OUT!" ( set /p LATEST_VER=<"!_OUT!" )
+del "!_JS!" 2>nul & del "!_OUT!" 2>nul
 
 if "!LATEST_VER!"=="" (
     echo   Could not fetch latest version (network issue?)
@@ -515,9 +545,15 @@ echo.
 echo   Updating...
 cd /d "%CORE_DIR%"
 call "%NPM_BIN%" install openclaw@latest --registry=https://registry.npmmirror.com
-for /f "tokens=*" %%v in ('"%NODE_BIN%" -e "console.log(require('./node_modules/openclaw/package.json').version)"') do set NEW_VER=%%v
+set "NEW_VER=unknown"
+set "_JS=%TEMP%\oc-newver-%RANDOM%.js"
+set "_OUT=%TEMP%\oc-newver-%RANDOM%.out"
+>"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('unknown')}
+"!NODE_BIN!" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
+if exist "!_OUT!" ( set /p NEW_VER=<"!_OUT!" )
+del "!_JS!" 2>nul & del "!_OUT!" 2>nul
 echo.
-echo   Updated! %CUR_VER% - %NEW_VER%
+echo   Updated! !CUR_VER! - !NEW_VER!
 pause
 goto :menu
 

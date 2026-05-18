@@ -163,11 +163,17 @@ fi
 # If a previous session's gateway is still running (user closed the
 # terminal without Ctrl+C, or the EXIT trap didn't fire), kill it
 # so we can reuse port 18789 instead of bumping to 18790+.
+# Safety: only kill processes whose command line contains "openclaw"
+# to avoid killing unrelated services on the same port range.
 for stale_port in $(seq 18789 18799); do
     stale_pid=$(lsof -ti ":$stale_port" 2>/dev/null)
     if [ -n "$stale_pid" ]; then
-        echo -e "  ${YELLOW}Killing stale process on port $stale_port (PID $stale_pid)...${NC}"
-        kill "$stale_pid" 2>/dev/null || true
+        for pid in $stale_pid; do
+            if ps -p "$pid" -o args= 2>/dev/null | grep -qi "openclaw"; then
+                echo -e "  ${YELLOW}Killing stale OpenClaw on port $stale_port (PID $pid)...${NC}"
+                kill "$pid" 2>/dev/null || true
+            fi
+        done
         sleep 1
     fi
 done

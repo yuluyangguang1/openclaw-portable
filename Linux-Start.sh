@@ -151,7 +151,9 @@ port_in_use() {
         return 1
     fi
 }
-# Kill stale processes from previous sessions
+# Kill stale processes from previous sessions.
+# Safety: only kill processes whose command line contains "openclaw"
+# to avoid killing unrelated services on the same port range.
 for stale_port in $(seq 18789 18799); do
     if port_in_use $stale_port; then
         stale_pid=""
@@ -161,8 +163,12 @@ for stale_port in $(seq 18789 18799); do
             stale_pid=$(ss -tlnp 2>/dev/null | grep ":$stale_port " | sed -n 's/.*pid=\([0-9]*\).*/\1/p')
         fi
         if [ -n "$stale_pid" ]; then
-            echo -e "  ${YELLOW}Killing stale process on port $stale_port (PID $stale_pid)...${NC}"
-            kill "$stale_pid" 2>/dev/null || true
+            for pid in $stale_pid; do
+                if ps -p "$pid" -o args= 2>/dev/null | grep -qi "openclaw"; then
+                    echo -e "  ${YELLOW}Killing stale OpenClaw on port $stale_port (PID $pid)...${NC}"
+                    kill "$pid" 2>/dev/null || true
+                fi
+            done
             sleep 1
         fi
     fi
