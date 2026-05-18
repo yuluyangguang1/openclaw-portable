@@ -69,6 +69,58 @@ async function readJsonBounded(response, max) {
   return JSON.parse(buf.toString('utf8'));
 }
 
+// ── Request body collection helper ──────────────────────────────────────────
+//
+// Centralizes the "collect POST body up to N bytes, parse JSON, send 413
+// on overflow" pattern. Replaces ad-hoc req.on('data'/'end') handlers
+// scattered across endpoints. Benefits:
+//   - One place to fix bugs (e.g. body-too-large path used to leak
+//     into 'end' handler and double-respond)
+//   - Consistent error responses across endpoints
+//   - Auto-rejects non-JSON content-type before reading
+function readBoundedJsonBody(req, res, max) {
+  return new Promise((resolve) => {
+    const limit = max || 100_000;
+    let body = '';
+    let exceeded = false;
+    let settled = false;
+    const settle = (val) => {
+      if (settled) return;
+      settled = true;
+      resolve(val);
+    };
+    req.on('data', (chunk) => {
+      if (exceeded) return;
+      body += chunk;
+      if (body.length > limit) {
+        exceeded = true;
+        // Send 413 once, then drain — destroying the req sometimes
+        // races the 'end' handler so we use the `exceeded` guard.
+        if (!res.headersSent) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Request body too large (max ' + limit + ' bytes)' }));
+        }
+        try { req.destroy(); } catch (_) {}
+        settle(null);
+      }
+    });
+    req.on('end', () => {
+      if (exceeded) return settle(null);
+      if (!body) return settle({});
+      try {
+        settle(JSON.parse(body));
+      } catch (e) {
+        if (!res.headersSent) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON: ' + e.message }));
+        }
+        settle(null);
+      }
+    });
+    req.on('error', () => settle(null));
+  });
+}
+
 // ── Config persistence: atomic write + auto-recovery ────────────────────────
 //
 // USB-stick reality: the user can yank the drive at any moment, the file
@@ -664,20 +716,17 @@ const server = http.createServer((req, res) => {
 
   // API: WeChat cancel
   if (req.url === '/api/wechat/cancel' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > 10_000) { req.destroy(); return; }
-    });
-    req.on('end', () => {
+    readBoundedJsonBody(req, res, 10_000).then((data) => {
+      if (data === null) return;  // already responded (413/400)
       try {
-        const data = body ? JSON.parse(body) : {};
-        handleWeChatCancel(data.session);
+        handleWeChatCancel(data && data.session);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
       }
     });
     return;
@@ -714,21 +763,17 @@ const server = http.createServer((req, res) => {
 
   // API: Save config
   if (req.url === '/api/config' && req.method === 'POST') {
-    let body = '';
-    const MAX_BODY = 1_000_000; // 1 MB — config files are tiny
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > MAX_BODY) { req.destroy(); return; }
-    });
-    req.on('end', () => {
+    readBoundedJsonBody(req, res, 1_000_000).then((config) => {
+      if (config === null) return;  // already responded with 413/400
       try {
-        const config = JSON.parse(body);
         atomicWriteConfig(config);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ ok: true }));
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
       }
     });
     return;
@@ -1193,11 +1238,10 @@ const server = http.createServer((req, res) => {
 
   // API: Test API Key validity (lightweight model list request)
   if (req.url === '/api/key/test' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk; if (body.length > 10000) req.destroy(); });
-    req.on('end', async () => {
+    readBoundedJsonBody(req, res, 10_000).then(async (parsed) => {
+      if (parsed === null) return;
       try {
-        const { provider, baseUrl, apiKey } = JSON.parse(body);
+        const { provider, baseUrl, apiKey } = parsed;
         if (!baseUrl || !apiKey) {
           res.writeHead(200, {'Content-Type':'application/json'});
           res.end(JSON.stringify({ok: false, error: 'Missing baseUrl or apiKey'}));
@@ -1279,14 +1323,9 @@ const server = http.createServer((req, res) => {
 
     // API: Channel connectivity test (lightweight fetch-based)
   if (req.url === '/api/channel/test' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => {
-      body += chunk;
-      if (body.length > 100_000) { req.destroy(); return; }
-    });
-    req.on('end', async () => {
+    readBoundedJsonBody(req, res, 100_000).then(async (data) => {
+      if (data === null) return;
       try {
-        const data = JSON.parse(body);
         const {type, config} = data;
         let result = {ok:false, error:'Unsupported channel'};
 
@@ -1329,11 +1368,15 @@ const server = http.createServer((req, res) => {
           // QQ, Wecom — no simple test API
           result = {ok:false, error:'Saved — test on restart'};
         }
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify(result));
+        if (!res.headersSent) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify(result));
+        }
       } catch(err) {
-        res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify({ok:false, error:'Network error: '+err.message.slice(0,80)}));
+        if (!res.headersSent) {
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok:false, error:'Network error: '+(err.message||'').slice(0,80)}));
+        }
       }
     });
     return;
