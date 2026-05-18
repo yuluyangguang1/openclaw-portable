@@ -13,7 +13,10 @@ CORE_DIR="$APP_DIR/core"
 RUNTIME_DIR="$APP_DIR/runtime"
 MIRROR="https://registry.npmmirror.com"
 NODE_MIRROR="https://npmmirror.com/mirrors/node"
-NODE_VERSION="v22.22.1"
+# Node 24 LTS (active LTS until 2026-10, maintenance until 2028-04).
+# Upgraded from v22.22.1 to match hermes-portable and get full
+# hermes-web-ui v0.5.x compatibility if users share the same USB.
+NODE_VERSION="v24.15.0"
 ALL_PLATFORMS=false
 [ "$1" = "--all-platforms" ] && ALL_PLATFORMS=true
 
