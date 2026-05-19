@@ -132,7 +132,7 @@ REM Always regenerate package.json so OPENCLAW_VERSION takes effect
 REM even on re-run / upgrade. Include both deps so the file matches
 REM the post-install state and avoids dropping qqbot.
 set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
->"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1',openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+>"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
 "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
 del "!_JS!" 2>nul
 
@@ -198,6 +198,24 @@ if exist "%QQ_DIR%\dist\index.js" (
     echo   [WARNING] QQ Plugin dist\index.js is missing
 )
 :qq_build_done
+
+REM ---- 3b. Install ACP harness (acpx + codex) ----
+REM OpenClaw 5.x stopped auto-staging acpx and codex-acp at gateway
+REM startup. Without these, Codex sessions fail with "harness 'codex'
+REM is not registered". Install as core deps so the gateway picks them
+REM up at startup. (B23-01)
+set "NPM_BIN=%NODE_TARGET%\npm.cmd"
+if not exist "%CORE_DIR%\node_modules\acpx" (
+    echo   [INSTALL] Installing ACP launcher (acpx)...
+    call "%NPM_BIN%" install acpx@latest --prefix "%CORE_DIR%" --registry="%MIRROR%" >nul 2>&1
+)
+if not exist "%CORE_DIR%\node_modules\@zed-industries\codex-acp" (
+    echo   [INSTALL] Installing Codex harness...
+    call "%NPM_BIN%" install @zed-industries/codex-acp@latest --prefix "%CORE_DIR%" --registry="%MIRROR%" >nul 2>&1
+)
+if exist "%CORE_DIR%\node_modules\acpx" if exist "%CORE_DIR%\node_modules\@zed-industries\codex-acp" (
+    echo   [OK] ACP / Codex harness ready
+)
 
 REM ---- 4. Install China-optimized skills ----
 set "SKILLS_CN=%SCRIPT_DIR%skills-cn"

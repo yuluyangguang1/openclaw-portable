@@ -169,6 +169,8 @@ cat > "$CORE_DIR/package.json" << PKGJSON
   "private": true,
   "dependencies": {
     "@sliverp/qqbot": "^1.6.1",
+    "@zed-industries/codex-acp": "^0.14.0",
+    "acpx": "^0.8.0",
     "openclaw": "$OPENCLAW_VERSION"
   }
 }
@@ -216,6 +218,24 @@ if [ -d "$CORE_DIR/node_modules/@sliverp/qqbot" ] && [ ! -d "$CORE_DIR/node_modu
     (cd "$CORE_DIR/node_modules/@sliverp/qqbot" && "$NODE_TARGET/bin/npm" run build 2>/dev/null || true)
     echo -e "  ${GREEN}✓${NC} QQ 插件构建完成"
 fi
+
+# ---- 3b. Install ACP harness (acpx + codex) ----
+# OpenClaw 2026.5.x stopped auto-staging acpx and codex-acp at startup
+# (4.29 used to bundle them into the runtime install). Without these
+# packages installed locally, "Requested agent harness 'codex' is not
+# registered" fires the moment a session targets a Codex agent. We
+# install them as core deps so the gateway sees them on boot.
+NODE_BIN="$NODE_TARGET/bin/node"
+NPM_BIN="$NODE_TARGET/bin/npm"
+if [ ! -d "$CORE_DIR/node_modules/acpx" ]; then
+    echo -e "  ${CYAN}↓${NC} 安装 ACP 启动器 (acpx)..."
+    "$NODE_BIN" "$NPM_BIN" install acpx@latest --prefix "$CORE_DIR" --registry="$MIRROR" 2>/dev/null || true
+fi
+if [ ! -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ]; then
+    echo -e "  ${CYAN}↓${NC} 安装 Codex harness..."
+    "$NODE_BIN" "$NPM_BIN" install @zed-industries/codex-acp@latest --prefix "$CORE_DIR" --registry="$MIRROR" 2>/dev/null || true
+fi
+[ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}✓${NC} ACP / Codex harness 就绪"
 
 # ---- 4. Install China-optimized skills ----
 SKILLS_CN="$SCRIPT_DIR/skills-cn"
