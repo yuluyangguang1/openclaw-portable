@@ -115,8 +115,8 @@ jobs:
       - name: Restore exec bits
         run: |
           # upload-artifact loses exec bits; set them before zipping
-          chmod +x Mac-Start.command Mac-Menu.command Mac-Diagnose.command
-          chmod +x Linux-Start.sh Linux-Diagnose.sh lib/maintain.sh
+          chmod +x Mac-Start.command Mac-Menu.command Mac-Diagnose.command Mac-Mobile.command
+          chmod +x Linux-Start.sh Linux-Diagnose.sh Linux-Mobile.sh lib/maintain.sh lib/mobile.sh
           for bindir in app/runtime/node-mac-*/bin app/runtime/node-linux-*/bin; do
             [ -d "$bindir" ] && find "$bindir" -type f -exec chmod +x {} +
           done
@@ -139,9 +139,14 @@ jobs:
           mv Mac-Menu.command Mac-Diagnose.command   system/
           mv Linux-Menu.sh    Linux-Diagnose.sh      system/
           mv Windows-Menu.bat Windows-Diagnose.bat   system/
+          # Mobile Connect launchers
+          mv Mac-Mobile.command   system/
+          mv Linux-Mobile.sh      system/
+          mv Windows-Mobile.bat   system/
           # Helpers
           mv lib/preflight.sh    system/lib/preflight.sh
           mv lib/maintain.sh     system/lib/maintain.sh
+          mv lib/mobile.sh       system/lib/mobile.sh
           rmdir lib
           # NOTE: default-config.json stays at the root. lib/maintain.sh
           # and Windows-Menu.bat reference it as
