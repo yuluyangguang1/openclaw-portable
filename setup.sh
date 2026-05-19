@@ -157,14 +157,17 @@ else
     echo -e "  ${CYAN}↓${NC} 安装 OpenClaw..."
     mkdir -p "$CORE_DIR"
 
-    # Init package.json if not exists (pinned OpenClaw version from OPENCLAW_VERSION)
+    # Read pinned OpenClaw version from OPENCLAW_VERSION file.
+    # Always regenerate package.json to ensure the version matches —
+    # previously the file was git-tracked with a stale version and
+    # setup.sh's "if not exists" guard meant OPENCLAW_VERSION changes
+    # never took effect.
     OPENCLAW_VERSION_FILE="$(dirname "$0")/OPENCLAW_VERSION"
     OPENCLAW_VERSION="2026.5.12"
     if [ -f "$OPENCLAW_VERSION_FILE" ]; then
         OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"
     fi
-    if [ ! -f "$CORE_DIR/package.json" ]; then
-        cat > "$CORE_DIR/package.json" << PKGJSON
+    cat > "$CORE_DIR/package.json" << PKGJSON
 {
   "name": "openclaw-portable-core",
   "version": "1.0.0",
@@ -174,7 +177,6 @@ else
   }
 }
 PKGJSON
-    fi
 
     # Install with China mirror
     NODE_BIN="$NODE_TARGET/bin/node"
