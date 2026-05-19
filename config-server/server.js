@@ -5,8 +5,15 @@ const path = require('path');
 const { deflateSync } = require('zlib');
 const crypto = require('crypto');
 
-const PORT_RANGE_START = 18788;
-const PORT_RANGE_END = 18798;
+// Config server uses a port range that does NOT overlap with the
+// gateway range (18789-18799). Earlier versions used 18788-18798
+// which overlapped at 18789-18798 — when 18788 was occupied the
+// config-server could fall through into 18789 and steal the port
+// the launcher had reserved for the gateway. The launcher writes
+// the actual bound port back to runtime.json so this range is
+// fully encapsulated. (B22-06)
+const PORT_RANGE_START = 18750;
+const PORT_RANGE_END = 18760;
 const CONFIG_PATH = path.join(__dirname, '../data/.openclaw/openclaw.json');
 const RUNTIME_PATH = path.join(__dirname, '../data/.openclaw/runtime.json');
 
@@ -646,10 +653,17 @@ const server = http.createServer((req, res) => {
     PUBLIC_PREFIXES.some(prefix => route.startsWith(prefix));
 
   if (isApiRequest && !isPublic) {
-    const provided = req.headers['x-openclaw-token'] || '';
+    // Node coerces duplicate headers to a comma-joined string for most
+    // headers, but defensively ensure provided is always a plain string.
+    // Arrays (some proxies) or non-string values would otherwise reach
+    // Buffer.from() which silently coerces, and length comparison
+    // could land on a value that mimics expected length. (B22-02)
+    let provided = req.headers['x-openclaw-token'];
+    if (Array.isArray(provided)) provided = provided[0] || '';
+    if (typeof provided !== 'string') provided = '';
+    const expected = SERVER_TOKEN;
     // Constant-time compare to avoid timing leaks. Pad to equal length
     // first so timingSafeEqual doesn't throw on mismatched sizes.
-    const expected = SERVER_TOKEN;
     const okToken = provided.length === expected.length &&
       crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));
     if (!okToken) {
@@ -881,6 +895,16 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {'Content-Type':'application/json'});
     res.end(JSON.stringify({ ok: true, message: 'Update started. The process will restart when complete.' }));
 
+    // newFiles tracks files created by the update so rollback can
+    // remove them on failure. MUST be declared OUTSIDE the try block
+    // (and outside setTimeout) — the catch block reads it via closure
+    // (~line 1104). If declared inside try and the failure happens
+    // before line 998 (download/extract phase), the catch would hit
+    // ReferenceError, rollback would bail out silently, and
+    // global._updateInProgress would stay true forever — locking the
+    // update path until config-server restarts. (B22-01)
+    let newFiles = [];
+
     // Run update in background
     setTimeout(async () => {
       // execFile (not execSync) to pass args as array → no shell
@@ -994,7 +1018,10 @@ const server = http.createServer((req, res) => {
         console.log('Update: backing up...');
         fs.mkdirSync(backupDir, { recursive: true });
         const skipDirs = ['data', '.git'];
-        const newFiles = [];  // files added by the update; rollback removes these
+        // newFiles is declared in the outer scope (closure target for catch).
+        // Reset for this run in case the variable was retained across
+        // a hot-restart attempt.
+        newFiles.length = 0;
 
         const shouldSkip = (relPath) => {
           if (skipDirs.some(d => relPath === d || relPath.startsWith(d + path.sep))) return true;
@@ -1083,8 +1110,8 @@ const server = http.createServer((req, res) => {
             console.error('Update: failed to spawn replacement:', e.message);
           }
           if (spawned) {
-            // Give the child 500ms to bind 18788 (it'll bump to 18789
-            // if we're still listening), then exit gracefully.
+            // Give the child 500ms to bind 18750 (it'll bump within
+            // PORT_RANGE_START..END if we're still listening), then exit.
             setTimeout(() => process.exit(0), 500);
           } else {
             // Spawn failed — keep running so the user has SOMETHING.

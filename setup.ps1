@@ -219,6 +219,7 @@ $packageJson = @"
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@sliverp/qqbot": "^1.6.1",
     "openclaw": "$openclawVersion"
   }
 }

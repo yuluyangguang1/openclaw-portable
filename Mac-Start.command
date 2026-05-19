@@ -201,9 +201,9 @@ sleep 2
 # directly into the JS string literal breaks if the path contains a
 # single quote (e.g. /Volumes/Daisy's USB/...). Same fix as Windows P7.
 RUNTIME_JSON="$STATE_DIR/runtime.json"
-CONFIG_PORT=18788
+CONFIG_PORT=18750
 if [ -f "$RUNTIME_JSON" ]; then
-    DETECTED_PORT=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).configServerPort||18788)}catch(e){console.log(18788)}" "$RUNTIME_JSON" 2>/dev/null)
+    DETECTED_PORT=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).configServerPort||18750)}catch(e){console.log(18750)}" "$RUNTIME_JSON" 2>/dev/null)
     [ -n "$DETECTED_PORT" ] && CONFIG_PORT="$DETECTED_PORT"
 fi
 
