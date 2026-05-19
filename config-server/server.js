@@ -1247,6 +1247,22 @@ const server = http.createServer((req, res) => {
           const j = await readJsonBounded(r, 512 * 1024);
           let models;
           try { models = p.extract(j); } catch (_) { models = []; }
+          // Only report as "running" if we actually got a valid model
+          // list response. A random HTTP service on the same port that
+          // returns 200 + valid JSON (e.g. a dev server, dashboard, or
+          // health-check endpoint) would otherwise be misidentified as
+          // a local AI runtime. We require either:
+          //   - at least one model in the list, OR
+          //   - the response has the expected shape (data array or
+          //     models array) even if empty — this means the runtime
+          //     is running but the user hasn't pulled any models yet.
+          const hasExpectedShape = (
+            (Array.isArray(j.data)) ||   // OpenAI-compatible /v1/models
+            (Array.isArray(j.models))     // Ollama /api/tags
+          );
+          if (!hasExpectedShape) {
+            return { id: p.id, name: p.name, port: p.port, running: false };
+          }
           return { id: p.id, name: p.name, port: p.port, running: true, models: models.slice(0, 50) };
         } catch (e) {
           clearTimeout(t);
