@@ -1753,7 +1753,13 @@ function buildConfig(provider, base, model, apiKey) {
 }
 
 // ===== SAVE CONFIG =====
+// Re-entrancy guard: rapid double-clicks on the save button used to
+// fire two POST /api/config + two /api/restart in parallel. Server
+// handled the config writes atomically, but two restart spawns racing
+// each other could land on different ports or kill each other.
+var _saveConfigBusy = false;
 function saveConfig() {
+  if (_saveConfigBusy) return;
   if (!selectedProvider) { showToast('\u8bf7\u5148\u9009\u62e9\u6a21\u578b\u63d0\u4f9b\u5546', 'error'); return; }
   const p = PROVIDERS.find(x => x.id === selectedProvider);
   const card = document.querySelector('.provider-card[data-id="' + selectedProvider + '"]');
@@ -1781,11 +1787,13 @@ function saveConfig() {
   const cfg = buildConfig(selectedProvider, base, model, apiKey);
   configData = cfg;
 
+  _saveConfigBusy = true;
   apiFetch('/api/config', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(cfg)
   }).then(function(r) { return r.json(); }).then(function(data) {
+    _saveConfigBusy = false;
     if (data.ok) {
       showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
       try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
@@ -1812,7 +1820,10 @@ function saveConfig() {
     } else {
       showToast((data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
     }
-  }).catch(function(err) { showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+  }).catch(function(err) {
+    _saveConfigBusy = false;
+    showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error');
+  });
 }
 
 // ===== SAVE CHANNELS AND OPEN =====
