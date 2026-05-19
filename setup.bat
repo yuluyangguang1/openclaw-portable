@@ -129,9 +129,10 @@ if defined OPENCLAW_VERSION (
     if "!OPENCLAW_VERSION:~0,1!"=="ï" set "OPENCLAW_VERSION=!OPENCLAW_VERSION:~3!"
 )
 REM Always regenerate package.json so OPENCLAW_VERSION takes effect
-REM even on re-run / upgrade.
+REM even on re-run / upgrade. Include both deps so the file matches
+REM the post-install state and avoids dropping qqbot.
 set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
->"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+>"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1',openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
 "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
 del "!_JS!" 2>nul
 
@@ -142,7 +143,11 @@ if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     set "_OUT=%TEMP%\oc-ver-%RANDOM%.out"
     >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}
     "%NODE_TARGET%\node.exe" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
-    set /p INSTALLED_VER=<"!_OUT!"
+    REM Clear before set /p — if _OUT is empty (node failed), set /p
+    REM leaves INSTALLED_VER unchanged, which would make a stale value
+    REM from a previous run silently compare equal.
+    set "INSTALLED_VER="
+    if exist "!_OUT!" set /p INSTALLED_VER=<"!_OUT!"
     del "!_JS!" 2>nul & del "!_OUT!" 2>nul
     if "!INSTALLED_VER!"=="!OPENCLAW_VERSION!" (
         echo   [OK] OpenClaw !OPENCLAW_VERSION! already installed, skipping

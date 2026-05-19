@@ -937,7 +937,7 @@
       <span class="y-label-xs y-op-7" style="letter-spacing:.15rem">openclaw portable · config</span>
       <h1 class="y-display">openclaw</h1>
       <p class="y-sub">便携 AI 助手 · 配置模型 · 一键启动</p>
-      <span class="y-label-xs y-op-5" id="hero-version">v0.9.2 · 零安装 · 跨平台</span>
+      <span class="y-label-xs y-op-5" id="hero-version">v0.9.7 · 零安装 · 跨平台</span>
       <div class="y-term" aria-hidden="true">
         <div class="y-term-h">
           <span class="y-td"></span><span class="y-td"></span><span class="y-td"></span>
@@ -1084,7 +1084,7 @@
   <div class="c"><span class="y-label y-op-7">yu.ai</span></div>
   <div class="c"><a class="y-label" href="https://yu.ai/" style="opacity:.7;color:inherit;text-decoration:none">home ↗</a></div>
   <div class="c"><a class="y-label" href="https://github.com/yuluyangguang1/openclaw-portable" target="_blank" rel="noopener" style="opacity:.7;color:inherit;text-decoration:none">github ↗</a></div>
-  <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v0.9.2</span></div>
+  <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v0.9.7</span></div>
   <div class="c"><span class="y-label y-op-5" style="color:var(--accent)">openclaw config</span></div>
 </footer>
 
@@ -1480,13 +1480,13 @@ function testLocal(providerId) {
   }
   const base = 'http://127.0.0.1:' + port + '/v1';
   // Timeout: local model server may be starting up or hanging.
-  // Without this the spinner could hang for minutes.
+  // Without this the spinner could hang for minutes. Don't clear the
+  // timer until BOTH headers and body are read — clearing right after
+  // the fetch resolves leaves r.json() unprotected.
   const ctrl = new AbortController();
   const tt = setTimeout(function(){ ctrl.abort(); }, 5000);
-  fetch(base + '/models', { signal: ctrl.signal }).then(r => {
+  fetch(base + '/models', { signal: ctrl.signal }).then(r => r.json()).then(data => {
     clearTimeout(tt);
-    return r.json();
-  }).then(data => {
     if (data && data.data) {
       showToast('\u5df2\u8fde\u63a5\uff0c\u53d1\u73b0 ' + data.data.length + ' \u4e2a\u6a21\u578b', 'success');
       // Auto-fill model select if empty
@@ -1593,10 +1593,17 @@ function testKey(providerId) {
     body: JSON.stringify({provider: providerId, baseUrl: p.base, apiKey: key})
   }).then(function(r){return r.json();}).then(function(data){
     if (resultEl) {
+      // HTML-escape data.error in case the backend (or upstream API)
+      // ever returns characters that could be interpreted as markup.
+      var _esc = function(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+          return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+        });
+      };
       if (data.ok) {
-        resultEl.innerHTML = '<span style="color:var(--emerald);">有效' + (data.models ? ' ('+data.models+' 模型)' : '') + '</span>';
+        resultEl.innerHTML = '<span style="color:var(--emerald);">有效' + (data.models ? ' ('+parseInt(data.models,10)+' 模型)' : '') + '</span>';
       } else {
-        resultEl.innerHTML = '<span style="color:var(--destructive);">' + (data.error || '失败') + '</span>';
+        resultEl.innerHTML = '<span style="color:var(--destructive);">' + _esc(data.error || '失败') + '</span>';
       }
     }
   }).catch(function(){
@@ -1746,7 +1753,13 @@ function buildConfig(provider, base, model, apiKey) {
 }
 
 // ===== SAVE CONFIG =====
+// Re-entrancy guard: rapid double-clicks on the save button used to
+// fire two POST /api/config + two /api/restart in parallel. Server
+// handled the config writes atomically, but two restart spawns racing
+// each other could land on different ports or kill each other.
+var _saveConfigBusy = false;
 function saveConfig() {
+  if (_saveConfigBusy) return;
   if (!selectedProvider) { showToast('\u8bf7\u5148\u9009\u62e9\u6a21\u578b\u63d0\u4f9b\u5546', 'error'); return; }
   const p = PROVIDERS.find(x => x.id === selectedProvider);
   const card = document.querySelector('.provider-card[data-id="' + selectedProvider + '"]');
@@ -1774,11 +1787,13 @@ function saveConfig() {
   const cfg = buildConfig(selectedProvider, base, model, apiKey);
   configData = cfg;
 
+  _saveConfigBusy = true;
   apiFetch('/api/config', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify(cfg)
   }).then(function(r) { return r.json(); }).then(function(data) {
+    _saveConfigBusy = false;
     if (data.ok) {
       showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
       try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
@@ -1805,7 +1820,10 @@ function saveConfig() {
     } else {
       showToast((data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
     }
-  }).catch(function(err) { showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+  }).catch(function(err) {
+    _saveConfigBusy = false;
+    showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error');
+  });
 }
 
 // ===== SAVE CHANNELS AND OPEN =====
@@ -1912,6 +1930,22 @@ function showToast(msg, type) {
 }
 
 // ===== MODAL =====
+// Action handler dispatch — replaces the previous `new Function(b.action)`
+// pattern which was an eval sink. viewConfig in particular built its
+// "copy" action by interpolating a JSON.stringify(data) into the
+// action string, where any embedded quote/backslash in user-imported
+// config could escape the literal and execute arbitrary JS. (B22-03)
+//
+// Buttons now declare {handler: function} OR a built-in action name
+// from MODAL_ACTIONS. String actions are still tolerated for the few
+// hard-coded callsites (closeModal, doUpdate) but only those exact
+// names are recognised — no eval.
+var MODAL_ACTIONS = {
+  closeModal: function() { closeModal(); },
+  doUpdate: function() { doUpdate(); },
+  doReset: function() { doReset(); }
+};
+
 function showModal(title, body, btns) {
   var overlay = document.getElementById('modalOverlay');
   if (!overlay) return;
@@ -1923,7 +1957,22 @@ function showModal(title, body, btns) {
     var btn = document.createElement('button');
     btn.className = b.cls || 'modal-btn-cancel';
     btn.textContent = b.text;
-    btn.onclick = function() { try { (new Function(b.action))(); } catch(e) { console.error('modal action error', e); } };
+    btn.onclick = function() {
+      try {
+        if (typeof b.handler === 'function') {
+          b.handler();
+        } else if (typeof b.action === 'string') {
+          // Tolerate trailing "()" for back-compat with old callsites.
+          var key = b.action.replace(/\(\)\s*$/, '').trim();
+          if (Object.prototype.hasOwnProperty.call(MODAL_ACTIONS, key)) {
+            MODAL_ACTIONS[key]();
+          } else {
+            // Unknown action: silently ignore. Never eval.
+            console.warn('modal: unknown action', b.action);
+          }
+        }
+      } catch (e) { console.error('modal action error', e); }
+    };
     btnDiv.appendChild(btn);
   });
   overlay.classList.add('show');
@@ -2034,12 +2083,27 @@ function runCmd(cmd) {
     apiFetch('/api/update/check').then(function(r){return r.json();}).then(function(data){
       if (!data.ok) { showToast(data.error || '\u68c0\u67e5\u5931\u8d25', 'error'); return; }
       if (!data.isNewer) { showToast('\u5df2\u662f\u6700\u65b0\u7248\u672c ('+data.current+')', 'success'); return; }
+      // Full HTML escape — release body comes from GitHub and could
+      // contain attribute injectors like `" onmouseover=alert(1) x="`
+      // if the upstream account is ever compromised. (B22-07)
+      var esc = function(s){
+        return String(s)
+          .replace(/&/g,'&amp;')
+          .replace(/</g,'&lt;')
+          .replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;')
+          .replace(/'/g,'&#39;');
+      };
+      var bodyHtml = data.body
+        ? '<p style="margin-top:12px;font-size:0.82em;color:#8aaa9a;max-height:120px;overflow:auto;">'
+            + esc(data.body).replace(/\n/g,'<br>')
+            + '</p>'
+        : '';
       showModal('\u53d1\u73b0\u65b0\u7248\u672c',
-        '<p>\u5f53\u524d: <strong>'+data.current+'</strong> \u2192 \u6700\u65b0: <strong>'+data.latest+'</strong></p>' +
-        (data.body ? '<p style="margin-top:12px;font-size:0.82em;color:#8aaa9a;max-height:120px;overflow:auto;">'+data.body.replace(/</g,'&lt;').replace(/\n/g,'<br>')+'</p>' : ''),
+        '<p>\u5f53\u524d: <strong>'+esc(data.current)+'</strong> \u2192 \u6700\u65b0: <strong>'+esc(data.latest)+'</strong></p>' + bodyHtml,
         [
-          {text:'\u7a0d\u540e\u518d\u8bf4', cls:'btn', action:'closeModal()'},
-          {text:'\u7acb\u5373\u66f4\u65b0', cls:'btn btn-primary', action:'doUpdate()'}
+          {text:'\u7a0d\u540e\u518d\u8bf4', cls:'btn', action:'closeModal'},
+          {text:'\u7acb\u5373\u66f4\u65b0', cls:'btn btn-primary', action:'doUpdate'}
         ]
       );
     }).catch(function(e){ showToast('\u68c0\u67e5\u5931\u8d25: '+e.message, 'error'); });
@@ -2182,8 +2246,17 @@ function viewConfig() {
   apiFetch('/api/config').then(r => r.json()).then(data => {
     const json = JSON.stringify(data, null, 2);
     showModal('\u5f53\u524d\u914d\u7f6e', '<pre style="background:#0d1117;padding:12px;border-radius:8px;overflow:auto;max-height:400px;color:#e6edf3;font-size:12px;">' + json.replace(/</g,'&lt;') + '</pre>', [
-      {text:'\u5173\u95ed',cls:'btn',action:'closeModal()'},
-      {text:'\u590d\u5236',cls:'btn btn-primary',action:'navigator.clipboard.writeText(JSON.stringify(' + JSON.stringify(data).replace(/'/g,"\\'") + ',null,2));showToast("\u2705 Copied","success");closeModal()'}
+      {text:'\u5173\u95ed',cls:'btn',action:'closeModal'},
+      // handler closure captures `json` directly — no eval, no string
+      // interpolation of attacker-controlled data. (B22-03)
+      {text:'\u590d\u5236', cls:'btn btn-primary', handler: function() {
+        var p = navigator.clipboard && navigator.clipboard.writeText
+          ? navigator.clipboard.writeText(json)
+          : Promise.reject(new Error('clipboard API unavailable'));
+        Promise.resolve(p)
+          .then(function(){ showToast('\u2705 Copied','success'); closeModal(); })
+          .catch(function(e){ showToast('\u590d\u5236\u5931\u8d25: '+(e && e.message || e),'error'); });
+      }}
     ]);
   }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }

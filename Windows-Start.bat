@@ -249,10 +249,10 @@ REM   2. for /F backtick commands fail on paths with non-ASCII chars +
 REM      spaces (e.g. C:\Users\高\Desktop\...). The cmd subshell
 REM      mangles UTF-8 multi-byte sequences. Write Node's stdout to a
 REM      temp file and read it with set /p — this is encoding-invariant.
-set "CONFIG_PORT=18788"
+set "CONFIG_PORT=18750"
 set "_JS=%TEMP%\oc-read-port-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-read-port-%RANDOM%.out"
->"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[1],'utf8');var v=JSON.parse(d).configServerPort;console.log(v?v:18788)}catch(e){console.log(18788)}
+>"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[1],'utf8');var v=JSON.parse(d).configServerPort;console.log(v?v:18750)}catch(e){console.log(18750)}
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" >"!_OUT!" 2>nul
 if exist "!_OUT!" (
     set /p CONFIG_PORT=<"!_OUT!"

@@ -218,9 +218,9 @@ a:hover{text-decoration:underline}
           <span class="term-label">openclaw</span>
         </div>
         <div class="term-b"><span class="p">$ ./openclaw start</span>
-<span class="t">  🦞 openclaw portable v0.9.2</span>
+<span class="t">  🦞 openclaw portable v0.9.7</span>
 <span class="t">  ✓ gateway ready on :18789</span>
-<span class="t">  ✓ config center on :18788</span><span class="blink"></span></div>
+<span class="t">  ✓ config center on :18750</span><span class="blink"></span></div>
       </div>
     </div>
   </div>
@@ -261,7 +261,7 @@ a:hover{text-decoration:underline}
     <div class="step"><span class="step-num">2</span><span class="step-content"><strong>浏览器自动打开配置页面</strong>（首次运行）。在这里选一个 AI 模型、填写 API Key。不知道从哪拿 Key？推荐用 <strong>DeepSeek</strong> 或 <strong>OpenRouter</strong>，注册就有。</span></div>
     <div class="step"><span class="step-num">3</span><span class="step-content"><strong>保存配置后开始对话</strong>：浏览器打开 <code>http://127.0.0.1:18789</code> 即可。</span></div>
   </div>
-  <div class="callout callout-info"><span class="callout-icon">○</span><div><strong>占用的端口：</strong><div class="ports"><span class="port">配置 <span class="port-num">18788</span></span><span class="port">对话 <span class="port-num">18789</span></span></div>只在本机监听（127.0.0.1），外部访问不到。</div></div>
+  <div class="callout callout-info"><span class="callout-icon">○</span><div><strong>占用的端口：</strong><div class="ports"><span class="port">配置 <span class="port-num">18750</span></span><span class="port">对话 <span class="port-num">18789</span></span></div>只在本机监听（127.0.0.1），外部访问不到。</div></div>
   <div class="callout callout-tip"><span class="callout-icon">&#x1F4BE;</span><div><strong>配置持久化：</strong>所有配置保存在 U 盘 <code>data/.openclaw/openclaw.json</code> 中，拔盘携带，Mac 和 Windows 共享同一份配置。</div></div>
   <h3>以后再次启动</h3>
   <p>下次用的时候，<strong>直接双击同一个启动器就行</strong>。会自动读取上次的配置进入对话。</p>
@@ -306,7 +306,7 @@ a:hover{text-decoration:underline}
 <!-- 4: Config -->
 <div class="section" id="config">
   <div class="section-header"><div class="section-icon">&#x2699</div><h2>配置中心</h2></div>
-  <p>配置中心运行于 <a href="http://127.0.0.1:18788/" target="_blank" rel="noopener">http://127.0.0.1:18788/</a>。启动 OpenClaw 后服务会自动启动并打开。</p>
+  <p>配置中心运行于 <a href="http://127.0.0.1:18750/" target="_blank" rel="noopener">http://127.0.0.1:18750/</a>。启动 OpenClaw 后服务会自动启动并打开。</p>
   <h3>配置步骤</h3>
   <div class="steps">
     <div class="step"><span class="step-num">1</span><span class="step-content">选择一个 AI 模型（API 地址和格式会自动填充）</span></div>
@@ -340,7 +340,7 @@ a:hover{text-decoration:underline}
       <tr><td><strong>搜索</strong></td><td><code>openclaw skills search 关键词</code></td></tr>
     </tbody>
   </table>
-  <div class="callout callout-info"><span class="callout-icon">&#x1F4DA;</span><div>想浏览更多技能？在 <a href="https://clawhub.openclaw.dev" target="_blank" rel="noopener">ClawHub 官网</a> 浏览，或在配置中心 <code>http://127.0.0.1:18788/</code> 的「技能」标签页里安装。</div></div>
+  <div class="callout callout-info"><span class="callout-icon">&#x1F4DA;</span><div>想浏览更多技能？在 <a href="https://clawhub.openclaw.dev" target="_blank" rel="noopener">ClawHub 官网</a> 浏览，或在配置中心 <code>http://127.0.0.1:18750/</code> 的「技能」标签页里安装。</div></div>
 </div>
 
 <!-- 6: Chat Platforms -->
@@ -391,7 +391,7 @@ a:hover{text-decoration:underline}
     <thead><tr><th>端口</th><th>用途</th><th>说明</th></tr></thead>
     <tbody>
       <tr><td><code>18789</code></td><td>AI 对话</td><td>主服务，自动检测 18789-18799</td></tr>
-      <tr><td><code>18788</code></td><td>配置中心</td><td>Web 配置界面（详见下方）</td></tr>
+      <tr><td><code>18750</code></td><td>配置中心</td><td>Web 配置界面（详见下方）</td></tr>
       <tr><td><code>1234</code></td><td>LM Studio</td><td>本地 LLM</td></tr>
       <tr><td><code>8080</code></td><td>llama.cpp</td><td>本地 LLM（自行启动）</td></tr>
       <tr><td><code>11434</code></td><td>Ollama</td><td>本地 LLM</td></tr>
@@ -420,7 +420,7 @@ a:hover{text-decoration:underline}
 
   <div class="faq-item">
     <div class="faq-q">如何更换 AI 模型？</div>
-    <div class="faq-a">打开配置中心 <code>http://127.0.0.1:18788/</code>，重新选择模型和 API Key 即可。</div>
+    <div class="faq-a">打开配置中心 <code>http://127.0.0.1:18750/</code>，重新选择模型和 API Key 即可。</div>
   </div>
 
   <div class="faq-item">

@@ -168,6 +168,7 @@ cat > "$CORE_DIR/package.json" << PKGJSON
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@sliverp/qqbot": "^1.6.1",
     "openclaw": "$OPENCLAW_VERSION"
   }
 }
