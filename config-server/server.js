@@ -1229,6 +1229,12 @@ const server = http.createServer((req, res) => {
           try {
             const pids = execSync(`lsof -ti :${p} 2>/dev/null || ss -tlnp 2>/dev/null | grep ":${p} " | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p'`, {encoding:'utf8', timeout:5000}).trim();
             for (const pid of pids.split('\n').filter(Boolean)) {
+              // Defense in depth: even though lsof -ti and our sed only
+              // emit digits, refuse to interpolate anything non-numeric
+              // into the next shell call. Future regression in upstream
+              // tools (or a hypothetical bypass) would otherwise reach
+              // `ps -p ${pid}` with attacker-controlled text. (B23-01)
+              if (!/^\d+$/.test(pid)) continue;
               // Only kill processes whose command contains 'openclaw.mjs'.
               // Plain 'node' or 'openclaw' is too lax — would also kill
               // unrelated Node services or even our own config-server
@@ -1389,6 +1395,46 @@ const server = http.createServer((req, res) => {
           res.end(JSON.stringify({ok: false, error: 'Only http(s) URLs are supported'}));
           return;
         }
+        // SSRF defence: refuse hostnames that resolve to private/loopback/
+        // link-local IPv4 ranges or IPv6 equivalents. Real LLM providers
+        // are public; "test my key against http://169.254.169.254/" is
+        // either a typo or someone trying to probe AWS metadata.
+        // Hostname-based check (not DNS-resolved) — we don't want to
+        // call dns.lookup before the request because that's an extra
+        // round-trip and the hostname IS the addressable target. (B23-02)
+        const isBlockedHost = (() => {
+          const h = parsedUrl.hostname.toLowerCase();
+          if (!h) return true;
+          // Bracket-stripped IPv6
+          const ipv6 = h.startsWith('[') && h.endsWith(']') ? h.slice(1, -1) : h;
+          // IPv4 literals
+          const m4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+          if (m4) {
+            const [a, b] = [parseInt(m4[1]), parseInt(m4[2])];
+            if (a === 10) return true;                              // 10/8
+            if (a === 127) return true;                             // loopback
+            if (a === 169 && b === 254) return true;                // link-local + cloud metadata
+            if (a === 172 && b >= 16 && b <= 31) return true;       // 172.16/12
+            if (a === 192 && b === 168) return true;                // 192.168/16
+            if (a === 0) return true;                               // 0.0.0.0/8
+            if (a >= 224) return true;                              // multicast / reserved
+          }
+          // IPv6 loopback / link-local / unique-local / mapped IPv4
+          if (ipv6 === '::1' || ipv6 === '::') return true;
+          if (ipv6.startsWith('fe80:')) return true;
+          if (ipv6.startsWith('fc') || ipv6.startsWith('fd')) return true;
+          if (ipv6.startsWith('::ffff:')) return true;              // IPv4-mapped — would need re-check
+          // Common hostnames pointing to private space
+          if (h === 'localhost' || h === 'localhost.localdomain') return true;
+          // Cloud metadata service well-known hostnames
+          if (h === 'metadata.google.internal') return true;
+          return false;
+        })();
+        if (isBlockedHost) {
+          res.writeHead(200, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ok: false, error: '拒绝连接到本地/内网地址（防止 SSRF）'}));
+          return;
+        }
         const url = parsedUrl.toString();
         const https = require('https');
         const http = require('http');
@@ -1453,7 +1499,11 @@ const server = http.createServer((req, res) => {
     readBoundedJsonBody(req, res, 100_000).then(async (data) => {
       if (data === null) return;
       try {
-        const {type, config} = data;
+        const {type} = data;
+        // Defensive: malformed POST body might have type but no config
+        // object. Without this guard, accessing config.token throws
+        // TypeError and the user sees a misleading "Network error".
+        const config = data.config || {};
         let result = {ok:false, error:'Unsupported channel'};
 
         if (type === 'telegram' && config.token) {
