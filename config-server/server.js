@@ -253,9 +253,12 @@ const ACTIVE_LOGIN_TTL_MS = 5 * 60000;
 const QR_POLL_TIMEOUT_MS = 35000;
 const MAX_QR_REFRESH_COUNT = 3;
 
-// Resolve ~/.openclaw/ directory
+// Resolve state directory. In portable mode the launcher sets
+// OPENCLAW_STATE_DIR to data/.openclaw on the USB. Fall back to the
+// portable-relative path (consistent with CONFIG_PATH) rather than
+// ~/.openclaw so a bare `node server.js` still works without env vars.
 const OPENCLAW_DIR = process.env.OPENCLAW_STATE_DIR ||
-  path.join(process.env.USERPROFILE || process.env.HOME || require('os').homedir(), '.openclaw');
+  path.join(__dirname, '../data/.openclaw');
 const WECHAT_STATE_DIR = path.join(OPENCLAW_DIR, 'openclaw-weixin');
 const WECHAT_ACCOUNTS_DIR = path.join(WECHAT_STATE_DIR, 'accounts');
 const WECHAT_ACCOUNT_INDEX_FILE = path.join(WECHAT_STATE_DIR, 'accounts.json');
