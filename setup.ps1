@@ -205,13 +205,15 @@ if ($AllPlatforms) {
 }
 
 $packageJsonPath = Join-Path $coreDir "package.json"
-if (-not (Test-Path -Path $packageJsonPath -PathType Leaf)) {
-    $openclawVersionFile = Join-Path $PSScriptRoot "OPENCLAW_VERSION"
-    $openclawVersion = "2026.5.12"
-    if (Test-Path -Path $openclawVersionFile -PathType Leaf) {
-        $openclawVersion = (Get-Content -Path $openclawVersionFile -Raw).Trim()
-    }
-    $packageJson = @"
+# Always regenerate package.json to ensure the version matches
+# OPENCLAW_VERSION. Previously the file was git-tracked with a stale
+# version and the "if not exists" guard meant changes never took effect.
+$openclawVersionFile = Join-Path $PSScriptRoot "OPENCLAW_VERSION"
+$openclawVersion = "2026.5.12"
+if (Test-Path -Path $openclawVersionFile -PathType Leaf) {
+    $openclawVersion = (Get-Content -Path $openclawVersionFile -Raw).Trim()
+}
+$packageJson = @"
 {
   "name": "openclaw-portable-core",
   "version": "1.0.0",
@@ -221,8 +223,7 @@ if (-not (Test-Path -Path $packageJsonPath -PathType Leaf)) {
   }
 }
 "@
-    $packageJson | Out-File -FilePath $packageJsonPath -Encoding utf8
-}
+$packageJson | Out-File -FilePath $packageJsonPath -Encoding utf8
 
 $npmCmd = Join-Path $windowsNodeTarget "npm.cmd"
 

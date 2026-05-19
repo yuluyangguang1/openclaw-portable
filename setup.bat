@@ -126,15 +126,13 @@ REM Strip UTF-8 BOM if present (CI sometimes writes OPENCLAW_VERSION with BOM)
 if defined OPENCLAW_VERSION (
     if "!OPENCLAW_VERSION:~0,1!"=="ï" set "OPENCLAW_VERSION=!OPENCLAW_VERSION:~3!"
 )
-if not exist "%CORE_DIR%\package.json" (
-    REM Use node (already extracted) to write valid UTF-8 JSON.
-    REM cmd's `echo > file` writes in OEM/ANSI encoding which corrupts
-    REM non-ASCII chars; node's fs.writeFileSync defaults to UTF-8.
-    set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
-    >"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
-    "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
-    del "!_JS!" 2>nul
-)
+REM Always regenerate package.json to ensure the version matches
+REM OPENCLAW_VERSION. Previously the file was git-tracked with a stale
+REM version and the "if not exist" guard meant changes never took effect.
+set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
+>"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+"%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
+del "!_JS!" 2>nul
 
 cd /d "%CORE_DIR%"
 call "%NPM_BIN%" install --prefix "%CORE_DIR%" --registry="%MIRROR%"
