@@ -393,14 +393,18 @@ async function pollWeChatQrStatus(apiBaseUrl, qrcode) {
       headers: { 'iLink-App-ClientVersion': '1' },
       signal: controller.signal
     });
-    clearTimeout(timer);
+    // Don't clear the timer until BOTH headers and body are read.
+    // Clearing right after fetch() returns leaves response.text()
+    // (the body stream) unprotected — if the upstream stalls mid-body
+    // we'd hang forever.
     const text = await response.text();
     if (!response.ok) throw new Error('Poll failed: ' + response.status + ' ' + text);
     return JSON.parse(text);
   } catch (err) {
-    clearTimeout(timer);
     if (err.name === 'AbortError') return { status: 'wait' };
     throw err;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -432,12 +436,14 @@ async function saveWeChatAccount(rawAccountId, payload) {
   const accountId = normalizeAccountId(rawAccountId);
   fs.mkdirSync(WECHAT_ACCOUNTS_DIR, { recursive: true });
   const filePath = path.join(WECHAT_ACCOUNTS_DIR, accountId + '.json');
+  // Coerce to string before .trim() — defends against the upstream
+  // returning a non-string (e.g. number) which would throw TypeError.
   const data = {
-    token: payload.token.trim(),
+    token: String(payload.token || '').trim(),
     savedAt: new Date().toISOString(),
   };
-  if (payload.baseUrl) data.baseUrl = payload.baseUrl.trim();
-  if (payload.userId) data.userId = payload.userId.trim();
+  if (payload.baseUrl) data.baseUrl = String(payload.baseUrl).trim();
+  if (payload.userId) data.userId = String(payload.userId).trim();
   atomicWriteJson(filePath, data);
 
   // Update account index (also atomic)
@@ -1243,8 +1249,10 @@ const server = http.createServer((req, res) => {
         const t = setTimeout(() => ctrl.abort(), 1500);
         try {
           const r = await fetch(url, { signal: ctrl.signal });
-          clearTimeout(t);
           if (!r.ok) return { id: p.id, name: p.name, port: p.port, running: false };
+          // Don't clear the timer until BOTH headers and body are read.
+          // readJsonBounded is the body-reading half; if the upstream
+          // stalls between sending headers and body, we want to abort.
           // Bound the response — a misbehaving local server could
           // stream gigabytes of JSON and OOM us.
           const j = await readJsonBounded(r, 512 * 1024);
@@ -1268,8 +1276,9 @@ const server = http.createServer((req, res) => {
           }
           return { id: p.id, name: p.name, port: p.port, running: true, models: models.slice(0, 50) };
         } catch (e) {
-          clearTimeout(t);
           return { id: p.id, name: p.name, port: p.port, running: false };
+        } finally {
+          clearTimeout(t);
         }
       };
       try {

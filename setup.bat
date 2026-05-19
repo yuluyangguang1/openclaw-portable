@@ -142,7 +142,11 @@ if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     set "_OUT=%TEMP%\oc-ver-%RANDOM%.out"
     >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}
     "%NODE_TARGET%\node.exe" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
-    set /p INSTALLED_VER=<"!_OUT!"
+    REM Clear before set /p — if _OUT is empty (node failed), set /p
+    REM leaves INSTALLED_VER unchanged, which would make a stale value
+    REM from a previous run silently compare equal.
+    set "INSTALLED_VER="
+    if exist "!_OUT!" set /p INSTALLED_VER=<"!_OUT!"
     del "!_JS!" 2>nul & del "!_OUT!" 2>nul
     if "!INSTALLED_VER!"=="!OPENCLAW_VERSION!" (
         echo   [OK] OpenClaw !OPENCLAW_VERSION! already installed, skipping

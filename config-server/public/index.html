@@ -1480,13 +1480,13 @@ function testLocal(providerId) {
   }
   const base = 'http://127.0.0.1:' + port + '/v1';
   // Timeout: local model server may be starting up or hanging.
-  // Without this the spinner could hang for minutes.
+  // Without this the spinner could hang for minutes. Don't clear the
+  // timer until BOTH headers and body are read — clearing right after
+  // the fetch resolves leaves r.json() unprotected.
   const ctrl = new AbortController();
   const tt = setTimeout(function(){ ctrl.abort(); }, 5000);
-  fetch(base + '/models', { signal: ctrl.signal }).then(r => {
+  fetch(base + '/models', { signal: ctrl.signal }).then(r => r.json()).then(data => {
     clearTimeout(tt);
-    return r.json();
-  }).then(data => {
     if (data && data.data) {
       showToast('\u5df2\u8fde\u63a5\uff0c\u53d1\u73b0 ' + data.data.length + ' \u4e2a\u6a21\u578b', 'success');
       // Auto-fill model select if empty
@@ -1593,10 +1593,17 @@ function testKey(providerId) {
     body: JSON.stringify({provider: providerId, baseUrl: p.base, apiKey: key})
   }).then(function(r){return r.json();}).then(function(data){
     if (resultEl) {
+      // HTML-escape data.error in case the backend (or upstream API)
+      // ever returns characters that could be interpreted as markup.
+      var _esc = function(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+          return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+        });
+      };
       if (data.ok) {
-        resultEl.innerHTML = '<span style="color:var(--emerald);">有效' + (data.models ? ' ('+data.models+' 模型)' : '') + '</span>';
+        resultEl.innerHTML = '<span style="color:var(--emerald);">有效' + (data.models ? ' ('+parseInt(data.models,10)+' 模型)' : '') + '</span>';
       } else {
-        resultEl.innerHTML = '<span style="color:var(--destructive);">' + (data.error || '失败') + '</span>';
+        resultEl.innerHTML = '<span style="color:var(--destructive);">' + _esc(data.error || '失败') + '</span>';
       }
     }
   }).catch(function(){
