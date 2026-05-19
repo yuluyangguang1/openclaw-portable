@@ -159,7 +159,7 @@ else
 
     # Init package.json if not exists (pinned OpenClaw version from OPENCLAW_VERSION)
     OPENCLAW_VERSION_FILE="$(dirname "$0")/OPENCLAW_VERSION"
-    OPENCLAW_VERSION="2026.4.29"
+    OPENCLAW_VERSION="2026.5.12"
     if [ -f "$OPENCLAW_VERSION_FILE" ]; then
         OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"
     fi
