@@ -111,9 +111,11 @@ set "PLAT=linux-arm64" & set "DIR_NAME=node-linux-arm64" & call :download_tar
 set "NPM_BIN=%NODE_TARGET%\npm.cmd"
 
 REM ---- 2. Install OpenClaw ----
-if exist "%CORE_DIR%\node_modules\openclaw" goto skip_openclaw_install
+REM ALWAYS regenerate package.json from OPENCLAW_VERSION first. This way
+REM users who re-run setup.bat after a partial install (or to upgrade
+REM OpenClaw) get the correct version even if node_modules\openclaw
+REM already exists.
 
-echo   [INSTALL] Installing OpenClaw...
 if not exist "%CORE_DIR%" mkdir "%CORE_DIR%" 2>nul
 
 REM Read pinned OpenClaw version from repo root
@@ -126,23 +128,36 @@ REM Strip UTF-8 BOM if present (CI sometimes writes OPENCLAW_VERSION with BOM)
 if defined OPENCLAW_VERSION (
     if "!OPENCLAW_VERSION:~0,1!"=="ï" set "OPENCLAW_VERSION=!OPENCLAW_VERSION:~3!"
 )
-REM Always regenerate package.json to ensure the version matches
-REM OPENCLAW_VERSION. Previously the file was git-tracked with a stale
-REM version and the "if not exist" guard meant changes never took effect.
+REM Always regenerate package.json so OPENCLAW_VERSION takes effect
+REM even on re-run / upgrade.
 set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
 >"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
 "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
 del "!_JS!" 2>nul
 
-cd /d "%CORE_DIR%"
-call "%NPM_BIN%" install --prefix "%CORE_DIR%" --registry="%MIRROR%"
+REM Compare installed version vs target. Only skip npm install when they match.
+set "NEED_INSTALL=1"
+if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
+    set "_JS=%TEMP%\oc-ver-%RANDOM%.js"
+    set "_OUT=%TEMP%\oc-ver-%RANDOM%.out"
+    >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}
+    "%NODE_TARGET%\node.exe" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
+    set /p INSTALLED_VER=<"!_OUT!"
+    del "!_JS!" 2>nul & del "!_OUT!" 2>nul
+    if "!INSTALLED_VER!"=="!OPENCLAW_VERSION!" (
+        echo   [OK] OpenClaw !OPENCLAW_VERSION! already installed, skipping
+        set "NEED_INSTALL=0"
+    ) else (
+        echo   [UPGRADE] OpenClaw installed=!INSTALLED_VER!, target=!OPENCLAW_VERSION!, upgrading...
+    )
+)
 
-echo   [OK] OpenClaw installed
-goto openclaw_install_done
-
-:skip_openclaw_install
-echo   [OK] OpenClaw exists, skipping
-:openclaw_install_done
+if "!NEED_INSTALL!"=="1" (
+    echo   [INSTALL] Installing OpenClaw !OPENCLAW_VERSION!...
+    cd /d "%CORE_DIR%"
+    call "%NPM_BIN%" install --prefix "%CORE_DIR%" --registry="%MIRROR%"
+    echo   [OK] OpenClaw installed
+)
 
 REM ---- 3. Install QQ Plugin ----
 if exist "%CORE_DIR%\node_modules\@sliverp\qqbot" goto skip_qq_install

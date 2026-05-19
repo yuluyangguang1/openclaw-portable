@@ -1338,22 +1338,31 @@ function toggleChannelsPanel() {
   if (!grid) return;
   grid.innerHTML = CHANNELS.map(ch => {
     let formHtml = '';
+    // Hint paragraph: shown above fields when present (e.g. Slack/WhatsApp
+    // need a plugin install before the credentials can be saved). For
+    // hint-only channels (no fields), the hint replaces the form body.
+    const hintHtml = ch.hint
+      ? '<p class="hint" style="margin-bottom:8px;">\u63d0\u793a: <code>' + ch.hint + '</code></p>'
+      : '';
     if (ch.special === 'wechat') {
       formHtml = '<div class="provider-expand channel-form">' +
         '<p>\u626b\u7801\u767b\u5f55\u4e2a\u4eba\u5fae\u4fe1</p>' +
         '<div id="wechat-qr"></div>' +
         '<button class="btn btn-primary" onclick="startWeChatLogin(event)">Start QR Login</button>' +
         '<p class="hint" id="wechat-status"></p></div>';
-    } else if (ch.hint) {
+    } else if (!ch.fields || ch.fields.length === 0) {
+      // No fields: hint-only channel (e.g. WhatsApp where login is via CLI).
       formHtml = '<div class="provider-expand channel-form">' +
-        '<p class="hint">\u7ec8\u7aef\u8fd0\u884c: <code>' + ch.hint + '</code></p>' +
+        hintHtml +
         '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
     } else {
       const inputs = ch.fields.map(f =>
         '<div class="input-group"><input type="' + f.type + '" class="input" placeholder="' + f.label + '" data-channel="' + ch.id + '" data-key="' + f.key + '" id="ch-' + ch.id + '-' + f.key + '">' +
         (f.type === 'password' ? '<button class="btn-icon" onclick="togglePw(\'' + ch.id + '-' + f.key + '\')">显示</button>' : '') + '</div>'
       ).join('');
-      formHtml = '<div class="provider-expand channel-form">' + inputs +
+      // hint + fields together — the hint informs users about prerequisites
+      // (e.g. plugin install) without hiding the credential inputs.
+      formHtml = '<div class="provider-expand channel-form">' + hintHtml + inputs +
         '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
     }
     return '<div class="channel-card" data-type="' + ch.id + '" onclick="toggleChannel(this,\'' + ch.id + '\')">' +
