@@ -220,6 +220,8 @@ $packageJson = @"
   "private": true,
   "dependencies": {
     "@sliverp/qqbot": "^1.6.1",
+    "@zed-industries/codex-acp": "^0.14.0",
+    "acpx": "^0.8.0",
     "openclaw": "$openclawVersion"
   }
 }
@@ -281,6 +283,26 @@ else {
 }
 
 Ensure-QQPluginBuild -CoreDir $coreDir -NpmCmd $npmCmd
+
+# ACP harness (acpx + codex). OpenClaw 5.x stopped auto-staging these
+# at startup. Without them, Codex sessions fail with "harness 'codex'
+# is not registered". (B23-01)
+if (-not (Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Container)) {
+    Write-Step "->" "Installing ACP launcher (acpx)..." "Cyan"
+    Push-Location $coreDir
+    try { & $npmCmd install "acpx@latest" --prefix $coreDir --registry=$mirror 2>$null } catch {}
+    finally { Pop-Location }
+}
+if (-not (Test-Path -Path (Join-Path $coreDir "node_modules\@zed-industries\codex-acp") -PathType Container)) {
+    Write-Step "->" "Installing Codex harness..." "Cyan"
+    Push-Location $coreDir
+    try { & $npmCmd install "@zed-industries/codex-acp@latest" --prefix $coreDir --registry=$mirror 2>$null } catch {}
+    finally { Pop-Location }
+}
+if ((Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Container) -and
+    (Test-Path -Path (Join-Path $coreDir "node_modules\@zed-industries\codex-acp") -PathType Container)) {
+    Write-Step "OK" "ACP / Codex harness ready." "Green"
+}
 
 $skillsCn = Join-Path $scriptDir "skills-cn"
 $skillsTarget = Join-Path $coreDir "node_modules\openclaw\skills"
