@@ -950,10 +950,15 @@ const server = http.createServer((req, res) => {
           // network), abort instead of hanging forever. 5 minutes is a
           // generous upper bound for a ~200 MB zip on a slow link.
           const DOWNLOAD_TIMEOUT_MS = 5 * 60_000;
+          const MAX_REDIRECTS = 5;
+          let redirectCount = 0;
           const doRequest = (u) => {
             const req = https.get(u, { headers: { 'User-Agent': 'OpenClawPortable' } }, (res) => {
               if (res.statusCode === 301 || res.statusCode === 302) {
                 req.destroy();
+                if (++redirectCount > MAX_REDIRECTS) {
+                  return reject(new Error('Too many redirects (' + MAX_REDIRECTS + ')'));
+                }
                 return doRequest(res.headers.location);
               }
               if (res.statusCode !== 200) return reject(new Error('HTTP ' + res.statusCode));

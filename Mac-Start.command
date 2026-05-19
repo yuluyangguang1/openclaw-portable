@@ -91,6 +91,10 @@ fi
 if [ -f "$_SCRIPT_DIR/lib/preflight.sh" ]; then
     # shellcheck disable=SC1091
     source "$_SCRIPT_DIR/lib/preflight.sh"
+    if ! preflight_run; then
+        read -p "  按回车关闭..."
+        exit 1
+    fi
 elif [ -f "$PORTABLE_DIR/lib/preflight.sh" ]; then
     # shellcheck disable=SC1091
     source "$PORTABLE_DIR/lib/preflight.sh"

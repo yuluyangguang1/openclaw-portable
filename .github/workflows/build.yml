@@ -169,6 +169,7 @@ jobs:
           # Don't ship the .git we removed earlier back via cp -a if
           # someone re-adds it; defensive remove inside the stage dir.
           rm -rf "$STAGE/.git" "$STAGE/.github"
+          find "$STAGE" -name '.DS_Store' -delete
           cd "$WORK_PARENT"
           zip -yrq OpenClawPortable.zip OpenClawPortable/
           mv OpenClawPortable.zip "$GITHUB_WORKSPACE/"
