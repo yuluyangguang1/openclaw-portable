@@ -99,7 +99,7 @@ jobs:
           PID=$!
           echo "PID=$PID" >> $GITHUB_ENV
           for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:18788/api/heartbeat > /dev/null 2>&1; then
+            if curl -fsS http://127.0.0.1:18750/api/heartbeat > /dev/null 2>&1; then
               echo "OK: heartbeat after ${i}s"
               break
             fi
@@ -130,46 +130,46 @@ jobs:
           set +o pipefail
 
           # Bootstrap auth token (required for write endpoints since p10).
-          BOOTSTRAP=$(curl -fsS http://127.0.0.1:18788/api/bootstrap)
+          BOOTSTRAP=$(curl -fsS http://127.0.0.1:18750/api/bootstrap)
           TOKEN=$(echo "$BOOTSTRAP" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).token))")
           [ -n "$TOKEN" ] && [ ${#TOKEN} -ge 32 ] || { echo "FAIL: no auth token from /api/bootstrap"; exit 1; }
           echo "OK: bootstrap token (length=${#TOKEN})"
 
-          R=$(curl -fsS http://127.0.0.1:18788/api/version)
+          R=$(curl -fsS http://127.0.0.1:18750/api/version)
           echo "$R" | grep -q '"portable"' || { echo "FAIL: /api/version: $R"; exit 1; }
           echo "OK: /api/version"
 
-          R=$(curl -fsS http://127.0.0.1:18788/api/config)
+          R=$(curl -fsS http://127.0.0.1:18750/api/config)
           echo "$R" | grep -q '"gateway"' || { echo "FAIL: /api/config GET: $R"; exit 1; }
           echo "OK: /api/config GET"
 
           PAYLOAD='{"gateway":{"mode":"local","auth":{"token":"openclaw"}},"models":{"providers":{"deepseek":{"baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-test","api":"openai-completions","models":[{"id":"deepseek-chat","name":"deepseek-chat"}]}}},"agents":{"defaults":{"model":{"primary":"deepseek/deepseek-chat"}}}}'
-          R=$(curl -fsS -X POST -H "Content-Type: application/json" -H "X-OpenClaw-Token: $TOKEN" -d "$PAYLOAD" http://127.0.0.1:18788/api/config)
+          R=$(curl -fsS -X POST -H "Content-Type: application/json" -H "X-OpenClaw-Token: $TOKEN" -d "$PAYLOAD" http://127.0.0.1:18750/api/config)
           echo "$R" | grep -q '"ok":true' || { echo "FAIL: /api/config POST: $R"; exit 1; }
           echo "OK: /api/config POST"
 
-          R=$(curl -fsS http://127.0.0.1:18788/api/config)
+          R=$(curl -fsS http://127.0.0.1:18750/api/config)
           echo "$R" | grep -q '"deepseek"' || { echo "FAIL: config not persisted: $R"; exit 1; }
           echo "OK: config persisted"
 
           R=$(curl -fsS -X POST -H "Content-Type: application/json" -H "X-OpenClaw-Token: $TOKEN" \
             -d '{"provider":"deepseek","baseUrl":"https://api.deepseek.com/v1","apiKey":"sk-invalid-test-key"}' \
-            --max-time 15 http://127.0.0.1:18788/api/key/test)
+            --max-time 15 http://127.0.0.1:18750/api/key/test)
           echo "$R" | grep -q '"ok"' || { echo "FAIL: /api/key/test: $R"; exit 1; }
           echo "OK: /api/key/test responds"
 
           # Auth regression test: POST without token must return 401
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"x":1}' http://127.0.0.1:18788/api/config)
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" -d '{"x":1}' http://127.0.0.1:18750/api/config)
           [ "$STATUS" = "401" ] || { echo "FAIL: unauthenticated POST should return 401, got $STATUS"; exit 1; }
           echo "OK: unauthenticated POST blocked (401)"
 
-          R=$(curl -fsS http://127.0.0.1:18788/)
+          R=$(curl -fsS http://127.0.0.1:18750/)
           echo "$R" | grep -q "OpenClaw Portable" || { echo "FAIL: index.html missing brand"; exit 1; }
           echo "OK: index.html served"
 
           # --path-as-is keeps curl from collapsing '..' before sending,
           # and %2e%2e ensures even pedantic clients pass the literal dots.
-          STATUS=$(curl -s --path-as-is -o /dev/null -w "%{http_code}" "http://127.0.0.1:18788/%2e%2e/server.js")
+          STATUS=$(curl -s --path-as-is -o /dev/null -w "%{http_code}" "http://127.0.0.1:18750/%2e%2e/server.js")
           if [ "$STATUS" = "403" ] || [ "$STATUS" = "404" ]; then
             echo "OK: path traversal blocked (HTTP $STATUS)"
           else
@@ -189,7 +189,7 @@ jobs:
             $ok = $false
             for ($i = 1; $i -le 60; $i++) {
               try {
-                $r = Invoke-WebRequest -Uri "http://127.0.0.1:18788/api/heartbeat" -TimeoutSec 2 -UseBasicParsing
+                $r = Invoke-WebRequest -Uri "http://127.0.0.1:18750/api/heartbeat" -TimeoutSec 2 -UseBasicParsing
                 if ($r.StatusCode -eq 200) { $ok = $true; Write-Host "OK: heartbeat after ${i}s"; break }
               } catch {}
               if ($serverProc.HasExited) {
@@ -205,7 +205,7 @@ jobs:
               exit 1
             }
 
-            $base = "http://127.0.0.1:18788"
+            $base = "http://127.0.0.1:18750"
 
             # Bootstrap auth token (required for write endpoints since p10).
             $bootstrap = Invoke-RestMethod "$base/api/bootstrap"
@@ -292,8 +292,8 @@ jobs:
         shell: pwsh
         run: |
           # Belt-and-suspenders: even if the smoke step's finally block
-          # ran, kill any leftover process bound to 18788.
-          $conns = Get-NetTCPConnection -LocalPort 18788 -State Listen -ErrorAction SilentlyContinue
+          # ran, kill any leftover process bound to 18750.
+          $conns = Get-NetTCPConnection -LocalPort 18750 -State Listen -ErrorAction SilentlyContinue
           if ($conns) {
             $conns | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
           }
