@@ -1533,7 +1533,16 @@ function startWeChatLogin(e) {
   apiFetch('/api/wechat/start', {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
     if (data.qrcodeUrl) {
       wechatSession = data.sessionKey;
-      qrEl.innerHTML = '<img src="' + data.qrcodeUrl + '" style="max-width:180px;border-radius:8px;">';
+      // Validate URL scheme to prevent XSS via crafted qrcodeUrl
+      if (/^data:image\//.test(data.qrcodeUrl) || /^https?:\/\//.test(data.qrcodeUrl)) {
+        var qrImg = document.createElement('img');
+        qrImg.src = data.qrcodeUrl;
+        qrImg.style.cssText = 'max-width:180px;border-radius:8px;';
+        qrEl.textContent = '';
+        qrEl.appendChild(qrImg);
+      } else {
+        qrEl.textContent = 'QR code unavailable';
+      }
       if (statusEl) statusEl.textContent = '\u8bf7\u7528\u5fae\u4fe1\u626b\u63cf\u4e8c\u7ef4\u7801';
       pollWeChatStatus();
     } else {
@@ -1560,7 +1569,15 @@ function pollWeChatStatus() {
         showToast('\u5fae\u4fe1\u767b\u5f55\u6210\u529f\uff01\u91cd\u542f Gateway \u540e\u751f\u6548', 'success');
       } else if (data.status === 'refreshed' && data.qrcodeUrl) {
         // QR code expired and was auto-refreshed; swap the image in place
-        if (qrEl) qrEl.innerHTML = '<img src="' + data.qrcodeUrl + '" style="max-width:180px;border-radius:8px;">';
+        if (qrEl) {
+          if (/^data:image\//.test(data.qrcodeUrl) || /^https?:\/\//.test(data.qrcodeUrl)) {
+            var rImg = document.createElement('img');
+            rImg.src = data.qrcodeUrl;
+            rImg.style.cssText = 'max-width:180px;border-radius:8px;';
+            qrEl.textContent = '';
+            qrEl.appendChild(rImg);
+          }
+        }
         if (statusEl) statusEl.textContent = '\u4e8c\u7ef4\u7801\u5df2\u5237\u65b0\uff0c\u8bf7\u91cd\u626b';
       } else if (data.status === 'expired') {
         clearInterval(wechatPollTimer);
@@ -1685,7 +1702,8 @@ function populateQuickSwitch(cfg) {
   el.style.display = 'block';
   var currentModel = (cfg.agents.defaults.model.primary || '').split('/').slice(1).join('/');
   sel.innerHTML = p.models.map(function(m){
-    return '<option value="'+m+'"'+(m===currentModel?' selected':'')+'>'+m+'</option>';
+    var em = m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return '<option value="'+em+'"'+(m===currentModel?' selected':'')+'>'+em+'</option>';
   }).join('');
 }
 
