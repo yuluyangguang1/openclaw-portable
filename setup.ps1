@@ -227,11 +227,24 @@ $packageJson | Out-File -FilePath $packageJsonPath -Encoding utf8
 
 $npmCmd = Join-Path $windowsNodeTarget "npm.cmd"
 
-if (Test-Path -Path (Join-Path $coreDir "node_modules\openclaw") -PathType Container) {
-    Write-Step "OK" "OpenClaw is already installed, skipping." "Green"
+# Compare installed version vs target. Only skip npm install when they match.
+$installedOpenclawJson = Join-Path $coreDir "node_modules\openclaw\package.json"
+$needInstall = $true
+if (Test-Path -Path $installedOpenclawJson -PathType Leaf) {
+    $installedVer = ""
+    try {
+        $installedVer = ((Get-Content -Path $installedOpenclawJson -Raw | ConvertFrom-Json).version).ToString()
+    } catch {}
+    if ($installedVer -eq $openclawVersion) {
+        Write-Step "OK" "OpenClaw $openclawVersion already installed, skipping." "Green"
+        $needInstall = $false
+    } else {
+        Write-Step "->" "OpenClaw installed=$installedVer, target=$openclawVersion, upgrading..." "Cyan"
+    }
 }
-else {
-    Write-Step "->" "Installing OpenClaw..." "Cyan"
+
+if ($needInstall) {
+    Write-Step "->" "Installing OpenClaw $openclawVersion..." "Cyan"
     Push-Location $coreDir
     try {
         & $npmCmd install --prefix $coreDir --registry=$mirror

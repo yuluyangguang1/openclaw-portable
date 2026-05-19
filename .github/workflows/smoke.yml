@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Node syntax check
         run: |
@@ -37,7 +37,13 @@ jobs:
 
       - name: Bash syntax check
         run: |
-          for f in Mac-Start.command Linux-Start.sh setup.sh lib/maintain.sh; do
+          # Check every shell script and .command file in the repo.
+          # Previously only checked 4 files, missing preflight.sh, Menu,
+          # Diagnose — a syntax error in any of those would have shipped.
+          for f in \
+              Mac-Start.command Mac-Menu.command Mac-Diagnose.command \
+              Linux-Start.sh Linux-Menu.sh Linux-Diagnose.sh \
+              setup.sh lib/maintain.sh lib/preflight.sh; do
             bash -n "$f" && echo "OK: $f"
           done
 
@@ -81,7 +87,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Boot config-server (POSIX)
         if: runner.os != 'Windows'
