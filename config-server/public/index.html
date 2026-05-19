@@ -903,6 +903,14 @@
      residual fills come from the inner wrapper either. */
   #step1 > div, #step2 > div { background: transparent !important; }
 
+  /* Mobile connect toggle switch */
+  .mobile-switch { position:relative; display:inline-block; width:44px; height:24px; }
+  .mobile-switch input { opacity:0; width:0; height:0; }
+  .mobile-slider { position:absolute; cursor:pointer; inset:0; background:var(--muted); border:1px solid var(--border); border-radius:24px; transition:.3s; }
+  .mobile-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--fg-muted); border-radius:50%; transition:.3s; }
+  .mobile-switch input:checked + .mobile-slider { background:var(--emerald-dim); border-color:var(--emerald); }
+  .mobile-switch input:checked + .mobile-slider::before { transform:translateX(20px); background:var(--fg); }
+
 </style>
 </head>
 <body>
@@ -1053,6 +1061,48 @@
     <div id="channelPanel" style="display:none;margin-top:12px;">
       <p style="color:#8aaa9a;font-size:0.8em;margin-bottom:12px;">点击卡片展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
       <div class="model-grid" id="channelGrid"></div>
+    </div>
+  </div>
+
+  <!-- 手机连接 -->
+  <div style="margin-top:28px;">
+    <button id="mobileToggleBtn" onclick="toggleMobilePanel()"
+      style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:var(--font-mono);font-size:0.88em;cursor:pointer;text-align:left;">
+      <span>📱 手机连接 (Android / iOS)</span>
+      <span id="mobileToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">▾</span>
+    </button>
+    <div id="mobilePanel" style="display:none;margin-top:12px;padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:14px;">开启后 Gateway 将监听局域网，同一 WiFi 下的手机可直接连接。关闭后恢复仅本机访问。</p>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <span style="font-family:var(--font-mono);font-size:0.88em;">局域网模式</span>
+        <label class="mobile-switch">
+          <input type="checkbox" id="mobileLanToggle" onchange="toggleMobileLan(this.checked)">
+          <span class="mobile-slider"></span>
+        </label>
+      </div>
+
+      <div id="mobileInfo" style="display:none;">
+        <div style="padding:12px;background:var(--bg);border:1px solid var(--emerald-dim);border-radius:6px;margin-bottom:12px;">
+          <div style="font-family:var(--font-mono);font-size:0.78em;color:var(--emerald);margin-bottom:8px;font-weight:600;">连接地址</div>
+          <div id="mobileUrls" style="font-family:var(--font-mono);font-size:0.82em;line-height:1.8;"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
+            <div style="font-size:0.72em;color:var(--fg-muted);margin-bottom:4px;">方式一</div>
+            <div style="font-size:0.82em;font-weight:500;">手机浏览器</div>
+            <div style="font-size:0.72em;color:var(--fg-muted);margin-top:2px;">零安装，打开链接即用</div>
+          </div>
+          <div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
+            <div style="font-size:0.72em;color:var(--fg-muted);margin-bottom:4px;">方式二</div>
+            <div style="font-size:0.82em;font-weight:500;">官方/第三方 App</div>
+            <div style="font-size:0.72em;color:var(--fg-muted);margin-top:2px;">获得摄像头、语音能力</div>
+          </div>
+        </div>
+        <div style="font-size:0.75em;color:var(--warning);display:flex;align-items:center;gap:6px;">
+          <span>⚠</span> 请确保手机和电脑在同一 WiFi 网络。重启 Gateway 后生效。
+        </div>
+      </div>
     </div>
   </div>
 
@@ -2569,6 +2619,109 @@ function showLocalModelHints() {
     }).finally(function(){ _hbBusy = false; });
   }, 5000);
 })();
+</script>
+
+<script>
+// ── Mobile Connect (手机连接) ──────────────────────────────────
+function toggleMobilePanel() {
+  var panel = document.getElementById('mobilePanel');
+  var arrow = document.getElementById('mobileToggleArrow');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    arrow.style.transform = 'rotate(180deg)';
+    loadMobileStatus();
+  } else {
+    panel.style.display = 'none';
+    arrow.style.transform = '';
+  }
+}
+
+function loadMobileStatus() {
+  apiFetch('/api/config').then(function(r){return r.json();}).then(function(cfg) {
+    var isLan = cfg && cfg.gateway && cfg.gateway.bind === 'lan';
+    document.getElementById('mobileLanToggle').checked = isLan;
+    if (isLan) showMobileInfo(cfg);
+    else document.getElementById('mobileInfo').style.display = 'none';
+  }).catch(function(){});
+}
+
+function toggleMobileLan(enabled) {
+  apiFetch('/api/config').then(function(r){return r.json();}).then(function(cfg) {
+    if (!cfg) cfg = {};
+    if (!cfg.gateway) cfg.gateway = {};
+
+    if (enabled) {
+      cfg.gateway.bind = 'lan';
+      if (!cfg.gateway.nodes) cfg.gateway.nodes = {};
+      if (!cfg.gateway.nodes.pairing) cfg.gateway.nodes.pairing = {};
+      cfg.gateway.nodes.pairing.autoApproveCidrs = ['192.168.0.0/16','10.0.0.0/8','172.16.0.0/12'];
+    } else {
+      delete cfg.gateway.bind;
+      if (cfg.gateway.nodes && cfg.gateway.nodes.pairing) {
+        delete cfg.gateway.nodes.pairing.autoApproveCidrs;
+        if (Object.keys(cfg.gateway.nodes.pairing).length === 0) delete cfg.gateway.nodes.pairing;
+        if (Object.keys(cfg.gateway.nodes).length === 0) delete cfg.gateway.nodes;
+      }
+    }
+
+    return apiFetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(cfg)
+    });
+  }).then(function(r){return r.json();}).then(function(res) {
+    if (res && res.ok) {
+      if (enabled) {
+        loadMobileInfo();
+      } else {
+        document.getElementById('mobileInfo').style.display = 'none';
+      }
+    } else {
+      // Revert checkbox on failure
+      document.getElementById('mobileLanToggle').checked = !enabled;
+    }
+  }).catch(function(e) {
+    console.error('Mobile toggle failed:', e);
+    // Revert checkbox on error
+    document.getElementById('mobileLanToggle').checked = !enabled;
+  });
+}
+
+function loadMobileInfo() {
+  apiFetch('/api/mobile/info').then(function(r){return r.json();}).then(function(data) {
+    if (data && data.lanIps && data.lanIps.length > 0) {
+      showMobileInfoFromData(data);
+    }
+  }).catch(function(){
+    // Fallback: just show a generic message
+    var info = document.getElementById('mobileInfo');
+    info.style.display = 'block';
+    document.getElementById('mobileUrls').innerHTML =
+      '<div style="color:var(--fg-muted);">重启 Gateway 后生效，届时将显示连接地址。</div>';
+  });
+}
+
+function showMobileInfo(cfg) {
+  loadMobileInfo();
+}
+
+function showMobileInfoFromData(data) {
+  var info = document.getElementById('mobileInfo');
+  info.style.display = 'block';
+  var html = '';
+  var token = data.token || 'openclaw';
+  var port = data.port || 18789;
+  for (var i = 0; i < data.lanIps.length; i++) {
+    var ip = data.lanIps[i];
+    html += '<div style="margin-bottom:4px;">';
+    html += '浏览器: <a href="http://'+ip+':'+port+'/#token='+token+'" target="_blank" style="color:var(--emerald);">http://'+ip+':'+port+'/</a>';
+    html += '</div>';
+    html += '<div style="margin-bottom:4px;color:var(--fg-muted);">';
+    html += 'App: '+ip+':'+port+' · Token: '+token;
+    html += '</div>';
+  }
+  document.getElementById('mobileUrls').innerHTML = html;
+}
 </script>
 
 <script>

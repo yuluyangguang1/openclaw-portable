@@ -635,6 +635,7 @@ const server = http.createServer((req, res) => {
     'GET /api/logs',              // Read-only log tail
     'GET /api/local/scan',        // Read-only local model scan
     'GET /api/update/check',      // Read-only version check
+    'GET /api/mobile/info',       // Read-only LAN IPs for mobile connect
     'GET /api/wechat/plugin-status',
     'POST /api/wechat/cancel',    // Only clears in-memory login state; no file writes
   ]);
@@ -832,6 +833,40 @@ const server = http.createServer((req, res) => {
   if (req.url === '/api/heartbeat' && req.method === 'GET') {
     res.writeHead(200, {'Content-Type':'application/json'});
     res.end(JSON.stringify({alive: true, ts: Date.now()}));
+    return;
+  }
+
+  // API: Mobile connect info — returns LAN IPs, gateway port, and token
+  // so the frontend can display connection instructions for phones.
+  if (req.url === '/api/mobile/info' && req.method === 'GET') {
+    const os = require('os');
+    const lanIps = [];
+    const ifaces = os.networkInterfaces();
+    for (const name of Object.keys(ifaces)) {
+      for (const iface of ifaces[name]) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          lanIps.push(iface.address);
+        }
+      }
+    }
+    // Read gateway port from runtime.json
+    let gwPort = 18789;
+    try {
+      if (fs.existsSync(RUNTIME_PATH)) {
+        const rt = JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8'));
+        if (rt && rt.gatewayPort) gwPort = rt.gatewayPort;
+      }
+    } catch (_) {}
+    // Read token from config
+    let token = 'openclaw';
+    try {
+      const { config } = safeReadConfig();
+      if (config && config.gateway && config.gateway.auth && config.gateway.auth.token) {
+        token = config.gateway.auth.token;
+      }
+    } catch (_) {}
+    res.writeHead(200, {'Content-Type':'application/json'});
+    res.end(JSON.stringify({ lanIps, port: gwPort, token }));
     return;
   }
 

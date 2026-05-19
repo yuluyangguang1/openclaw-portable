@@ -211,7 +211,7 @@ a:hover{text-decoration:underline}
     <div class="hero">
       <span class="label-xs op-7" style="letter-spacing:.15rem">openclaw portable · manual</span>
       <h1 class="display">openclaw portable</h1>
-      <p class="sub">便携 AI 助手 · 双击启动 · 数据随 U 盘走</p>
+      <p class="sub">便携 AI 助手 · 双击启动 · 数据随 U 盘走<br><span style="font-size:.85em;opacity:.7">Portable AI Assistant · Double-click to Start · Data Travels with USB</span></p>
       <div class="term" aria-hidden="true">
         <div class="term-h">
           <span class="td"></span><span class="td"></span><span class="td"></span>
@@ -384,9 +384,43 @@ a:hover{text-decoration:underline}
   <div class="callout callout-warn"><span class="callout-icon">!</span><div><strong>切换回在线模型：</strong>随时在配置中心改回 DeepSeek、Kim 等。两种模式互不冲突。</div></div>
 </div>
 
-<!-- 8: Ports -->
+<!-- 8: Mobile Connect -->
+<div class="section" id="mobile">
+  <div class="section-header"><div class="section-icon">📱</div><h2>手机连接 / Mobile Connect</h2></div>
+  <p>让同一 WiFi 下的手机（Android / iOS）连接到 OpenClaw Gateway。</p>
+  <p style="opacity:.6">Let phones (Android / iOS) on the same WiFi connect to the OpenClaw Gateway.</p>
+
+  <h3>启动方式 / Launchers</h3>
+  <div class="platform-grid">
+    <div class="platform-card"><div class="icon">🍎</div><strong>macOS</strong><span>双击 <code>Mac-Mobile.command</code></span></div>
+    <div class="platform-card"><div class="icon">🐧</div><strong>Linux</strong><span><code>bash Linux-Mobile.sh</code></span></div>
+    <div class="platform-card"><div class="icon">🖥</div><strong>Windows</strong><span>双击 <code>Windows-Mobile.bat</code></span></div>
+  </div>
+  <p style="opacity:.6;font-size:.92rem;margin-top:8px">也可以在配置中心 Web UI 中开启"局域网模式"开关，效果相同。<br>You can also toggle "LAN mode" in the Config Center Web UI for the same effect.</p>
+
+  <h3>连接方式 / Connection Methods</h3>
+  <table>
+    <thead><tr><th>方式 Method</th><th>说明 Description</th><th>适用 For</th></tr></thead>
+    <tbody>
+      <tr><td><strong>手机浏览器</strong><br>Phone Browser</td><td>打开 <code>http://&lt;电脑IP&gt;:18789</code>，零安装<br>Open the URL, zero install</td><td>Android / iOS</td></tr>
+      <tr><td><strong>官方 App</strong><br>Official App</td><td>自动发现或手动输入地址，获得摄像头/语音能力<br>Auto-discover or manual entry; camera/voice support</td><td>Android / iOS</td></tr>
+      <tr><td><strong>第三方 App</strong><br>Third-party</td><td>andClaw / AnyClaw / FlutterClaw (Google Play)<br>手动输入 ws://&lt;IP&gt;:&lt;port&gt;</td><td>Android</td></tr>
+    </tbody>
+  </table>
+
+  <h3>工作原理 / How It Works</h3>
+  <div class="steps">
+    <div class="step"><span class="step-num">1</span><span class="step-content"><strong>临时 LAN 配置</strong> — Gateway 绑定局域网 IP（而非 127.0.0.1）<br><span style="opacity:.6">Temporary LAN config — Gateway binds to LAN IP instead of 127.0.0.1</span></span></div>
+    <div class="step"><span class="step-num">2</span><span class="step-content"><strong>自动配对</strong> — 私有网段设备自动批准，无需终端手动确认<br><span style="opacity:.6">Auto-pairing — private network devices approved automatically</span></span></div>
+    <div class="step"><span class="step-num">3</span><span class="step-content"><strong>退出恢复</strong> — 关闭启动器后临时配置自动删除，不影响正常使用<br><span style="opacity:.6">Clean exit — temp config deleted, normal usage unaffected</span></span></div>
+  </div>
+
+  <div class="callout callout-warn"><span class="callout-icon">⚠</span><div><strong>安全提示 / Security:</strong> 仅同一 WiFi 下的私有网段（192.168.x.x / 10.x.x.x / 172.16-31.x.x）自动配对。公网 IP 不会被自动批准。<br>Only private network CIDRs on the same WiFi are auto-approved. Public IPs are never auto-paired.</div></div>
+</div>
+
+<!-- 9: Ports -->
 <div class="section" id="ports">
-  <div class="section-header"><div class="section-icon">&#x1F50C;</div><h2>端口说明</h2></div>
+  <div class="section-header"><div class="section-icon">&#x1F50C;</div><h2>端口说明 / Ports</h2></div>
   <table>
     <thead><tr><th>端口</th><th>用途</th><th>说明</th></tr></thead>
     <tbody>
@@ -399,9 +433,9 @@ a:hover{text-decoration:underline}
   </table>
 </div>
 
-<!-- 9: FAQ -->
+<!-- 10: FAQ -->
 <div class="section" id="troubleshoot">
-  <div class="section-header"><div class="section-icon">&#x2753;</div><h2>常见问题</h2></div>
+  <div class="section-header"><div class="section-icon">&#x2753;</div><h2>常见问题 / FAQ</h2></div>
 
   <div class="faq-item">
     <div class="faq-q">可以在不同电脑上使用同一个 U 盘吗？</div>
