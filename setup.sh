@@ -151,23 +151,18 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
 fi
 
 # ---- 2. Install OpenClaw ----
-if [ -d "$CORE_DIR/node_modules/openclaw" ]; then
-    echo -e "  ${GREEN}✓${NC} OpenClaw 已安装，跳过"
-else
-    echo -e "  ${CYAN}↓${NC} 安装 OpenClaw..."
-    mkdir -p "$CORE_DIR"
-
-    # Read pinned OpenClaw version from OPENCLAW_VERSION file.
-    # Always regenerate package.json to ensure the version matches —
-    # previously the file was git-tracked with a stale version and
-    # setup.sh's "if not exists" guard meant OPENCLAW_VERSION changes
-    # never took effect.
-    OPENCLAW_VERSION_FILE="$(dirname "$0")/OPENCLAW_VERSION"
-    OPENCLAW_VERSION="2026.5.12"
-    if [ -f "$OPENCLAW_VERSION_FILE" ]; then
-        OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"
-    fi
-    cat > "$CORE_DIR/package.json" << PKGJSON
+# ALWAYS regenerate package.json from OPENCLAW_VERSION first. This way
+# users who re-run setup.sh after a partial install (or to upgrade
+# OpenClaw) get the correct version even if node_modules/openclaw
+# already exists. The actual npm install is still skipped when
+# already-installed AND the version matches.
+mkdir -p "$CORE_DIR"
+OPENCLAW_VERSION_FILE="$(dirname "$0")/OPENCLAW_VERSION"
+OPENCLAW_VERSION="2026.5.12"
+if [ -f "$OPENCLAW_VERSION_FILE" ]; then
+    OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"
+fi
+cat > "$CORE_DIR/package.json" << PKGJSON
 {
   "name": "openclaw-portable-core",
   "version": "1.0.0",
@@ -177,6 +172,24 @@ else
   }
 }
 PKGJSON
+
+# Check if installed version matches what we want
+NEED_INSTALL=true
+if [ -d "$CORE_DIR/node_modules/openclaw" ]; then
+    INSTALLED_VER=""
+    if [ -f "$CORE_DIR/node_modules/openclaw/package.json" ]; then
+        INSTALLED_VER=$("$NODE_TARGET/bin/node" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){}" "$CORE_DIR/node_modules/openclaw/package.json" 2>/dev/null)
+    fi
+    if [ "$INSTALLED_VER" = "$OPENCLAW_VERSION" ]; then
+        echo -e "  ${GREEN}✓${NC} OpenClaw $OPENCLAW_VERSION 已安装，跳过"
+        NEED_INSTALL=false
+    else
+        echo -e "  ${CYAN}↑${NC} OpenClaw 已安装 ($INSTALLED_VER)，升级到 $OPENCLAW_VERSION..."
+    fi
+fi
+
+if [ "$NEED_INSTALL" = "true" ]; then
+    echo -e "  ${CYAN}↓${NC} 安装 OpenClaw $OPENCLAW_VERSION..."
 
     # Install with China mirror
     NODE_BIN="$NODE_TARGET/bin/node"

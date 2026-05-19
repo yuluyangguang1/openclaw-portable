@@ -1153,14 +1153,17 @@ const server = http.createServer((req, res) => {
           try {
             const pids = execSync(`lsof -ti :${p} 2>/dev/null || ss -tlnp 2>/dev/null | grep ":${p} " | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p'`, {encoding:'utf8', timeout:5000}).trim();
             for (const pid of pids.split('\n').filter(Boolean)) {
-              // 先确认是 openclaw/node 相关进程，避免误杀
+              // Only kill processes whose command contains 'openclaw.mjs'.
+              // Plain 'node' or 'openclaw' is too lax — would also kill
+              // unrelated Node services or even our own config-server
+              // if it ever bound to one of these ports.
               try {
                 const cmd = execSync(`ps -p ${pid} -o command= 2>/dev/null`, {encoding:'utf8', timeout:2000});
-                if (cmd && (cmd.includes('openclaw') || cmd.includes('node'))) {
+                if (cmd && cmd.includes('openclaw.mjs')) {
                   process.kill(parseInt(pid), 'SIGTERM');
                 }
               } catch(e) {
-                // ps 失败时不冒险杀进程
+                // ps failed — don't risk killing anything
               }
             }
           } catch(e) {}

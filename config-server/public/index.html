@@ -2207,8 +2207,10 @@ function refreshLogs() {
 function loadVersion() {
   apiFetch('/api/version').then(function(r){return r.json();}).then(function(data){
     if (data.portable) {
-      var verEl = document.querySelector('.hero .version');
-      if (verEl) verEl.textContent = 'v' + data.portable + ' · 零安装 · 跨平台';
+      // Hero version element — uses #hero-version id (not class
+      // .version which only exists in CSS as dead style).
+      var heroEl = document.getElementById('hero-version');
+      if (heroEl) heroEl.textContent = 'v' + data.portable + ' · 零安装 · 跨平台';
       // Update only the version cell in the structured footer.
       // textContent on the whole <footer> would wipe the y-footer
       // grid (links, labels, theme toggle).
