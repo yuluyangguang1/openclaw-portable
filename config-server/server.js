@@ -1614,7 +1614,10 @@ const server = http.createServer((req, res) => {
       '.html': 'text/html',
       '.css': 'text/css',
       '.js': 'application/javascript',
-      '.json': 'application/json'
+      '.json': 'application/json',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.ico': 'image/x-icon'
     }[ext] || 'text/plain';
 
     res.writeHead(200, { 'Content-Type': contentType });

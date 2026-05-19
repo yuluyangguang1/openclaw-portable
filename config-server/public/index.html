@@ -1307,6 +1307,13 @@ function searchProviders(q) {
   renderProviders();
 }
 
+// Provider icon helper — maps provider ID to SVG icon file
+var _iconMap = {zai:'zhipu',ernie:'baichuan',hunyuan:'qwen',siliconflow:'deepseek',novita:'openai',hyperbolic:'meta',deepinfra:'meta',stepfun:'yi',custom:'openrouter'};
+function providerIcon(id) {
+  var name = _iconMap[id] || id;
+  return '<img src="/icons/' + name + '.svg" width="20" height="20" alt="" style="border-radius:4px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+}
+
 function renderProviders() {
   var grid = document.getElementById('providerGrid');
   if (!grid) return;
@@ -1354,7 +1361,7 @@ function renderProviders() {
         '测试 Key</button><span id="keytest-'+p.id+'" style="margin-left:8px;font-size:0.78em;"></span></div>';
     }
     return '<div class="provider-card" data-id="' + p.id + '" onclick="toggleProvider(this,\'' + p.id + '\')">' +
-      '<div class="provider-header"><span class="provider-name">' + p.name + '</span>' + tagsHtml + '</div>' +
+      '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + p.name + '</span>' + tagsHtml + '</div>' +
       '<div class="provider-desc">' + p.desc + '</div>' + formHtml + '</div>';
   }).join('');
 }
