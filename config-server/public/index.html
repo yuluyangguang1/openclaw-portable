@@ -1338,31 +1338,37 @@ function renderProviders() {
   if (emptyEl) emptyEl.style.display = 'none';
   grid.innerHTML = visible.map(p => {
     const tagsHtml = p.tags.map(t => '<span class="tag ' + t + '">' + ({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t) + '</span>').join('');
+    // Defense in depth: PROVIDERS data is currently a hardcoded
+    // hostile-input-free constant in this file, but if it ever becomes
+    // dynamic (loaded from /api/config or similar) the unescaped
+    // interpolations below would become XSS sinks. Escape preemptively.
+    // (B23-03)
+    const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     let formHtml = '';
     if (p.isCustom) {
       formHtml = '<div class="provider-expand">' +
         '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
-        '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
-        '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">显示</button></div></div>';
+        '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
+        '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div></div>';
     } else if (p.isLocal) {
       formHtml = '<div class="provider-expand">' +
         '<input type="text" class="input" placeholder="Port (default: ' + (p.base.match(/:(\d+)/)||[])[1] + ')" data-field="port" value="' + (p.base.match(/:(\d+)/)||[])[1] + '">' +
         '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
-        '<button class="btn btn-sm" onclick="testLocal(\'' + p.id + '\')">检测连接</button></div>';
+        '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button></div>';
     } else {
-      const opts = p.models.map(m => '<option value="' + m + '">' + m + '</option>').join('');
+      const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(m) + '</option>').join('');
       formHtml = '<div class="provider-expand">' +
         '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
-        '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + p.id + '">' +
-        '<button class="btn-icon" onclick="togglePw(\'' + p.id + '\')">显示</button></div>' +
-        '<a href="' + p.link + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
-        '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+p.id+'\')">' +
-        '测试 Key</button><span id="keytest-'+p.id+'" style="margin-left:8px;font-size:0.78em;"></span></div>';
+        '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
+        '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div>' +
+        '<a href="' + _e(p.link) + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
+        '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+ _e(p.id) +'\')">' +
+        '测试 Key</button><span id="keytest-'+ _e(p.id) +'" style="margin-left:8px;font-size:0.78em;"></span></div>';
     }
-    return '<div class="provider-card" data-id="' + p.id + '" onclick="toggleProvider(this,\'' + p.id + '\')">' +
-      '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + p.name + '</span>' + tagsHtml + '</div>' +
-      '<div class="provider-desc">' + p.desc + '</div>' + formHtml + '</div>';
+    return '<div class="provider-card" data-id="' + _e(p.id) + '" onclick="toggleProvider(this,\'' + _e(p.id) + '\')">' +
+      '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + tagsHtml + '</div>' +
+      '<div class="provider-desc">' + _e(p.desc) + '</div>' + formHtml + '</div>';
   }).join('');
 }
 
