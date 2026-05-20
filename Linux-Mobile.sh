@@ -109,6 +109,8 @@ export OPENCLAW_HOME="$DATA_DIR"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="$MOBILE_CONFIG"
 # 不禁用 Bonjour — 让手机 App 通过 mDNS 自动发现
+# USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
+export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 
 # ---- 7. Find available port ----
 PORT=18789

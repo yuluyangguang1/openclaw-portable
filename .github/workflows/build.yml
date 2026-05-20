@@ -43,6 +43,41 @@ jobs:
           ls -d app/runtime/*/
           echo "OpenClaw installed OK"
 
+      - name: Patch plugin permission check for exFAT/FAT32 USB sticks
+        run: |
+          # OpenClaw's plugin discovery blocks directories with mode=777
+          # (world-writable) as a security measure. But exFAT/FAT32 USB
+          # sticks don't support Unix permissions — macOS/Linux report
+          # every file as 777. This causes ALL bundled plugins to be
+          # blocked on USB deployments (the primary use case for this
+          # portable distribution).
+          #
+          # The upstream has no env-var escape hatch, so we patch the
+          # bundled discovery module to respect our own env var:
+          # OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1 (set by all launchers).
+          #
+          # The patch clears the world-writable bit from the mode check
+          # when the env var is set, making the check pass. On NTFS/APFS
+          # (where permissions work correctly) the env var is still set
+          # but has no effect because mode is never 777 in the first place.
+          DISCOVERY="app/core/node_modules/openclaw/dist/discovery-BEbYTYvv.js"
+          if [ ! -f "$DISCOVERY" ]; then
+            # Filename may change across OpenClaw versions; find it dynamically
+            DISCOVERY=$(grep -rl "path_world_writable" app/core/node_modules/openclaw/dist/ --include="*.js" | grep -i discovery | head -1)
+          fi
+          if [ -z "$DISCOVERY" ] || [ ! -f "$DISCOVERY" ]; then
+            echo "WARNING: Could not find discovery module to patch. Plugin permission issue may persist on exFAT."
+            exit 0
+          fi
+          echo "Patching: $DISCOVERY"
+          sed -i 's/let modeBits = stat\.mode & 511;/let modeBits = stat.mode \& 511; if (process.env.OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK) modeBits = modeBits \& ~2;/' "$DISCOVERY"
+          # Verify the patch landed
+          if grep -q "OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK" "$DISCOVERY"; then
+            echo "OK: exFAT plugin permission patch applied"
+          else
+            echo "WARNING: Patch did not apply cleanly"
+          fi
+
       - name: Lift app shells to zip root
         run: |
           set -e
