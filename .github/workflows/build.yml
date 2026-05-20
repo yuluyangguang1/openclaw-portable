@@ -70,7 +70,7 @@ jobs:
             exit 0
           fi
           echo "Patching: $DISCOVERY"
-          sed -i 's/let modeBits = stat\.mode & 511;/let modeBits = stat.mode \& 511; if (process.env.OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK) modeBits = modeBits \& ~2;/' "$DISCOVERY"
+          sed -i '' 's/let modeBits = stat\.mode & 511;/let modeBits = stat.mode \& 511; if (process.env.OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK) modeBits = modeBits \& ~2;/' "$DISCOVERY"
           # Verify the patch landed
           if grep -q "OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK" "$DISCOVERY"; then
             echo "OK: exFAT plugin permission patch applied"
