@@ -89,15 +89,41 @@ if [[ "$PORTABLE_ROOT" == *"/AppTranslocation/"* ]]; then
     # even at the original location (broken install).
   fi
 
-  # Recovery failed — guide the user. Copy a generic fix command to
-  # the clipboard. We don't know the user's actual portable folder
-  # location (App Translocation hides it), so the safest universal
-  # instruction is "drag the folder out of where it currently is and
-  # back" which clears quarantine, OR run xattr on a known location.
-  # We give both options.
-  FIX_CMD='xattr -cr ~/Downloads/OpenClawPortable 2>/dev/null; xattr -cr ~/Desktop/OpenClawPortable 2>/dev/null'
-  echo "$FIX_CMD" | /usr/bin/pbcopy 2>/dev/null || true
-  /usr/bin/osascript -e "display dialog \"OpenClaw 被 macOS 隔离启动了（App Translocation）\n\n这是 macOS 对未签名应用的默认安全行为，第一次启动时会发生。\n\n修复方法（任选其一）：\n\n方法 1：复制粘贴一行命令\n  • 已自动复制修复命令到剪贴板\n  • 打开「终端」(Terminal.app) 粘贴回车\n  • 重新双击 OpenClaw.app\n\n方法 2：用「访达」拖动\n  • 把 OpenClawPortable 整个文件夹拖到桌面（或别处），再拖回去\n  • 重新双击 OpenClaw.app\n\n方法 3：右键打开 Mac-Start.command\n  • 直接在 OpenClawPortable 文件夹里右键点击\n    Mac-Start.command（或 system/Mac-Start.command）→ 打开\n  • 不需要使用 OpenClaw.app\" buttons {\"OK\"} default button 1 with icon stop with title \"OpenClaw 启动失败\""
+  # Recovery failed — guide the user. We need to give them the ACTUAL
+  # path to their portable folder, not a hardcoded ~/Desktop or
+  # ~/Downloads. Real users put OpenClawPortable on USB sticks, NAS
+  # mounts, external drives, anywhere. App Translocation hid the
+  # original path from us, but Spotlight has indexed it under our
+  # bundle id, so mdfind can find it.
+  REAL_APP=""
+  if command -v mdfind >/dev/null 2>&1; then
+    REAL_APP=$(
+      mdfind "kMDItemCFBundleIdentifier == 'ai.yu.openclaw.portable'" 2>/dev/null \
+        | grep -v "/AppTranslocation/" \
+        | grep -v "/.Trash/" \
+        | head -1
+    )
+  fi
+
+  if [ -n "$REAL_APP" ] && [ -d "$REAL_APP" ]; then
+    REAL_ROOT="$(cd "$REAL_APP/.." && pwd)"
+    # Build a clean, single-line xattr command pointing at the actual
+    # folder, with shell-safe quoting. The user pastes this into
+    # Terminal verbatim and it works regardless of whether the
+    # OpenClawPortable folder lives on Desktop, USB stick, NAS, etc.
+    # Single-quote wrapping defends against spaces, special chars,
+    # and Chinese path components.
+    QUOTED_ROOT=$(printf "%s" "$REAL_ROOT" | sed "s/'/'\\\\''/g")
+    FIX_CMD="xattr -cr '$QUOTED_ROOT'"
+    echo "$FIX_CMD" | /usr/bin/pbcopy 2>/dev/null || true
+    /usr/bin/osascript -e "display dialog \"OpenClaw 被 macOS 隔离启动了（App Translocation）\n\n这是 macOS 对未签名应用的默认安全行为，第一次启动时会发生。\n\n已自动定位到你的便携文件夹：\n$REAL_ROOT\n\n修复方法（任选其一）：\n\n方法 1：复制粘贴一行命令（推荐）\n  • 已自动复制修复命令到剪贴板\n  • 打开「终端」(Terminal.app) 粘贴回车\n  • 重新双击 OpenClaw.app\n\n方法 2：用「访达」拖动\n  • 把 OpenClawPortable 整个文件夹拖到桌面（或别处），再拖回 U 盘 / 原位置\n  • 重新双击 OpenClaw.app\n\n方法 3：右键打开 Mac-Start.command\n  • 在便携文件夹里右键点击 system/Mac-Start.command → 打开\n  • 不需要使用 OpenClaw.app\" buttons {\"OK\"} default button 1 with icon stop with title \"OpenClaw 启动失败\""
+  else
+    # Spotlight didn't find us — folder probably on a volume that
+    # Spotlight doesn't index (some USB sticks have indexing disabled,
+    # or .Spotlight-V100 was removed by the user). Fall back to the
+    # generic instructions without a specific path.
+    /usr/bin/osascript -e "display dialog \"OpenClaw 被 macOS 隔离启动了（App Translocation）\n\n这是 macOS 对未签名应用的默认安全行为，第一次启动时会发生。\n\n修复方法（任选其一）：\n\n方法 1：在终端运行 xattr 命令\n  • 打开「终端」(Terminal.app)\n  • 输入 xattr -cr 然后空格\n  • 把 OpenClawPortable 文件夹从访达拖进终端（自动填入路径）\n  • 回车\n  • 重新双击 OpenClaw.app\n\n方法 2：用「访达」拖动\n  • 把 OpenClawPortable 整个文件夹拖到桌面（或别处），再拖回原位置\n  • 重新双击 OpenClaw.app\n\n方法 3：右键打开 Mac-Start.command\n  • 在便携文件夹里右键点击 system/Mac-Start.command → 打开\n  • 不需要使用 OpenClaw.app\" buttons {\"OK\"} default button 1 with icon stop with title \"OpenClaw 启动失败\""
+  fi
   exit 1
 fi
 
