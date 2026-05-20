@@ -11,11 +11,16 @@
 #       Contents/
 #         MacOS/
 #           OpenClaw      ← this script ($0)
-#     Mac-Start.command   ← what we exec
+#     Mac-Start.command   ← what we exec (or system/Mac-Start.command)
 #     app/
 #     data/
 #
-# So from $0, ../../.. is the portable root.
+# So from $0, ../../.. is the portable root — UNLESS macOS is running
+# us via App Translocation, in which case ../../.. points into a
+# random /private/var/folders/.../AppTranslocation/.../d/ tmp dir
+# that doesn't contain the rest of the portable bundle. We detect
+# that case and try to recover or, failing that, give the user the
+# exact one-liner they need to fix it.
 
 set -e
 
@@ -32,6 +37,71 @@ BIN_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 # Portable root = BIN_DIR/../../..
 PORTABLE_ROOT="$(cd "$BIN_DIR/../../.." && pwd)"
 
+# ── App Translocation detection + recovery ───────────────────────────
+# When macOS runs an unsigned/quarantined .app, it copies the bundle
+# to /private/var/folders/.../AppTranslocation/.../d/ before launching.
+# That isolates malware but breaks portable apps that need files next
+# to themselves — exactly our case. The path always contains the
+# literal "/AppTranslocation/" component.
+#
+# Recovery strategy:
+#   1. Try to find the original .app via LaunchServices (lsregister).
+#      If found, re-launch from there using `open` and exit. macOS
+#      may translocate again, but if the user has run xattr -cr or
+#      moved the bundle, the second run breaks the cycle.
+#   2. If recovery fails, show a dialog with the exact xattr command
+#      the user needs. AppleScript dialogs don't support clipboard
+#      writes, so we copy the command to the clipboard ourselves
+#      via pbcopy before showing the dialog.
+if [[ "$PORTABLE_ROOT" == *"/AppTranslocation/"* ]]; then
+  # Try to find the original location via lsregister's database.
+  # Filter for our bundle id, then take the first non-translocated
+  # path. lsregister output format varies; use a permissive grep.
+  LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Support/lsregister"
+  ORIG_APP=""
+  if [ -x "$LSREG" ]; then
+    ORIG_APP=$(
+      "$LSREG" -dump 2>/dev/null \
+        | grep -E "path:.*/OpenClaw\.app" \
+        | grep -v "/AppTranslocation/" \
+        | grep -v "/Trash/" \
+        | head -1 \
+        | sed -E 's/^.*path: *//; s/ *\(.*\)$//'
+    )
+  fi
+
+  if [ -n "$ORIG_APP" ] && [ -d "$ORIG_APP" ]; then
+    ORIG_ROOT="$(cd "$ORIG_APP/.." && pwd)"
+    # Auto-clear quarantine on the original folder so this is the LAST
+    # time translocation happens. xattr exits non-zero if there's
+    # nothing to remove, which is fine.
+    xattr -dr com.apple.quarantine "$ORIG_ROOT" 2>/dev/null || true
+    # Re-launch from the original location. After xattr removal,
+    # macOS won't translocate this run.
+    if [ -f "$ORIG_ROOT/system/Mac-Start.command" ]; then
+      /usr/bin/open -a Terminal "$ORIG_ROOT/system/Mac-Start.command"
+      exit 0
+    elif [ -f "$ORIG_ROOT/Mac-Start.command" ]; then
+      /usr/bin/open -a Terminal "$ORIG_ROOT/Mac-Start.command"
+      exit 0
+    fi
+    # Fall through to the dialog if Mac-Start.command is missing
+    # even at the original location (broken install).
+  fi
+
+  # Recovery failed — guide the user. Copy a generic fix command to
+  # the clipboard. We don't know the user's actual portable folder
+  # location (App Translocation hides it), so the safest universal
+  # instruction is "drag the folder out of where it currently is and
+  # back" which clears quarantine, OR run xattr on a known location.
+  # We give both options.
+  FIX_CMD='xattr -cr ~/Downloads/OpenClawPortable 2>/dev/null; xattr -cr ~/Desktop/OpenClawPortable 2>/dev/null'
+  echo "$FIX_CMD" | /usr/bin/pbcopy 2>/dev/null || true
+  /usr/bin/osascript -e "display dialog \"OpenClaw 被 macOS 隔离启动了（App Translocation）\n\n这是 macOS 对未签名应用的默认安全行为，第一次启动时会发生。\n\n修复方法（任选其一）：\n\n方法 1：复制粘贴一行命令\n  • 已自动复制修复命令到剪贴板\n  • 打开「终端」(Terminal.app) 粘贴回车\n  • 重新双击 OpenClaw.app\n\n方法 2：用「访达」拖动\n  • 把 OpenClawPortable 整个文件夹拖到桌面（或别处），再拖回去\n  • 重新双击 OpenClaw.app\n\n方法 3：右键打开 Mac-Start.command\n  • 直接在 OpenClawPortable 文件夹里右键点击\n    Mac-Start.command（或 system/Mac-Start.command）→ 打开\n  • 不需要使用 OpenClaw.app\" buttons {\"OK\"} default button 1 with icon stop with title \"OpenClaw 启动失败\""
+  exit 1
+fi
+
+# ── Normal path ──────────────────────────────────────────────────────
 # Prefer the system/ subdirectory layout (release zip), fall back to
 # the launcher being at the portable root (dev mode).
 if [ -f "$PORTABLE_ROOT/system/Mac-Start.command" ]; then
