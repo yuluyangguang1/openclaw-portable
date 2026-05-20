@@ -145,6 +145,12 @@ export OPENCLAW_HOME="$DATA_DIR"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 export OPENCLAW_DISABLE_BONJOUR=1
+# USB sticks formatted as exFAT/FAT32 don't support Unix permissions —
+# macOS reports every file as mode=777. OpenClaw's plugin loader refuses
+# to load world-writable plugin directories as a security measure, but
+# on a portable USB this is a false positive (the user owns the stick).
+# Skip the check so all bundled plugins load normally.
+export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 
 # ---- 7. Check dependencies ----
 if [ ! -d "$CORE_DIR/node_modules" ]; then
