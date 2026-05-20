@@ -83,14 +83,12 @@ jobs:
           set -e
           # The repo keeps installers/ as a source directory so the
           # commits stay tidy. For end users, OpenClaw.app, OpenClaw.vbs,
-          # OpenClaw.desktop, openclaw.png need to sit at the portable
           # root (next to Mac-Start.command etc.) so double-click works.
           if [ -d installers/OpenClaw.app ]; then
             cp -R installers/OpenClaw.app ./OpenClaw.app
           fi
           [ -f installers/OpenClaw.vbs ] && cp installers/OpenClaw.vbs ./OpenClaw.vbs || true
           [ -f installers/OpenClaw.desktop ] && cp installers/OpenClaw.desktop ./OpenClaw.desktop || true
-          [ -f installers/openclaw.png ] && cp installers/openclaw.png ./openclaw.png || true
           # Source dir not needed in user zip
           rm -rf installers
           # Restore exec bit on the .app launcher binary (cp preserved it
