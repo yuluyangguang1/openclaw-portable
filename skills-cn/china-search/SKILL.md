@@ -1,7 +1,7 @@
 ---
 name: china-search
 description: "国内搜索引擎 - 百度、搜狗、Bing中国搜索，绕过GFW限制"
-metadata: { "openclaw": { "emoji": "🔍" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # 国内搜索引擎助手
@@ -21,24 +21,24 @@ metadata: { "openclaw": { "emoji": "🔍" } }
 ### 百度搜索
 ```bash
 curl -s -L "https://www.baidu.com/s?wd=关键词" \
-  -H "User-Agent: Mozilla/5.0" | head -200
+ -H "User-Agent: Mozilla/5.0" | head -200
 ```
 
 ### 搜狗搜索（含微信文章）
 ```bash
 # 网页搜索
 curl -s -L "https://www.sogou.com/web?query=关键词" \
-  -H "User-Agent: Mozilla/5.0"
+ -H "User-Agent: Mozilla/5.0"
 
 # 微信文章搜索
 curl -s -L "https://weixin.sogou.com/weixin?query=关键词" \
-  -H "User-Agent: Mozilla/5.0"
+ -H "User-Agent: Mozilla/5.0"
 ```
 
 ### Bing 中国搜索
 ```bash
 curl -s -L "https://cn.bing.com/search?q=关键词" \
-  -H "User-Agent: Mozilla/5.0"
+ -H "User-Agent: Mozilla/5.0"
 ```
 
 ## 使用示例

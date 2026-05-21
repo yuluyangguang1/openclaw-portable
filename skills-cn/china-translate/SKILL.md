@@ -1,7 +1,7 @@
 ---
 name: china-translate
 description: "中英互译 + 本地化 - 技术翻译、UI本地化、文化适配、避免机翻腔"
-metadata: { "openclaw": { "emoji": "🌐" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # 中英互译 + 本地化助手

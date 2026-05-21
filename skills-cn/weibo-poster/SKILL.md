@@ -1,7 +1,7 @@
 ---
 name: weibo-poster
 description: "微博内容创作 - 140字优化、话题热搜、@提及策略、配图描述、发布时机"
-metadata: { "openclaw": { "emoji": "🔴" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # 微博内容创作助手

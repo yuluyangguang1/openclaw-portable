@@ -1,7 +1,7 @@
 ---
 name: deepseek-helper
 description: "DeepSeek API 助手 - 编程辅助、模型选择、API调用指南、定价信息"
-metadata: { "openclaw": { "emoji": "🤖" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # DeepSeek API 助手

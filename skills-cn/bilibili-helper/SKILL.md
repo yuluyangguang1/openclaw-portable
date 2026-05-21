@@ -1,7 +1,7 @@
 ---
 name: bilibili-helper
 description: "B站内容助手 - 视频标题描述优化、标签策略、封面设计建议、分区选择、评论互动"
-metadata: { "openclaw": { "emoji": "📺" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # B站内容助手

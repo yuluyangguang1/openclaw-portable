@@ -1,7 +1,7 @@
 ---
 name: wechat-article
 description: "微信公众号文章写作 - 文章结构、排版规范、阅读转化优化、封面建议"
-metadata: { "openclaw": { "emoji": "💚" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # 微信公众号文章写作助手
@@ -38,7 +38,7 @@ metadata: { "openclaw": { "emoji": "💚" } }
 【总结】回扣主题，升华观点
 
 【尾部】
-觉得有收获？点个「在看」让更多人看到 👇
+觉得有收获？点个「在看」让更多人看到 
 关注我，每周分享 XX 干货
 ```
 

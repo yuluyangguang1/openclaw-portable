@@ -1,7 +1,7 @@
 ---
 name: douyin-script
 description: "抖音/快手短视频脚本 - 前3秒hook、脚本结构、热门音乐建议、话题标签策略"
-metadata: { "openclaw": { "emoji": "🎬" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # 抖音/快手短视频脚本助手

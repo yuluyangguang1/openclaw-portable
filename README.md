@@ -102,8 +102,8 @@ macOS may show "cannot verify developer". Fix (pick one):
 ```bash
 git clone https://github.com/yuluyangguang1/openclaw-portable.git
 cd openclaw-portable
-bash setup.sh              # current platform
-bash setup.sh --all-platforms  # all platforms for USB
+bash setup.sh # current platform
+bash setup.sh --all-platforms # all platforms for USB
 ```
 
 Windows: use `setup.bat` or `setup.ps1`.
@@ -140,31 +140,31 @@ Windows: use `setup.bat` or `setup.ps1`.
 
 ```
 OpenClawPortable/
-  OpenClaw.app              macOS 启动器
-  OpenClaw.vbs              Windows 启动器
-  OpenClawPortable使用说明.html   用户手册
-  OPENCLAW_VERSION          上游版本号
-  PORTABLE_VERSION          Portable 版本号
-  data/                     用户数据（API Key、对话历史等）
-  app/                      Node.js 运行时 + OpenClaw 核心
-  config-server/            配置中心 Web UI + API
-  default-config.json       默认配置
-  system/                   底层脚本 + Linux 启动器 + README
-    OpenClaw.desktop        Linux 启动器
-    README.md               离线文档
-    Mac-Start.command
-    Mac-Menu.command
-    Mac-Mobile.command      手机连接
-    Mac-Diagnose.command
-    Linux-Start.sh
-    Linux-Menu.sh
-    Linux-Mobile.sh         手机连接
-    Linux-Diagnose.sh
-    Windows-Start.bat
-    Windows-Menu.bat
-    Windows-Mobile.bat      手机连接
-    Windows-Diagnose.bat
-    lib/                    preflight / maintain / mobile 帮助库
+ OpenClaw.app macOS 启动器
+ OpenClaw.vbs Windows 启动器
+ OpenClawPortable使用说明.html 用户手册
+ OPENCLAW_VERSION 上游版本号
+ PORTABLE_VERSION Portable 版本号
+ data/ 用户数据（API Key、对话历史等）
+ app/ Node.js 运行时 + OpenClaw 核心
+ config-server/ 配置中心 Web UI + API
+ default-config.json 默认配置
+ system/ 底层脚本 + Linux 启动器 + README
+ OpenClaw.desktop Linux 启动器
+ README.md 离线文档
+ Mac-Start.command
+ Mac-Menu.command
+ Mac-Mobile.command 手机连接
+ Mac-Diagnose.command
+ Linux-Start.sh
+ Linux-Menu.sh
+ Linux-Mobile.sh 手机连接
+ Linux-Diagnose.sh
+ Windows-Start.bat
+ Windows-Menu.bat
+ Windows-Mobile.bat 手机连接
+ Windows-Diagnose.bat
+ lib/ preflight / maintain / mobile 帮助库
 ```
 
 源码仓库中 `system/` 里的文件放在根目录（dev 模式），CI 打包时移入 `system/`。

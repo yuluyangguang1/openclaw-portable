@@ -1,7 +1,7 @@
 ---
 name: zhihu-writer
 description: "知乎回答/文章写作 - 回答结构、专业语气、引用规范、话题关联、盐值优化"
-metadata: { "openclaw": { "emoji": "📝" } }
+metadata: { "openclaw": { "emoji": "" } }
 ---
 
 # 知乎回答/文章写作助手

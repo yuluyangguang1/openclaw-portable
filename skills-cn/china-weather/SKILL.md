@@ -1,7 +1,7 @@
 ---
 name: china-weather
 description: "中国城市天气查询 - 支持中文城市名、农历日期、wttr.in接口"
-metadata: { "openclaw": { "emoji": "🌤️" } }
+metadata: { "openclaw": { "emoji": "️" } }
 ---
 
 # 中国城市天气查询
