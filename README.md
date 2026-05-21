@@ -142,16 +142,16 @@ Windows: use `setup.bat` or `setup.ps1`.
 OpenClawPortable/
   OpenClaw.app              macOS 启动器
   OpenClaw.vbs              Windows 启动器
-  OpenClaw.desktop          Linux 启动器
   OpenClawPortable使用说明.html   用户手册
-  README.md
   OPENCLAW_VERSION          上游版本号
   PORTABLE_VERSION          Portable 版本号
   data/                     用户数据（API Key、对话历史等）
   app/                      Node.js 运行时 + OpenClaw 核心
   config-server/            配置中心 Web UI + API
   default-config.json       默认配置
-  system/                   底层脚本
+  system/                   底层脚本 + Linux 启动器 + README
+    OpenClaw.desktop        Linux 启动器
+    README.md               离线文档
     Mac-Start.command
     Mac-Menu.command
     Mac-Mobile.command      手机连接
