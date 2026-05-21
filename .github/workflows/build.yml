@@ -82,12 +82,14 @@ jobs:
         run: |
           set -e
           # The repo keeps installers/ as a source directory so the
-          # commits stay tidy. For end users, OpenClaw.app, OpenClaw.vbs,
-          # root (next to Mac-Start.command etc.) so double-click works.
+          # commits stay tidy. For end users, OpenClaw.app and OpenClaw.vbs
+          # go to root (next to system/) so double-click works.
           if [ -d installers/OpenClaw.app ]; then
             cp -R installers/OpenClaw.app ./OpenClaw.app
           fi
           [ -f installers/OpenClaw.vbs ] && cp installers/OpenClaw.vbs ./OpenClaw.vbs || true
+          # Linux .desktop goes into system/ (Linux users are comfortable
+          # navigating subdirectories; keeps root minimal for casual users)
           [ -f installers/OpenClaw.desktop ] && cp installers/OpenClaw.desktop ./OpenClaw.desktop || true
           # Source dir not needed in user zip
           rm -rf installers
@@ -156,19 +158,17 @@ jobs:
 
       - name: Move scripts into system/ subdirectory
         run: |
-          # End-user zip layout: only OpenClaw.app / .vbs / .desktop +
-          # the manual + README + version files at the root. Everything
-          # else (raw launcher scripts, menu/diagnose helpers, lib/,
-          # default-config) goes into system/ so casual users can't
-          # accidentally double-click the wrong file.
+          # End-user zip layout: only OpenClaw.app + OpenClaw.vbs at
+          # root. Everything else (launcher scripts, menu/diagnose
+          # helpers, lib/, .desktop, README) goes into system/ so the
+          # root stays minimal for casual users.
           set -e
           mkdir -p system/lib
-          # Launchers (Start) — moved here, the .app/.vbs/.desktop shims
-          # know to look in system/ first.
+          # Launchers (Start)
           mv Mac-Start.command   system/
           mv Linux-Start.sh      system/
           mv Windows-Start.bat   system/
-          # Menu + Diagnose — advanced users can still find them
+          # Menu + Diagnose
           mv Mac-Menu.command Mac-Diagnose.command   system/
           mv Linux-Menu.sh    Linux-Diagnose.sh      system/
           mv Windows-Menu.bat Windows-Diagnose.bat   system/
@@ -176,18 +176,15 @@ jobs:
           mv Mac-Mobile.command   system/
           mv Linux-Mobile.sh      system/
           mv Windows-Mobile.bat   system/
+          # Linux desktop entry
+          [ -f OpenClaw.desktop ] && mv OpenClaw.desktop system/
+          # README (users can find it in system/ if needed)
+          [ -f README.md ] && mv README.md system/
           # Helpers
           mv lib/preflight.sh    system/lib/preflight.sh
           mv lib/maintain.sh     system/lib/maintain.sh
           mv lib/mobile.sh       system/lib/mobile.sh
           rmdir lib
-          # NOTE: default-config.json stays at the root. lib/maintain.sh
-          # and Windows-Menu.bat reference it as
-          # $PORTABLE_DIR/default-config.json during factory reset; moving
-          # it would silently break that path. The file is small and
-          # not visually distracting at root.
-          # The .app, .vbs, .desktop shims (already at root from
-          # 'Lift app shells to zip root') stay at root.
           echo "Root after move:"
           ls -1 | head -20
 
@@ -252,9 +249,9 @@ jobs:
             echo
             echo "| 平台 | 操作 |"
             echo "|---|---|"
-            echo "| macOS | 双击 \`Mac-Start.command\` |"
-            echo "| Windows | 双击 \`Windows-Start.bat\` |"
-            echo "| Linux | \`bash Linux-Start.sh\` |"
+            echo "| macOS | 双击 \`OpenClaw.app\` |"
+            echo "| Windows | 双击 \`OpenClaw.vbs\` |"
+            echo "| Linux | \`bash system/Linux-Start.sh\` 或双击 \`system/OpenClaw.desktop\` |"
             echo
             echo "### 首次使用"
             echo
