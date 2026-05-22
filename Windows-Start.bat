@@ -371,9 +371,13 @@ if !errorlevel! equ 0 goto handoff_wait_config
 REM Gateway exited — clean up config-server (W6 fix)
 echo.
 echo   Stopping Config Center...
-REM Kill node processes that are listening on the config port we detected
+REM Find PIDs listening on CONFIG_PORT, but verify each is actually
+REM our config-server before killing. Without this filter, any user
+REM process listening on 18750 would be force-killed.
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":!CONFIG_PORT! " ^| findstr "LISTENING"') do (
-    taskkill /PID %%a /F >nul 2>&1
+    for /f "usebackq tokens=*" %%c in (`wmic process where "ProcessId=%%a" get CommandLine /value 2^>nul ^| findstr "CommandLine"`) do (
+        echo %%c | findstr /i "config-server\\server.js" >nul 2>&1 && taskkill /PID %%a /F >nul 2>&1
+    )
 )
 echo   OpenClaw stopped.
 pause

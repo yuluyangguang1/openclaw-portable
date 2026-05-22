@@ -924,7 +924,44 @@ const server = http.createServer((req, res) => {
 
   // API: Update — download and apply update
   if (req.url === '/api/update/apply' && req.method === 'POST') {
+    // File lock — survives across processes (in case port fallback
+    // started a second config-server). Memory flag alone wouldn't
+    // protect against two processes running update simultaneously.
+    const lockPath = path.join(path.dirname(CONFIG_PATH), 'update.lock');
+    let lockFd = null;
+    try {
+      // O_EXCL fails if file exists — atomic across processes
+      lockFd = fs.openSync(lockPath, 'wx');
+      fs.writeSync(lockFd, String(process.pid));
+    } catch (e) {
+      // Another process holds the lock, OR a stale lock from a crashed
+      // process. Check if the holder is alive.
+      try {
+        const lockPid = parseInt(fs.readFileSync(lockPath, 'utf8'), 10);
+        if (lockPid && lockPid !== process.pid) {
+          try {
+            process.kill(lockPid, 0); // signal 0 = check existence
+            // Process alive, real conflict
+            res.writeHead(409, {'Content-Type':'application/json'});
+            res.end(JSON.stringify({ ok: false, error: 'Update already in progress (pid '+lockPid+')' }));
+            return;
+          } catch (_) {
+            // Stale lock — process dead, remove and retry once
+            fs.unlinkSync(lockPath);
+            lockFd = fs.openSync(lockPath, 'wx');
+            fs.writeSync(lockFd, String(process.pid));
+          }
+        }
+      } catch (_) {
+        res.writeHead(409, {'Content-Type':'application/json'});
+        res.end(JSON.stringify({ ok: false, error: 'Update already in progress' }));
+        return;
+      }
+    } finally {
+      if (lockFd !== null) try { fs.closeSync(lockFd); } catch (_) {}
+    }
     if (global._updateInProgress) {
+      try { fs.unlinkSync(lockPath); } catch (_) {}
       res.writeHead(409, {'Content-Type':'application/json'});
       res.end(JSON.stringify({ ok: false, error: 'Update already in progress' }));
       return;
@@ -1159,6 +1196,7 @@ const server = http.createServer((req, res) => {
           } else {
             // Spawn failed — keep running so the user has SOMETHING.
             console.error('Update: keeping current process alive (spawn failed). Restart launcher manually.');
+            try { fs.unlinkSync(path.join(path.dirname(CONFIG_PATH), 'update.lock')); } catch(_) {}
             global._updateInProgress = false;
           }
         }, 1000);
@@ -1195,6 +1233,7 @@ const server = http.createServer((req, res) => {
           try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
         }
         global._updateInProgress = false;
+        try { fs.unlinkSync(path.join(path.dirname(CONFIG_PATH), 'update.lock')); } catch(_) {}
       }
     }, 500);
     return;
@@ -1221,7 +1260,18 @@ const server = http.createServer((req, res) => {
           for (const line of lines) {
             const pid = line.trim().split(/\s+/).pop();
             if (pid && /^\d+$/.test(pid) && pid !== '0') {
-              try { execSync(`taskkill /PID ${pid} /F`, {timeout:5000}); } catch(e) {}
+              // Verify the process is actually OpenClaw before killing.
+              // Without this check, any process listening on 18789-18799
+              // gets force-killed (e.g., user's other Node services on
+              // these ports). Use wmic to inspect CommandLine.
+              try {
+                const cmdLine = execSync(`wmic process where "ProcessId=${pid}" get CommandLine /value`, {encoding:'utf8', timeout:3000}).trim();
+                if (cmdLine && cmdLine.includes('openclaw.mjs')) {
+                  try { execSync(`taskkill /PID ${pid} /F`, {timeout:5000}); } catch(e) {}
+                }
+              } catch(e) {
+                // wmic failed — don't risk killing anything
+              }
             }
           }
         } else {
