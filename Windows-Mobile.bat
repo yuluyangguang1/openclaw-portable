@@ -55,7 +55,7 @@ if exist "!PORTABLE_DIR!OPENCLAW_VERSION" (
 echo.
 if defined ESC (
     echo !ESC![96m  ╔══════════════════════════════════════╗!ESC![0m
-    echo !ESC![96m  ║  📱 OpenClaw Portable — 手机连接     ║!ESC![0m
+    echo !ESC![96m  ║   OpenClaw Portable — 手机连接     ║!ESC![0m
     echo !ESC![96m  ║     Mobile Connect Mode !OPENCLAW_VER!  ║!ESC![0m
     echo !ESC![96m  ╚══════════════════════════════════════╝!ESC![0m
 ) else (
@@ -134,7 +134,7 @@ REM Write runtime info
 
 echo.
 echo   ┌─────────────────────────────────────────────────┐
-echo   │         📱 手机连接信息                          │
+echo   │          手机连接信息                          │
 echo   ├─────────────────────────────────────────────────┤
 echo   │                                                 │
 echo   │  方式一：手机浏览器（推荐，零安装）             │

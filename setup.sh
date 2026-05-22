@@ -27,7 +27,7 @@ NC='\033[0m'
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║  🦞 OpenClaw Portable Setup           ║${NC}"
+echo -e "${CYAN}║   OpenClaw Portable Setup           ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════╝${NC}"
 echo ""
 

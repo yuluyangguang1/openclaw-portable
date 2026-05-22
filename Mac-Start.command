@@ -252,7 +252,7 @@ for i in $(seq 1 30); do
 done
 
 echo -e "  ${GREEN}════════════════════════════════${NC}"
-echo -e "  ${GREEN}🦞 OpenClaw Portable is running!${NC}"
+echo -e "  ${GREEN} OpenClaw Portable is running!${NC}"
 echo -e "  ${GREEN}   Dashboard:     http://127.0.0.1:$PORT/#token=$TOKEN${NC}"
 echo -e "  ${GREEN}   Config Center: http://127.0.0.1:$CONFIG_PORT/${NC}"
 echo ""
@@ -265,7 +265,7 @@ cleanup_children() {
     [ -n "$GW_PID" ] && kill $GW_PID 2>/dev/null
     [ -n "$CONFIG_PID" ] && kill $CONFIG_PID 2>/dev/null
     echo ""
-    echo -e "  🦞 OpenClaw Portable stopped."
+    echo -e "   OpenClaw Portable stopped."
 }
 # Combined EXIT handler: kill child processes AND show diagnosis on
 # abnormal exit. Two separate `trap ... EXIT` statements would have

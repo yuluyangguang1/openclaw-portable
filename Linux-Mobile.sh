@@ -33,7 +33,7 @@ OPENCLAW_VER="unknown"
 
 echo ""
 echo -e "  ${CYAN}╔══════════════════════════════════════╗${NC}"
-echo -e "  ${CYAN}║  📱 OpenClaw Portable — 手机连接     ║${NC}"
+echo -e "  ${CYAN}║   OpenClaw Portable — 手机连接     ║${NC}"
 echo -e "  ${CYAN}║     Mobile Connect Mode $OPENCLAW_VER  ║${NC}"
 echo -e "  ${CYAN}╚══════════════════════════════════════╝${NC}"
 echo ""
@@ -150,7 +150,7 @@ on_exit_handler() {
     [ -n "$CONFIG_PID" ] && kill $CONFIG_PID 2>/dev/null
     cleanup_mobile_config "$MOBILE_CONFIG"
     echo ""
-    echo -e "  🦞 手机连接模式已停止，配置已恢复。"
+    echo -e "   手机连接模式已停止，配置已恢复。"
     exit "$code"
 }
 trap on_exit_handler INT TERM EXIT
@@ -180,7 +180,7 @@ done
 if [ "$GW_READY" = "true" ]; then
     print_mobile_info "$PORT" "$TOKEN"
     echo -e "  ${GREEN}════════════════════════════════════════${NC}"
-    echo -e "  ${GREEN}🦞 OpenClaw 手机连接模式已启动！${NC}"
+    echo -e "  ${GREEN} OpenClaw 手机连接模式已启动！${NC}"
     echo -e "  ${GREEN}   Dashboard:     http://127.0.0.1:$PORT/#token=$TOKEN${NC}"
     echo -e "  ${GREEN}   Config Center: http://127.0.0.1:$CONFIG_PORT/${NC}"
     echo ""
