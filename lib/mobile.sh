@@ -70,7 +70,7 @@ print_mobile_info() {
 
     echo ""
     echo -e "  ${GREEN}┌─────────────────────────────────────────────────┐${NC}"
-    echo -e "  ${GREEN}│         📱 手机连接信息                          │${NC}"
+    echo -e "  ${GREEN}│         手机连接信息                              │${NC}"
     echo -e "  ${GREEN}├─────────────────────────────────────────────────┤${NC}"
     echo -e "  ${GREEN}│${NC}                                                 ${GREEN}│${NC}"
     echo -e "  ${GREEN}│${NC}  ${WHITE}方式一：手机浏览器（推荐，零安装）${NC}             ${GREEN}│${NC}"
@@ -96,7 +96,7 @@ print_mobile_info() {
     done
     echo -e "  ${GREEN}│${NC}  Token: ${YELLOW}$TOKEN${NC}"
     echo -e "  ${GREEN}│${NC}                                                 ${GREEN}│${NC}"
-    echo -e "  ${GREEN}│${NC}  ${DIM}⚠ 请确保手机和电脑在同一 WiFi 网络${NC}             ${GREEN}│${NC}"
+    echo -e "  ${GREEN}│${NC}  ${DIM}[!] 请确保手机和电脑在同一 WiFi 网络${NC}           ${GREEN}│${NC}"
     echo -e "  ${GREEN}└─────────────────────────────────────────────────┘${NC}"
     echo ""
 }

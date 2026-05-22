@@ -63,9 +63,9 @@ echo ""
 NODE_TARGET="$RUNTIME_DIR/$NODE_DIR_NAME"
 
 if [ -f "$NODE_TARGET/bin/node" ]; then
-    echo -e "  ${GREEN}✓${NC} Node.js ($PLATFORM) 已存在，跳过下载"
+    echo -e "  ${GREEN}[ok]${NC} Node.js ($PLATFORM) 已存在，跳过下载"
 else
-    echo -e "  ${CYAN}↓${NC} 下载 Node.js $NODE_VERSION ($PLATFORM)..."
+    echo -e "  ${CYAN}[v]${NC} 下载 Node.js $NODE_VERSION ($PLATFORM)..."
     mkdir -p "$NODE_TARGET"
 
     NODE_URL="$NODE_MIRROR/$NODE_VERSION/node-$NODE_VERSION-$PLATFORM.tar.gz"
@@ -74,9 +74,9 @@ else
     curl -fSL "$NODE_URL" | tar xz -C "$NODE_TARGET" --strip-components=1
 
     if [ -f "$NODE_TARGET/bin/node" ]; then
-        echo -e "  ${GREEN}✓${NC} Node.js ($PLATFORM) 下载完成"
+        echo -e "  ${GREEN}[ok]${NC} Node.js ($PLATFORM) 下载完成"
     else
-        echo -e "  ${RED}✗ Node.js 下载失败${NC}"
+        echo -e "  ${RED}[x] Node.js 下载失败${NC}"
         exit 1
     fi
 fi
@@ -92,17 +92,17 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
         local PLAT="$1" DIR_NAME="$2"
         local TARGET="$RUNTIME_DIR/$DIR_NAME"
         if [ -f "$TARGET/bin/node" ]; then
-            echo -e "  ${GREEN}✓${NC} Node.js ($PLAT) 已存在，跳过"
+            echo -e "  ${GREEN}[ok]${NC} Node.js ($PLAT) 已存在，跳过"
             return
         fi
-        echo -e "  ${CYAN}↓${NC} 下载 Node.js $NODE_VERSION ($PLAT)..."
+        echo -e "  ${CYAN}[v]${NC} 下载 Node.js $NODE_VERSION ($PLAT)..."
         mkdir -p "$TARGET"
         local URL="$NODE_MIRROR/$NODE_VERSION/node-$NODE_VERSION-$PLAT.tar.gz"
         echo "    $URL"
         if curl -fSL "$URL" | tar xz -C "$TARGET" --strip-components=1; then
-            echo -e "  ${GREEN}✓${NC} Node.js ($PLAT) 下载完成"
+            echo -e "  ${GREEN}[ok]${NC} Node.js ($PLAT) 下载完成"
         else
-            echo -e "  ${CYAN}⚠${NC}  $PLAT runtime 下载失败 (不影响当前平台)"
+            echo -e "  ${CYAN}[!]${NC}  $PLAT runtime 下载失败 (不影响当前平台)"
         fi
     }
 
@@ -111,10 +111,10 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
         local PLAT="$1" DIR_NAME="$2"
         local TARGET="$RUNTIME_DIR/$DIR_NAME"
         if [ -f "$TARGET/node.exe" ]; then
-            echo -e "  ${GREEN}✓${NC} Node.js ($PLAT) 已存在，跳过"
+            echo -e "  ${GREEN}[ok]${NC} Node.js ($PLAT) 已存在，跳过"
             return
         fi
-        echo -e "  ${CYAN}↓${NC} 下载 Node.js $NODE_VERSION ($PLAT)..."
+        echo -e "  ${CYAN}[v]${NC} 下载 Node.js $NODE_VERSION ($PLAT)..."
         mkdir -p "$TARGET"
         local URL="$NODE_MIRROR/$NODE_VERSION/node-$NODE_VERSION-$PLAT.zip"
         echo "    $URL"
@@ -125,13 +125,13 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
             cp -r "/tmp/node-extract-$$"/node-$NODE_VERSION-$PLAT/* "$TARGET/"
             rm -rf "/tmp/node-extract-$$"
         else
-            echo -e "    ${RED}✗ unzip not found, skipping${NC}"
+            echo -e "    ${RED}[x] unzip not found, skipping${NC}"
         fi
         rm -f "$TMP_ZIP"
         if [ -f "$TARGET/node.exe" ]; then
-            echo -e "  ${GREEN}✓${NC} Node.js ($PLAT) 下载完成"
+            echo -e "  ${GREEN}[ok]${NC} Node.js ($PLAT) 下载完成"
         else
-            echo -e "  ${CYAN}⚠${NC}  $PLAT runtime 下载失败"
+            echo -e "  ${CYAN}[!]${NC}  $PLAT runtime 下载失败"
         fi
     }
 
@@ -184,7 +184,7 @@ if [ -d "$CORE_DIR/node_modules/openclaw" ]; then
         INSTALLED_VER=$("$NODE_TARGET/bin/node" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){}" "$CORE_DIR/node_modules/openclaw/package.json" 2>/dev/null)
     fi
     if [ "$INSTALLED_VER" = "$OPENCLAW_VERSION" ]; then
-        echo -e "  ${GREEN}✓${NC} OpenClaw $OPENCLAW_VERSION 已安装，跳过"
+        echo -e "  ${GREEN}[ok]${NC} OpenClaw $OPENCLAW_VERSION 已安装，跳过"
         NEED_INSTALL=false
     else
         echo -e "  ${CYAN}↑${NC} OpenClaw 已安装 ($INSTALLED_VER)，升级到 $OPENCLAW_VERSION..."
@@ -192,32 +192,32 @@ if [ -d "$CORE_DIR/node_modules/openclaw" ]; then
 fi
 
 if [ "$NEED_INSTALL" = "true" ]; then
-    echo -e "  ${CYAN}↓${NC} 安装 OpenClaw $OPENCLAW_VERSION..."
+    echo -e "  ${CYAN}[v]${NC} 安装 OpenClaw $OPENCLAW_VERSION..."
 
     # Install with China mirror
     NODE_BIN="$NODE_TARGET/bin/node"
     NPM_BIN="$NODE_TARGET/bin/npm"
     "$NODE_BIN" "$NPM_BIN" install --prefix "$CORE_DIR" --registry="$MIRROR"
 
-    echo -e "  ${GREEN}✓${NC} OpenClaw 安装完成"
+    echo -e "  ${GREEN}[ok]${NC} OpenClaw 安装完成"
 fi
 
 # ---- 3. Verify core deps ----
 # QQ plugin, acpx, and codex-acp are declared in package.json and
 # installed by the npm install above. Just verify + build if needed.
 if [ -d "$CORE_DIR/node_modules/@sliverp/qqbot" ] && [ ! -d "$CORE_DIR/node_modules/@sliverp/qqbot/dist" ]; then
-    echo -e "  ${CYAN}↓${NC} 构建 QQ 插件..."
+    echo -e "  ${CYAN}[v]${NC} 构建 QQ 插件..."
     (cd "$CORE_DIR/node_modules/@sliverp/qqbot" && "$NODE_TARGET/bin/npm" run build 2>/dev/null || true)
-    echo -e "  ${GREEN}✓${NC} QQ 插件构建完成"
+    echo -e "  ${GREEN}[ok]${NC} QQ 插件构建完成"
 fi
-[ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}✓${NC} ACP / Codex harness 就绪"
+[ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}[ok]${NC} ACP / Codex harness 就绪"
 
 # ---- 4. Install China-optimized skills ----
 SKILLS_CN="$SCRIPT_DIR/skills-cn"
 SKILLS_TARGET="$CORE_DIR/node_modules/openclaw/skills"
 
 if [ -d "$SKILLS_CN" ] && [ -d "$SKILLS_TARGET" ]; then
-    echo -e "  ${CYAN}↓${NC} 安装中国优化技能 (skills-cn)..."
+    echo -e "  ${CYAN}[v]${NC} 安装中国优化技能 (skills-cn)..."
     SKILL_COUNT=0
     for skill_dir in "$SKILLS_CN"/*/; do
         skill_name=$(basename "$skill_dir")
@@ -226,7 +226,7 @@ if [ -d "$SKILLS_CN" ] && [ -d "$SKILLS_TARGET" ]; then
             SKILL_COUNT=$((SKILL_COUNT + 1))
         fi
     done
-    echo -e "  ${GREEN}✓${NC} 中国技能安装完成 (+$SKILL_COUNT 个)"
+    echo -e "  ${GREEN}[ok]${NC} 中国技能安装完成 (+$SKILL_COUNT 个)"
 fi
 
 # ---- Done ----

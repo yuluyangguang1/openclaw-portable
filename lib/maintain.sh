@@ -30,8 +30,12 @@ do_kill_gateway() {
     echo ""
 
     local FOUND=0
+    local OC_PORT_PIDS=""
 
-    # Method 1: Check ports 18789-18799
+    # Method 1: Check ports 18789-18799 (only flag OpenClaw-owned procs)
+    # Without the cmdline filter we'd report every random listener on
+    # 18789-18799 as "stale" and offer to kill it — could nuke an
+    # unrelated service (e.g. a co-worker's dev server).
     for PORT in $(seq 18789 18799); do
         local PIDS=""
         if command -v lsof >/dev/null 2>&1; then
@@ -41,9 +45,13 @@ do_kill_gateway() {
         fi
         if [ -n "$PIDS" ]; then
             for PID in $PIDS; do
-                local CMD=$(ps -p "$PID" -o comm= 2>/dev/null || echo "unknown")
-                echo -e "  ${YELLOW}端口 $PORT: PID $PID ($CMD)${NC}"
-                FOUND=1
+                local ARGS=$(ps -p "$PID" -o args= 2>/dev/null || echo "")
+                if echo "$ARGS" | grep -qi "openclaw"; then
+                    local CMD=$(ps -p "$PID" -o comm= 2>/dev/null || echo "unknown")
+                    echo -e "  ${YELLOW}端口 $PORT: PID $PID ($CMD)${NC}"
+                    OC_PORT_PIDS="$OC_PORT_PIDS $PID"
+                    FOUND=1
+                fi
             done
         fi
     done
@@ -69,14 +77,14 @@ do_kill_gateway() {
         return
     fi
 
-    # Kill port processes
-    for PORT in $(seq 18789 18799); do
-        if command -v lsof >/dev/null 2>&1; then
-            lsof -ti :$PORT 2>/dev/null | xargs kill 2>/dev/null
-        elif command -v ss >/dev/null 2>&1; then
-            ss -tlnp 2>/dev/null | grep ":$PORT " | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | xargs kill 2>/dev/null
-        fi
-    done
+    # Kill the OpenClaw-owned PIDs we collected above (only those that
+    # passed the cmdline check). Falling back to a fresh port-only scan
+    # would re-introduce the bug we just fixed.
+    if [ -n "$OC_PORT_PIDS" ]; then
+        for PID in $OC_PORT_PIDS; do
+            kill "$PID" 2>/dev/null || true
+        done
+    fi
 
     # Kill openclaw.mjs processes
     pgrep -f "openclaw.mjs gateway" 2>/dev/null | xargs kill 2>/dev/null

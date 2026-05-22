@@ -42,11 +42,11 @@ if exist "%NODE_BIN%" (
     echo   [OK] Node.js found >> "%LOG_FILE%"
     for /f "tokens=*" %%v in ('"%NODE_BIN%" --version 2^>^&1') do (
         echo       Version: %%v >> "%LOG_FILE%"
-        echo   ✓ Node.js 运行环境: %%v
+        echo   [ok] Node.js 运行环境: %%v
     )
 ) else (
     echo   [ERROR] Node.js not found >> "%LOG_FILE%"
-    echo   ✗ Node.js 运行环境: 缺失
+    echo   [x] Node.js 运行环境: 缺失
     echo       Path: %NODE_BIN% >> "%LOG_FILE%"
     set /a ERROR_COUNT+=1
 )
@@ -59,10 +59,10 @@ echo [2/7] 检查依赖目录...
 set "CORE_DIR=%PORTABLE_DIR%app\core"
 if exist "%CORE_DIR%" (
     echo   [OK] core directory exists >> "%LOG_FILE%"
-    echo   ✓ 依赖目录: 正常
+    echo   [ok] 依赖目录: 正常
 ) else (
     echo   [ERROR] core directory not found >> "%LOG_FILE%"
-    echo   ✗ 依赖目录: 缺失
+    echo   [x] 依赖目录: 缺失
     set /a ERROR_COUNT+=1
 )
 
@@ -70,10 +70,10 @@ REM 3. Check node_modules
 echo [3/7] 检查 npm 依赖包...
 if exist "%CORE_DIR%\node_modules" (
     echo   [OK] node_modules exists >> "%LOG_FILE%"
-    echo   ✓ npm 依赖包: 已安装
+    echo   [ok] npm 依赖包: 已安装
 ) else (
     echo   [ERROR] node_modules not found >> "%LOG_FILE%"
-    echo   ✗ npm 依赖包: 未安装
+    echo   [x] npm 依赖包: 未安装
     set /a ERROR_COUNT+=1
 )
 
@@ -82,10 +82,10 @@ echo [4/7] 检查 OpenClaw 核心文件...
 set "OPENCLAW_MJS=%CORE_DIR%\node_modules\openclaw\openclaw.mjs"
 if exist "%OPENCLAW_MJS%" (
     echo   [OK] openclaw.mjs found >> "%LOG_FILE%"
-    echo   ✓ OpenClaw 核心: 正常
+    echo   [ok] OpenClaw 核心: 正常
 ) else (
     echo   [ERROR] openclaw.mjs not found >> "%LOG_FILE%"
-    echo   ✗ OpenClaw 核心: 缺失
+    echo   [x] OpenClaw 核心: 缺失
     echo       Path: %OPENCLAW_MJS% >> "%LOG_FILE%"
     set /a ERROR_COUNT+=1
 )
@@ -95,17 +95,17 @@ echo [5/7] 检查配置文件...
 set "STATE_DIR=%PORTABLE_DIR%data\.openclaw"
 if exist "%STATE_DIR%\openclaw.json" (
     echo   [OK] Config file exists >> "%LOG_FILE%"
-    echo   ✓ 配置文件: 正常
+    echo   [ok] 配置文件: 正常
     REM Check if model is configured
     findstr /c:"model" "%STATE_DIR%\openclaw.json" >nul 2>&1
     if !errorlevel!==0 (
-        echo   ✓ AI 模型: 已配置
+        echo   [ok] AI 模型: 已配置
     ) else (
-        echo   ⚠ AI 模型: 未配置（首次使用请先配置）
+        echo   [!] AI 模型: 未配置（首次使用请先配置）
     )
 ) else (
     echo   [WARNING] Config not found >> "%LOG_FILE%"
-    echo   ⚠ 配置文件: 未创建（首次启动会自动创建）
+    echo   [!] 配置文件: 未创建（首次启动会自动创建）
 )
 
 REM 6. Check port availability
@@ -115,7 +115,7 @@ for /l %%p in (18789,1,18799) do (
     netstat -an | findstr ":%%p " | findstr "LISTENING" >nul 2>&1
     if !errorlevel!==0 (
         echo   [WARNING] Port %%p is in use >> "%LOG_FILE%"
-        echo   ⚠ 端口 %%p: 已被占用
+        echo   [!] 端口 %%p: 已被占用
         for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p " ^| findstr "LISTENING"') do (
             echo       PID: %%a >> "%LOG_FILE%"
         )
@@ -124,7 +124,7 @@ for /l %%p in (18789,1,18799) do (
 )
 if "!PORT_ISSUE!"=="0" (
     echo   [OK] Ports 18789-18799 available >> "%LOG_FILE%"
-    echo   ✓ 端口 18789-18799: 全部可用
+    echo   [ok] 端口 18789-18799: 全部可用
 )
 
 REM 7. Test OpenClaw startup
@@ -141,15 +141,15 @@ if exist "%NODE_BIN%" if exist "%OPENCLAW_MJS%" (
     cd /d "%CORE_DIR%"
     for /f "tokens=*" %%v in ('"%NODE_BIN%" "%OPENCLAW_MJS%" --version 2^>^&1') do (
         echo   %%v >> "%LOG_FILE%"
-        echo   ✓ OpenClaw 启动测试: 通过 (%%v^)
+        echo   [ok] OpenClaw 启动测试: 通过 (%%v^)
     )
     if !errorlevel! neq 0 (
-        echo   ✗ OpenClaw 启动测试: 失败
+        echo   [x] OpenClaw 启动测试: 失败
         echo   [ERROR] OpenClaw failed to start >> "%LOG_FILE%"
         set /a ERROR_COUNT+=1
     )
 ) else (
-    echo   ⚠ OpenClaw 启动测试: 跳过（文件缺失）
+    echo   [!] OpenClaw 启动测试: 跳过（文件缺失）
     echo   [SKIP] Cannot test - required files missing >> "%LOG_FILE%"
 )
 
