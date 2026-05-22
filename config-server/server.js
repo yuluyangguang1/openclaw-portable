@@ -1017,6 +1017,7 @@ const server = http.createServer((req, res) => {
         // 2. Download zip via Node https (no curl dependency)
         console.log('Update: downloading from ' + downloadUrl);
         const https = require('https');
+        const { pipeline } = require('stream/promises');
         await new Promise((resolve, reject) => {
           // Per-request timeout: if the download stalls (slow USB, flaky
           // network), abort instead of hanging forever. 5 minutes is a
@@ -1033,12 +1034,18 @@ const server = http.createServer((req, res) => {
                 }
                 return doRequest(res.headers.location);
               }
-              if (res.statusCode !== 200) return reject(new Error('HTTP ' + res.statusCode));
+              if (res.statusCode !== 200) {
+                res.resume(); // drain so socket can be released
+                return reject(new Error('HTTP ' + res.statusCode));
+              }
+              // Use stream/promises pipeline so any error on either
+              // side properly closes BOTH streams. Plain `res.pipe(file)`
+              // leaks the file descriptor when the source aborts (slow
+              // USB / network drop / timeout) — the file stays open
+              // until GC, and on Windows that even prevents cleanupTmp
+              // from deleting the partial download. (B23-04)
               const file = fs.createWriteStream(tmpZip);
-              res.pipe(file);
-              file.on('finish', () => file.close(resolve));
-              file.on('error', reject);
-              res.on('error', reject);
+              pipeline(res, file).then(resolve).catch(reject);
             });
             req.setTimeout(DOWNLOAD_TIMEOUT_MS, () => {
               req.destroy(new Error('Download timeout (' + DOWNLOAD_TIMEOUT_MS + 'ms)'));
@@ -1201,39 +1208,50 @@ const server = http.createServer((req, res) => {
           }
         }, 1000);
       } catch (err) {
-        console.error('Update failed:', err.message);
-        cleanupTmp();
-        // Rollback: restore from backup if it exists
-        if (fs.existsSync(backupDir)) {
-          console.error('Update: rolling back from backup...');
-          try {
-            // Step 1: remove files added by the failed update.
-            // newFiles is in scope from the try block (closure).
-            for (const f of newFiles) {
-              try { fs.rmSync(f, { force: true }); } catch (_) {}
-            }
-            // Step 2: restore overwritten files from backup
-            const restoreRecursive = (src, dst) => {
-              for (const item of fs.readdirSync(src, { withFileTypes: true })) {
-                const srcP = path.join(src, item.name);
-                const dstP = path.join(dst, item.name);
-                if (item.isDirectory()) {
-                  fs.mkdirSync(dstP, { recursive: true });
-                  restoreRecursive(srcP, dstP);
-                } else {
-                  fs.copyFileSync(srcP, dstP);
-                }
+        // Defensive: catch block itself may throw if `err` lacks .message
+        // or if rollback's filesystem ops fail in unexpected ways.
+        // Wrapping the whole catch body ensures we always release the
+        // lock + flag — otherwise update path stays locked until next
+        // config-server restart. (B23-03)
+        try {
+          console.error('Update failed:', err && err.message ? err.message : err);
+          cleanupTmp();
+          // Rollback: restore from backup if it exists
+          if (fs.existsSync(backupDir)) {
+            console.error('Update: rolling back from backup...');
+            try {
+              // Step 1: remove files added by the failed update.
+              // newFiles is in scope from the try block (closure).
+              for (const f of newFiles) {
+                try { fs.rmSync(f, { force: true }); } catch (_) {}
               }
-            };
-            restoreRecursive(backupDir, baseDir);
-            console.error('Update: rollback complete (' + newFiles.length + ' new files removed)');
-          } catch (rbErr) {
-            console.error('Update: rollback failed:', rbErr.message);
+              // Step 2: restore overwritten files from backup
+              const restoreRecursive = (src, dst) => {
+                for (const item of fs.readdirSync(src, { withFileTypes: true })) {
+                  const srcP = path.join(src, item.name);
+                  const dstP = path.join(dst, item.name);
+                  if (item.isDirectory()) {
+                    fs.mkdirSync(dstP, { recursive: true });
+                    restoreRecursive(srcP, dstP);
+                  } else {
+                    fs.copyFileSync(srcP, dstP);
+                  }
+                }
+              };
+              restoreRecursive(backupDir, baseDir);
+              console.error('Update: rollback complete (' + newFiles.length + ' new files removed)');
+            } catch (rbErr) {
+              console.error('Update: rollback failed:', rbErr && rbErr.message);
+            }
+            try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
           }
-          try { fs.rmSync(backupDir, { recursive: true, force: true }); } catch(e) {}
+        } catch (innerErr) {
+          console.error('Update: error in cleanup path:', innerErr && innerErr.message);
+        } finally {
+          // ALWAYS release the lock + flag, even if cleanup itself crashed.
+          global._updateInProgress = false;
+          try { fs.unlinkSync(path.join(path.dirname(CONFIG_PATH), 'update.lock')); } catch(_) {}
         }
-        global._updateInProgress = false;
-        try { fs.unlinkSync(path.join(path.dirname(CONFIG_PATH), 'update.lock')); } catch(_) {}
       }
     }, 500);
     return;
@@ -1303,9 +1321,15 @@ const server = http.createServer((req, res) => {
       }
     } catch(e) { /* best effort */ }
 
-    // Re-launch gateway after a short delay (let ports release)
+    // Re-launch gateway after a short delay (let ports release).
+    // Wrap the entire spawn path in try/catch — a thrown exception
+    // from setTimeout would otherwise hit the global uncaughtException
+    // handler (which only logs), leaving the user stuck at "Restarting..."
+    // with no gateway. Better to log and at least keep config-server
+    // responsive so they can hit the button again. (B23-02)
     setTimeout(() => {
-      const { spawn } = require('child_process');
+      try {
+        const { spawn } = require('child_process');
       const coreDir = path.join(__dirname, '../app/core');
       const openclawMjs = path.join(coreDir, 'node_modules/openclaw/openclaw.mjs');
       const nodeBin = process.execPath; // same node that's running us
@@ -1324,7 +1348,7 @@ const server = http.createServer((req, res) => {
         }
       } catch (e) { /* fall back to default */ }
 
-      if (fs.existsSync(openclawMjs)) {
+        if (fs.existsSync(openclawMjs)) {
         // Inherit launcher-set env (OPENCLAW_HOME, OPENCLAW_STATE_DIR,
         // OPENCLAW_DISABLE_BONJOUR, etc.) and only fill in values that
         // are missing. Previously OPENCLAW_HOME was unconditionally
@@ -1341,7 +1365,16 @@ const server = http.createServer((req, res) => {
           detached: true,
           stdio: 'ignore',
         });
+        // spawn() can fail asynchronously (e.g. ENOENT for nodeBin on
+        // a corrupted USB). Without an 'error' listener Node would
+        // emit unhandledError → process crash.
+        child.on('error', (e) => {
+          console.error('[restart] gateway spawn error:', e.message);
+        });
         child.unref();
+      }
+      } catch (spawnErr) {
+        console.error('[restart] failed to relaunch gateway:', spawnErr && spawnErr.message);
       }
     }, 2000);
     return;
@@ -1708,7 +1741,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (fs.existsSync(resolved) && fs.statSync(resolved).isFile()) {
+  // Stat once with try/catch — using existsSync + statSync separately
+  // is a TOCTOU race (file may vanish between the two calls when the
+  // USB stick is pulled mid-request). One stat call, one error path.
+  let stat = null;
+  try {
+    stat = fs.statSync(resolved);
+  } catch (_) { /* ENOENT, EACCES, etc. — fall through to 404 */ }
+
+  if (stat && stat.isFile()) {
     const ext = path.extname(resolved);
     const contentType = {
       '.html': 'text/html',
@@ -1721,7 +1762,17 @@ const server = http.createServer((req, res) => {
     }[ext] || 'text/plain';
 
     res.writeHead(200, { 'Content-Type': contentType });
-    fs.createReadStream(resolved).pipe(res);
+    // Bind error handler before pipe — without it, USB yank or
+    // mid-stream file deletion emits an unhandled 'error' event,
+    // crashing the process via uncaughtException. Also set autoClose
+    // (default true) and ensure res ends if the stream errors out.
+    const stream = fs.createReadStream(resolved);
+    stream.on('error', (e) => {
+      console.warn('[static] read error for', resolved, ':', e.message);
+      try { if (!res.headersSent) res.writeHead(500); } catch (_) {}
+      try { res.end(); } catch (_) {}
+    });
+    stream.pipe(res);
   } else {
     res.writeHead(404);
     res.end('Not Found');
@@ -1742,7 +1793,7 @@ function listenWithFallback(port) {
   server.on('error', onError);
   server.listen(port, '127.0.0.1', () => {
     server.removeListener('error', onError);
-    console.log(`\n🦞 OpenClaw Portable Config Center`);
+    console.log(`\n[OpenClaw] Portable Config Center`);
     console.log(`   http://127.0.0.1:${port}`);
     console.log(`   Config file: ${CONFIG_PATH}\n`);
     try {
