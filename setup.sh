@@ -169,6 +169,7 @@ cat > "$CORE_DIR/package.json" << PKGJSON
   "private": true,
   "dependencies": {
     "@sliverp/qqbot": "^1.6.1",
+    "@tencent-weixin/openclaw-weixin": "^2.4.4",
     "@zed-industries/codex-acp": "^0.14.0",
     "acpx": "^0.8.0",
     "openclaw": "$OPENCLAW_VERSION"
