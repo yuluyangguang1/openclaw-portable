@@ -263,8 +263,14 @@ const WECHAT_STATE_DIR = path.join(OPENCLAW_DIR, 'openclaw-weixin');
 const WECHAT_ACCOUNTS_DIR = path.join(WECHAT_STATE_DIR, 'accounts');
 const WECHAT_ACCOUNT_INDEX_FILE = path.join(WECHAT_STATE_DIR, 'accounts.json');
 
-// Plugin source on USB
-const USB_PLUGIN_DIR = path.join(__dirname, '../app/extensions/openclaw-weixin');
+// Plugin source — installed as an npm dependency in app/core/package.json
+// (consistent with how @sliverp/qqbot is bundled). The fallback path
+// app/extensions/openclaw-weixin/ exists for legacy installs / manual setup.
+const PLUGIN_NPM_DIR = path.join(__dirname, '../app/core/node_modules/@tencent-weixin/openclaw-weixin');
+const PLUGIN_LEGACY_DIR = path.join(__dirname, '../app/extensions/openclaw-weixin');
+const USB_PLUGIN_DIR = fs.existsSync(path.join(PLUGIN_NPM_DIR, 'openclaw.plugin.json'))
+  ? PLUGIN_NPM_DIR
+  : PLUGIN_LEGACY_DIR;
 const INSTALLED_PLUGIN_DIR = path.join(OPENCLAW_DIR, 'extensions', 'openclaw-weixin');
 
 const activeLogins = new Map();
@@ -419,7 +425,14 @@ async function pollWeChatQrStatus(apiBaseUrl, qrcode) {
 }
 
 function normalizeAccountId(raw) {
-  return String(raw).toLowerCase().replace(/[^a-z0-9._-]/g, '-');
+  // Must match OpenClaw SDK's canonicalizeAccountId exactly:
+  //   lowercase → replace invalid chars with '-' → strip leading/trailing dashes → max 64 chars
+  // Valid chars: [a-z0-9_-] (NO dots!)
+  return String(raw).trim().toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '')
+    .slice(0, 64) || 'default';
 }
 
 // Generic atomic JSON write helper. Used for both the main openclaw.json
@@ -446,6 +459,26 @@ async function saveWeChatAccount(rawAccountId, payload) {
   const accountId = normalizeAccountId(rawAccountId);
   fs.mkdirSync(WECHAT_ACCOUNTS_DIR, { recursive: true });
   const filePath = path.join(WECHAT_ACCOUNTS_DIR, accountId + '.json');
+
+  // Migration: if an old-format file exists (with dots in name), remove it.
+  // Old normalizeAccountId preserved dots: "id@im.bot" → "id-im.bot"
+  // New one replaces dots: "id@im.bot" → "id-im-bot"
+  const legacyId = String(rawAccountId).toLowerCase().replace(/[^a-z0-9._-]/g, '-');
+  if (legacyId !== accountId) {
+    const legacyPath = path.join(WECHAT_ACCOUNTS_DIR, legacyId + '.json');
+    if (fs.existsSync(legacyPath)) {
+      try { fs.unlinkSync(legacyPath); } catch {}
+    }
+    // Also clean up accounts.json index
+    try {
+      let idx = JSON.parse(fs.readFileSync(WECHAT_ACCOUNT_INDEX_FILE, 'utf-8'));
+      if (Array.isArray(idx) && idx.includes(legacyId)) {
+        idx = idx.filter(id => id !== legacyId);
+        atomicWriteJson(WECHAT_ACCOUNT_INDEX_FILE, idx);
+      }
+    } catch {}
+  }
+
   // Coerce to string before .trim() — defends against the upstream
   // returning a non-string (e.g. number) which would throw TypeError.
   const data = {
@@ -472,13 +505,85 @@ function ensureWeChatPluginInstalled() {
   if (!fs.existsSync(USB_PLUGIN_DIR) || !fs.existsSync(path.join(USB_PLUGIN_DIR, 'openclaw.plugin.json'))) {
     return { installed: false, warning: 'WeChat plugin not found on USB' };
   }
-  if (fs.existsSync(path.join(INSTALLED_PLUGIN_DIR, 'openclaw.plugin.json'))) {
-    return { installed: true };
+
+  const alreadyInstalled = fs.existsSync(path.join(INSTALLED_PLUGIN_DIR, 'openclaw.plugin.json'));
+
+  // Check if installed version is outdated compared to USB source
+  let needsUpdate = false;
+  if (alreadyInstalled) {
+    try {
+      const srcManifest = JSON.parse(fs.readFileSync(path.join(USB_PLUGIN_DIR, 'openclaw.plugin.json'), 'utf-8'));
+      const dstManifest = JSON.parse(fs.readFileSync(path.join(INSTALLED_PLUGIN_DIR, 'openclaw.plugin.json'), 'utf-8'));
+      if (srcManifest.version && dstManifest.version && srcManifest.version !== dstManifest.version) {
+        needsUpdate = true;
+      }
+    } catch { /* ignore parse errors, proceed with existing */ }
   }
-  // Copy from USB to ~/.openclaw/extensions/
-  const extDir = path.join(OPENCLAW_DIR, 'extensions');
-  fs.mkdirSync(extDir, { recursive: true });
-  copyDirSync(USB_PLUGIN_DIR, INSTALLED_PLUGIN_DIR);
+
+  if (!alreadyInstalled || needsUpdate) {
+    // Copy from USB to ~/.openclaw/extensions/
+    // Only copy runtime-essential files. When the plugin source is an
+    // installed npm package, the source directory contains many files
+    // we don't need at runtime (src/, *.ts, README.md, CHANGELOG.md,
+    // tests, etc.). Copying everything wastes disk and exposes source.
+    const extDir = path.join(OPENCLAW_DIR, 'extensions');
+    fs.mkdirSync(extDir, { recursive: true });
+    fs.mkdirSync(INSTALLED_PLUGIN_DIR, { recursive: true });
+
+    // Required files: manifest + dist/ (compiled JS)
+    fs.copyFileSync(
+      path.join(USB_PLUGIN_DIR, 'openclaw.plugin.json'),
+      path.join(INSTALLED_PLUGIN_DIR, 'openclaw.plugin.json'),
+    );
+    const distSrc = path.join(USB_PLUGIN_DIR, 'dist');
+    if (fs.existsSync(distSrc)) {
+      copyDirSync(distSrc, path.join(INSTALLED_PLUGIN_DIR, 'dist'));
+    }
+    // package.json is needed for Node module resolution (main field)
+    const pkgSrc = path.join(USB_PLUGIN_DIR, 'package.json');
+    if (fs.existsSync(pkgSrc)) {
+      fs.copyFileSync(pkgSrc, path.join(INSTALLED_PLUGIN_DIR, 'package.json'));
+    }
+  }
+
+  // Always ensure node_modules link exists. The plugin depends on
+  // qrcode-terminal and zod. When loaded from
+  // OPENCLAW_DIR/extensions/openclaw-weixin/, Node's resolution walks
+  // up looking for node_modules but never reaches app/core/node_modules
+  // where those deps live (different filesystem branches).
+  //
+  // We seed a node_modules symlink (or copy fallback for filesystems
+  // without symlink support, e.g. exFAT/FAT32 USB sticks) pointing to
+  // app/core/node_modules so the plugin can resolve its deps.
+  //
+  // Run this even when alreadyInstalled=true to recover from earlier
+  // failed setups (e.g. user yanked USB mid-install).
+  try {
+    const coreNodeModules = path.join(__dirname, '../app/core/node_modules');
+    const targetNodeModules = path.join(INSTALLED_PLUGIN_DIR, 'node_modules');
+    if (fs.existsSync(coreNodeModules) && !fs.existsSync(targetNodeModules)) {
+      try {
+        // Use relative symlink so it survives USB drive letter / mount point changes.
+        const relPath = path.relative(INSTALLED_PLUGIN_DIR, coreNodeModules);
+        fs.symlinkSync(relPath, targetNodeModules, 'dir');
+      } catch (symlinkErr) {
+        // exFAT/FAT32 don't support symlinks; copy the two deps the
+        // plugin actually uses (full copy of core/node_modules would
+        // be 200MB+ which is unacceptable).
+        fs.mkdirSync(targetNodeModules, { recursive: true });
+        for (const dep of ['qrcode-terminal', 'zod']) {
+          const src = path.join(coreNodeModules, dep);
+          const dst = path.join(targetNodeModules, dep);
+          if (fs.existsSync(src) && !fs.existsSync(dst)) {
+            copyDirSync(src, dst);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[wechat-plugin] could not link node_modules:', e.message);
+  }
+
   return { installed: fs.existsSync(path.join(INSTALLED_PLUGIN_DIR, 'openclaw.plugin.json')) };
 }
 
@@ -487,8 +592,17 @@ function copyDirSync(src, dest) {
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const s = path.join(src, entry.name);
     const d = path.join(dest, entry.name);
-    if (entry.isDirectory()) copyDirSync(s, d);
-    else fs.copyFileSync(s, d);
+    if (entry.isSymbolicLink()) {
+      // Preserve symlinks as-is (re-create relative target)
+      try {
+        const target = fs.readlinkSync(s);
+        fs.symlinkSync(target, d);
+      } catch { /* skip broken symlinks */ }
+    } else if (entry.isDirectory()) {
+      copyDirSync(s, d);
+    } else {
+      fs.copyFileSync(s, d);
+    }
   }
 }
 
@@ -543,7 +657,13 @@ async function handleWeChatStatus(sessionKey) {
     }
 
     // 1. Install plugin
-    const pluginResult = ensureWeChatPluginInstalled();
+    let pluginResult;
+    try {
+      pluginResult = ensureWeChatPluginInstalled();
+    } catch (pluginErr) {
+      pluginResult = { installed: false, warning: 'Plugin install failed: ' + pluginErr.message };
+      console.error('[wechat] plugin install error:', pluginErr.message);
+    }
 
     // 2. Save account
     const accountId = await saveWeChatAccount(result.ilink_bot_id, {

@@ -203,12 +203,21 @@ if [ "$NEED_INSTALL" = "true" ]; then
 fi
 
 # ---- 3. Verify core deps ----
-# QQ plugin, acpx, and codex-acp are declared in package.json and
-# installed by the npm install above. Just verify + build if needed.
+# QQ plugin, WeChat plugin, acpx, and codex-acp are declared in package.json
+# and installed by the npm install above. Just verify + build if needed.
 if [ -d "$CORE_DIR/node_modules/@sliverp/qqbot" ] && [ ! -d "$CORE_DIR/node_modules/@sliverp/qqbot/dist" ]; then
     echo -e "  ${CYAN}[v]${NC} 构建 QQ 插件..."
     (cd "$CORE_DIR/node_modules/@sliverp/qqbot" && "$NODE_TARGET/bin/npm" run build 2>/dev/null || true)
     echo -e "  ${GREEN}[ok]${NC} QQ 插件构建完成"
+fi
+if [ -d "$CORE_DIR/node_modules/@tencent-weixin/openclaw-weixin" ]; then
+    if [ -f "$CORE_DIR/node_modules/@tencent-weixin/openclaw-weixin/dist/index.js" ]; then
+        echo -e "  ${GREEN}[ok]${NC} 微信插件就绪 (prebuilt)"
+    else
+        echo -e "  ${CYAN}[v]${NC} 构建微信插件..."
+        (cd "$CORE_DIR/node_modules/@tencent-weixin/openclaw-weixin" && "$NODE_TARGET/bin/npm" run build 2>/dev/null || true)
+        echo -e "  ${GREEN}[ok]${NC} 微信插件构建完成"
+    fi
 fi
 [ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}[ok]${NC} ACP / Codex harness 就绪"
 

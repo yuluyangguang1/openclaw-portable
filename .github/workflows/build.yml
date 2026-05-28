@@ -39,9 +39,12 @@ jobs:
           test -f app/runtime/node-win-x64/node.exe     || { echo "MISSING: node-win-x64"; exit 1; }
           test -f app/runtime/node-linux-arm64/bin/node || { echo "MISSING: node-linux-arm64"; exit 1; }
           test -f app/core/node_modules/openclaw/openclaw.mjs || { echo "MISSING: openclaw.mjs"; exit 1; }
+          test -f app/core/node_modules/@tencent-weixin/openclaw-weixin/openclaw.plugin.json || { echo "MISSING: WeChat plugin manifest"; exit 1; }
+          test -f app/core/node_modules/@tencent-weixin/openclaw-weixin/dist/index.js || { echo "MISSING: WeChat plugin dist/index.js"; exit 1; }
           echo "All runtimes present:"
           ls -d app/runtime/*/
           echo "OpenClaw installed OK"
+          echo "WeChat plugin installed OK"
 
       - name: Patch plugin permission check for exFAT/FAT32 USB sticks
         run: |

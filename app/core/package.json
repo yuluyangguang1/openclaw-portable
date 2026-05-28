@@ -1,0 +1,12 @@
+{
+  "name": "openclaw-portable-core",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@sliverp/qqbot": "^1.6.1",
+    "@tencent-weixin/openclaw-weixin": "^2.4.4",
+    "@zed-industries/codex-acp": "^0.14.0",
+    "acpx": "^0.8.0",
+    "openclaw": "2026.5.12"
+  }
+}
