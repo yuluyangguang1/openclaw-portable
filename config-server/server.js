@@ -1872,7 +1872,26 @@ const server = http.createServer((req, res) => {
         } else if (type === 'discord' && config.token) {
           const r = await fetchWithTimeout('https://discord.com/api/v10/users/@me',{headers:{Authorization:'Bot '+config.token}, timeout: 10000});
           if (r.ok) {const j=await readJsonBounded(r);result={ok:true,info:'@'+(j.username||'bot')};}
-          else {const t=await r.text();result={error:t.slice(0,120)};}
+          else {
+            // Bounded read: error responses can be large HTML pages
+            // when the API endpoint is misrouted; we only show the
+            // first 120 chars anyway.
+            let errText = '';
+            try {
+              const reader = r.body.getReader();
+              const buf = [];
+              let total = 0;
+              while (total < 4096) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buf.push(value);
+                total += value.length;
+              }
+              try { reader.cancel(); } catch (_) {}
+              errText = Buffer.concat(buf.map(c => Buffer.from(c))).toString('utf8');
+            } catch (_) {}
+            result = {error: errText.slice(0, 120)};
+          }
         } else if (type === 'slack' && config.token) {
           const r = await fetchWithTimeout('https://slack.com/api/auth.test',{headers:{Authorization:'Bearer '+config.token}, timeout: 10000});
           const j = await readJsonBounded(r);
@@ -2090,7 +2109,12 @@ function listenWithFallback(port) {
       try {
         fd = fs.openSync(tmp, 'w', 0o600);
         fs.writeSync(fd, JSON.stringify(existing, null, 2));
-        try { fs.fsyncSync(fd); } catch (_) {}
+        try {
+          fs.fsyncSync(fd);
+        } catch (fsyncErr) {
+          // FAT32/exFAT may not support fsync — see atomicWriteJson.
+          console.warn(`[config-server] runtime.json fsync failed: ${fsyncErr.code || fsyncErr.message}`);
+        }
       } finally {
         if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
       }

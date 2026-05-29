@@ -121,10 +121,13 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
         # Use mktemp instead of $$ in /tmp so an attacker can't pre-create
         # a symlink (e.g. /tmp/node-win-x64-12345.zip → /etc/passwd) and
         # have curl -o follow it. mktemp creates the file with O_EXCL and
-        # mode 0600 atomically.
+        # mode 0600 atomically. Use absolute-path form for cross-platform
+        # consistency (GNU and BSD/macOS mktemp differ on the -t flag).
+        local TMPDIR_BASE="${TMPDIR:-/tmp}"
+        TMPDIR_BASE="${TMPDIR_BASE%/}"
         local TMP_ZIP TMP_EXTRACT
-        TMP_ZIP=$(mktemp -t "node-${PLAT}-XXXXXX.zip" 2>/dev/null) || TMP_ZIP="/tmp/node-${PLAT}-$$-$RANDOM.zip"
-        TMP_EXTRACT=$(mktemp -d -t "node-extract-${PLAT}-XXXXXX" 2>/dev/null) || TMP_EXTRACT="/tmp/node-extract-${PLAT}-$$-$RANDOM"
+        TMP_ZIP=$(mktemp "${TMPDIR_BASE}/node-${PLAT}-XXXXXX") || TMP_ZIP="${TMPDIR_BASE}/node-${PLAT}-$$-$RANDOM"
+        TMP_EXTRACT=$(mktemp -d "${TMPDIR_BASE}/node-extract-${PLAT}-XXXXXX") || TMP_EXTRACT="${TMPDIR_BASE}/node-extract-${PLAT}-$$-$RANDOM"
         curl -fSL "$URL" -o "$TMP_ZIP"
         if command -v unzip >/dev/null 2>&1; then
             unzip -q "$TMP_ZIP" -d "$TMP_EXTRACT"
