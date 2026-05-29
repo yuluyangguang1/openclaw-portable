@@ -88,7 +88,14 @@ async function readJsonBounded(response, max) {
 function readBoundedJsonBody(req, res, max) {
   return new Promise((resolve) => {
     const limit = max || 100_000;
-    let body = '';
+    // Accumulate as Buffer chunks rather than concatenated strings.
+    // String concat with `body += chunk` calls chunk.toString('utf8')
+    // per chunk — if a multi-byte character (e.g. Chinese) is split
+    // across TCP packet boundaries, the partial bytes get replaced by
+    // U+FFFD and JSON.parse fails. Buffer accumulation defers decoding
+    // to the end when all bytes are present.
+    const chunks = [];
+    let total = 0;
     let exceeded = false;
     let settled = false;
     const settle = (val) => {
@@ -98,8 +105,8 @@ function readBoundedJsonBody(req, res, max) {
     };
     req.on('data', (chunk) => {
       if (exceeded) return;
-      body += chunk;
-      if (body.length > limit) {
+      total += chunk.length;
+      if (total > limit) {
         exceeded = true;
         // Send 413 once, then drain — destroying the req sometimes
         // races the 'end' handler so we use the `exceeded` guard.
@@ -109,11 +116,23 @@ function readBoundedJsonBody(req, res, max) {
         }
         try { req.destroy(); } catch (_) {}
         settle(null);
+        return;
       }
+      chunks.push(chunk);
     });
     req.on('end', () => {
       if (exceeded) return settle(null);
-      if (!body) return settle({});
+      if (chunks.length === 0) return settle({});
+      let body;
+      try {
+        body = Buffer.concat(chunks).toString('utf8');
+      } catch (e) {
+        if (!res.headersSent) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Failed to decode body' }));
+        }
+        return settle(null);
+      }
       try {
         settle(JSON.parse(body));
       } catch (e) {
@@ -225,7 +244,14 @@ function atomicWriteConfig(config) {
   try {
     fd = fs.openSync(tmp, 'w');
     fs.writeSync(fd, json);
-    try { fs.fsyncSync(fd); } catch (_) { /* fsync may fail on some FS */ }
+    try {
+      fs.fsyncSync(fd);
+    } catch (fsyncErr) {
+      // fsync isn't supported on FAT32/exFAT in some environments.
+      // The write is still buffered to disk eventually but a hard
+      // USB yank could lose it. Log so users have a paper trail.
+      console.warn('[config] fsync failed (data still buffered, eject safely):', fsyncErr.code || fsyncErr.message);
+    }
   } finally {
     if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
   }
@@ -495,7 +521,14 @@ function atomicWriteJson(filePath, data) {
   try {
     fd = fs.openSync(tmp, 'w');
     fs.writeSync(fd, json);
-    try { fs.fsyncSync(fd); } catch (_) {}
+    try {
+      fs.fsyncSync(fd);
+    } catch (fsyncErr) {
+      // FAT32/exFAT may not support fsync — write is still committed
+      // to OS cache, so on a clean shutdown it persists. Hard USB yank
+      // can lose the latest save. Log for diagnostics.
+      console.warn('[atomicWriteJson] fsync failed for', path.basename(filePath), '-', fsyncErr.code || fsyncErr.message);
+    }
   } finally {
     if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
   }
