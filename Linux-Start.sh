@@ -32,6 +32,24 @@ NC='\033[0m'
 OPENCLAW_VER="unknown"
 [ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
 
+# ---- Tree-kill helper (used by stale-port cleanup AND on_exit_handler) ----
+#
+# Walks descendants depth-first BEFORE killing parent. Without this,
+# `kill $PID` would orphan grandchildren (gateway → polling worker
+# → child process). pgrep -P loses the parent → child reverse-lookup
+# once the parent is gone.
+kill_tree() {
+    local pid="$1"
+    [ -z "$pid" ] && return
+    [ "$pid" -le 1 ] 2>/dev/null && return
+    local children
+    children=$(pgrep -P "$pid" 2>/dev/null || true)
+    kill "$pid" 2>/dev/null || true
+    for child in $children; do
+        kill_tree "$child"
+    done
+}
+
 echo ""
 echo -e "${GOLD}  ██╗   ██╗██╗  ██╗   ██╗ ██████╗${NC}"
 echo -e "${GOLD}  ╚██╗ ██╔╝██║  ╚██╗ ██╔╝██╔════╝${NC}"
@@ -172,7 +190,7 @@ for stale_port in $(seq 18789 18799); do
             for pid in $stale_pid; do
                 if ps -p "$pid" -o args= 2>/dev/null | grep -qi "openclaw"; then
                     echo -e "  ${YELLOW}Killing stale OpenClaw on port $stale_port (PID $pid)...${NC}"
-                    kill "$pid" 2>/dev/null || true
+                    kill_tree "$pid"
                 fi
             done
             sleep 1
@@ -258,9 +276,10 @@ echo -e "  ${GREEN}════════════════════�
 echo ""
 
 # ---- Cleanup helper (called from on_exit_handler) ----
+# Uses kill_tree (defined near the top of this script).
 cleanup_children() {
-    [ -n "$GW_PID" ] && kill $GW_PID 2>/dev/null
-    [ -n "$CONFIG_PID" ] && kill $CONFIG_PID 2>/dev/null
+    [ -n "$GW_PID" ] && kill_tree "$GW_PID"
+    [ -n "$CONFIG_PID" ] && kill_tree "$CONFIG_PID"
     echo ""
     echo -e "  OpenClaw Portable stopped."
 }

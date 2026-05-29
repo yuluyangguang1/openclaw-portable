@@ -118,14 +118,21 @@ if [ "$ALL_PLATFORMS" = "true" ]; then
         mkdir -p "$TARGET"
         local URL="$NODE_MIRROR/$NODE_VERSION/node-$NODE_VERSION-$PLAT.zip"
         echo "    $URL"
-        local TMP_ZIP="/tmp/node-$PLAT-$$.zip"
+        # Use mktemp instead of $$ in /tmp so an attacker can't pre-create
+        # a symlink (e.g. /tmp/node-win-x64-12345.zip → /etc/passwd) and
+        # have curl -o follow it. mktemp creates the file with O_EXCL and
+        # mode 0600 atomically.
+        local TMP_ZIP TMP_EXTRACT
+        TMP_ZIP=$(mktemp -t "node-${PLAT}-XXXXXX.zip" 2>/dev/null) || TMP_ZIP="/tmp/node-${PLAT}-$$-$RANDOM.zip"
+        TMP_EXTRACT=$(mktemp -d -t "node-extract-${PLAT}-XXXXXX" 2>/dev/null) || TMP_EXTRACT="/tmp/node-extract-${PLAT}-$$-$RANDOM"
         curl -fSL "$URL" -o "$TMP_ZIP"
         if command -v unzip >/dev/null 2>&1; then
-            unzip -q "$TMP_ZIP" -d "/tmp/node-extract-$$"
-            cp -r "/tmp/node-extract-$$"/node-$NODE_VERSION-$PLAT/* "$TARGET/"
-            rm -rf "/tmp/node-extract-$$"
+            unzip -q "$TMP_ZIP" -d "$TMP_EXTRACT"
+            cp -r "$TMP_EXTRACT"/node-$NODE_VERSION-$PLAT/* "$TARGET/"
+            rm -rf "$TMP_EXTRACT"
         else
             echo -e "    ${RED}[x] unzip not found, skipping${NC}"
+            rm -rf "$TMP_EXTRACT"
         fi
         rm -f "$TMP_ZIP"
         if [ -f "$TARGET/node.exe" ]; then

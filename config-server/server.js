@@ -1795,12 +1795,28 @@ const server = http.createServer((req, res) => {
           headers: headers,
           timeout: 10000,
         }, (resp) => {
-          let data = '';
-          resp.on('data', c => { data += c; if (data.length > 50000) resp.destroy(); });
+          // Buffer accumulation: avoid string concat which breaks
+          // multi-byte UTF-8 chars at chunk boundaries and uses
+          // UTF-16 char count for the size limit (Chinese chars are
+          // 1 char but 3 bytes — would let 150KB through a 50K limit).
+          const chunks = [];
+          let total = 0;
+          resp.on('data', c => {
+            total += c.length;
+            if (total > 50000) {
+              resp.destroy();
+              return;
+            }
+            chunks.push(c);
+          });
           resp.on('end', () => {
+            const data = Buffer.concat(chunks).toString('utf8');
             if (resp.statusCode >= 200 && resp.statusCode < 300) {
               let modelCount = 0;
-              try { modelCount = JSON.parse(data).data ? JSON.parse(data).data.length : 0; } catch(e) {}
+              try {
+                const parsed = JSON.parse(data);
+                modelCount = parsed && parsed.data ? parsed.data.length : 0;
+              } catch (_) {}
               respond({ok: true, models: modelCount, status: resp.statusCode});
             } else if (resp.statusCode === 401 || resp.statusCode === 403) {
               respond({ok: false, error: 'Key 无效或已过期 (HTTP ' + resp.statusCode + ')'});
@@ -2048,12 +2064,38 @@ function listenWithFallback(port) {
     console.log(`   Config file: ${CONFIG_PATH}\n`);
     try {
       fs.mkdirSync(path.dirname(RUNTIME_PATH), { recursive: true });
-      const existing = fs.existsSync(RUNTIME_PATH) ? JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8')) : {};
+      // Read-modify-write requires care: gateway may also be writing
+      // its own keys (gatewayPort, gatewayToken). Use atomic write
+      // (.tmp + rename) so a crash mid-write doesn't corrupt the file.
+      // We accept the small race where two processes both read the
+      // same baseline and one's update gets lost — runtime.json is
+      // best-effort coordination, not a transactional store.
+      let existing = {};
+      try {
+        if (fs.existsSync(RUNTIME_PATH)) {
+          existing = JSON.parse(fs.readFileSync(RUNTIME_PATH, 'utf8'));
+          if (!existing || typeof existing !== 'object') existing = {};
+        }
+      } catch (parseErr) {
+        // Corrupt runtime.json — start fresh rather than crash startup
+        console.warn(`[config-server] runtime.json corrupt, recreating: ${parseErr.message}`);
+        existing = {};
+      }
       existing.configServerPort = port;
       existing.configServerToken = SERVER_TOKEN;
       existing.configServerUpdatedAt = new Date().toISOString();
-      fs.writeFileSync(RUNTIME_PATH, JSON.stringify(existing, null, 2), { mode: 0o600 });
-      // Ensure permissions even if file already existed with wider perms
+      // Atomic via .tmp + rename
+      const tmp = RUNTIME_PATH + '.tmp';
+      let fd = null;
+      try {
+        fd = fs.openSync(tmp, 'w', 0o600);
+        fs.writeSync(fd, JSON.stringify(existing, null, 2));
+        try { fs.fsyncSync(fd); } catch (_) {}
+      } finally {
+        if (fd !== null) try { fs.closeSync(fd); } catch (_) {}
+      }
+      fs.renameSync(tmp, RUNTIME_PATH);
+      // Ensure 0600 even if rename inherited wider perms
       try { fs.chmodSync(RUNTIME_PATH, 0o600); } catch (_) {}
     } catch (err) {
       console.warn(`   Warning: could not write ${RUNTIME_PATH}: ${err.message}`);
@@ -2083,10 +2125,20 @@ setImmediate(() => {
           !name.startsWith('openclaw-update-backup-')) continue;
       const p = path.join(tmpdir, name);
       try {
-        const st = fs.statSync(p);
+        // Use lstat (not stat) so we don't follow symlinks. If a malicious
+        // process planted a symlink with our prefix pointing at /home/user/Documents,
+        // stat() would report it as a directory and rmSync(recursive) would
+        // wipe the user's docs. lstat reports the symlink itself.
+        const st = fs.lstatSync(p);
         if (st.mtimeMs < cutoff) {
-          if (st.isDirectory()) fs.rmSync(p, { recursive: true, force: true });
-          else fs.rmSync(p, { force: true });
+          if (st.isSymbolicLink()) {
+            // Just unlink the symlink, never follow.
+            fs.unlinkSync(p);
+          } else if (st.isDirectory()) {
+            fs.rmSync(p, { recursive: true, force: true });
+          } else {
+            fs.rmSync(p, { force: true });
+          }
         }
       } catch (_) {}
     }

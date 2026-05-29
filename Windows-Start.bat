@@ -199,11 +199,26 @@ if exist "!WECHAT_PLUGIN_SRC!\openclaw.plugin.json" (
 REM Find available port (kill stale gateway processes first)
 REM If a previous session's gateway is still running (user closed the
 REM terminal without waiting), kill it so we reuse port 18789.
+REM
+REM Safety: only kill processes whose command line contains "openclaw"
+REM (matching the Linux/Mac launcher behavior). Without this check,
+REM any user process listening on 18789-18799 (IDE debugger, dev
+REM server, etc) would be force-killed by /F.
 for /l %%p in (18789,1,18799) do (
     for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":%%p " ^| findstr "LISTENING"') do (
         if not "%%a"=="0" (
-            echo   Killing stale process on port %%p (PID %%a^)...
-            taskkill /PID %%a /F >nul 2>&1
+            REM Verify the PID is actually an OpenClaw process before killing.
+            REM wmic returns CommandLine=... ; we grep for "openclaw" or "node"
+            REM pointing at openclaw.mjs. Quote ProcessId to avoid wmic parse
+            REM issues with PIDs that contain leading zeros.
+            for /f "usebackq tokens=*" %%c in (`wmic process where "ProcessId=%%a" get CommandLine /value 2^>nul ^| findstr "CommandLine"`) do (
+                echo %%c | findstr /i "openclaw" >nul 2>&1 && (
+                    echo   Killing stale OpenClaw on port %%p ^(PID %%a^)...
+                    REM /T = kill child processes too (taskkill's tree-kill).
+                    REM Without /T, gateway worker processes survive as orphans.
+                    taskkill /PID %%a /F /T >nul 2>&1
+                )
+            )
         )
     )
 )
@@ -376,7 +391,7 @@ REM our config-server before killing. Without this filter, any user
 REM process listening on 18750 would be force-killed.
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":!CONFIG_PORT! " ^| findstr "LISTENING"') do (
     for /f "usebackq tokens=*" %%c in (`wmic process where "ProcessId=%%a" get CommandLine /value 2^>nul ^| findstr "CommandLine"`) do (
-        echo %%c | findstr /i "config-server\\server.js" >nul 2>&1 && taskkill /PID %%a /F >nul 2>&1
+        echo %%c | findstr /i "config-server\\server.js" >nul 2>&1 && taskkill /PID %%a /F /T >nul 2>&1
     )
 )
 echo   OpenClaw stopped.
