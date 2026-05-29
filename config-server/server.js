@@ -368,9 +368,21 @@ function encodePngRgba(buffer, width, height) {
 }
 
 function renderQrPngDataUrl(input) {
+  // Bounded input size: legitimate iLinkAI QR strings are <500 chars.
+  // Reject longer inputs to prevent attacker-controlled QR generation
+  // from exploding the pixel buffer (modules count grows non-linearly
+  // with content length).
+  if (typeof input !== 'string' || input.length === 0 || input.length > 4096) {
+    throw new Error('Invalid QR input: must be non-empty string under 4096 chars');
+  }
   const scale = 6, margin = 4;
   const qr = createQrMatrix(input);
   const modules = qr.getModuleCount();
+  // Defensive cap: a Version 40 QR has 177 modules. Anything larger
+  // means the library miscounted or the input was malformed.
+  if (modules > 200) {
+    throw new Error('QR module count out of bounds: ' + modules);
+  }
   const size = (modules + margin * 2) * scale;
   const buf = Buffer.alloc(size * size * 4, 255);
   for (let row = 0; row < modules; row++) {
@@ -393,10 +405,26 @@ async function fetchWeChatQrCode(apiBaseUrl) {
   // ilinkai.weixin.qq.com is unreachable (firewall, DNS, captive portal).
   const response = await fetchWithTimeout(url, { timeout: 15000 });
   if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error('Failed to fetch QR: ' + response.status + ' ' + body);
+    // Bounded error text read (avoid buffering attacker-controlled MBs).
+    let errBody = '';
+    try {
+      const reader = response.body.getReader();
+      const buf = [];
+      let total = 0;
+      while (total < 4096) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf.push(value);
+        total += value.length;
+      }
+      try { reader.cancel(); } catch (_) {}
+      errBody = Buffer.concat(buf.map(c => Buffer.from(c))).toString('utf8').slice(0, 4096);
+    } catch (_) {}
+    throw new Error('Failed to fetch QR: ' + response.status + ' ' + errBody);
   }
-  return await readJsonBounded(response);
+  // QR response is a small JSON with a base64 image — cap at 1MB
+  // (typical real responses are <30KB).
+  return await readJsonBounded(response, 1 * 1024 * 1024);
 }
 
 async function pollWeChatQrStatus(apiBaseUrl, qrcode) {
@@ -413,9 +441,28 @@ async function pollWeChatQrStatus(apiBaseUrl, qrcode) {
     // Clearing right after fetch() returns leaves response.text()
     // (the body stream) unprotected — if the upstream stalls mid-body
     // we'd hang forever.
-    const text = await response.text();
-    if (!response.ok) throw new Error('Poll failed: ' + response.status + ' ' + text);
-    return JSON.parse(text);
+    if (!response.ok) {
+      // Read up to 4KB of error text for the message; bounded to avoid
+      // buffering attacker-controlled MB-sized error pages.
+      let errText = '';
+      try {
+        const reader = response.body.getReader();
+        const buf = [];
+        let total = 0;
+        while (total < 4096) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buf.push(value);
+          total += value.length;
+        }
+        try { reader.cancel(); } catch (_) {}
+        errText = Buffer.concat(buf.map(c => Buffer.from(c))).toString('utf8').slice(0, 4096);
+      } catch (_) {}
+      throw new Error('Poll failed: ' + response.status + ' ' + errText);
+    }
+    // Bounded JSON read prevents memory exhaustion if upstream returns
+    // a malicious/corrupt response with gigabytes of body.
+    return await readJsonBounded(response, 256 * 1024); // 256KB cap; status responses are <1KB
   } catch (err) {
     if (err.name === 'AbortError') return { status: 'wait' };
     throw err;
@@ -609,9 +656,31 @@ function copyDirSync(src, dest) {
 // ── WeChat login session management ─────────────────────────────────────────
 
 async function handleWeChatStart() {
+  // Defensive cap: prevent unbounded memory growth if someone (or a
+  // buggy frontend) starts dozens of login sessions without finishing.
+  // Real flow only ever needs 1 active session; 32 leaves headroom.
+  if (activeLogins.size >= 32) {
+    // Drop the oldest expired one if any; if all still fresh, refuse.
+    const now = Date.now();
+    for (const [k, v] of activeLogins) {
+      if (now - v.startedAt > ACTIVE_LOGIN_TTL_MS) {
+        activeLogins.delete(k);
+        break;
+      }
+    }
+    if (activeLogins.size >= 32) {
+      throw new Error('Too many active login sessions; please retry shortly');
+    }
+  }
+
   const sessionKey = crypto.randomUUID();
   const apiBaseUrl = DEFAULT_WECHAT_BASE_URL;
   const qrResponse = await fetchWeChatQrCode(apiBaseUrl);
+  // Validate upstream response shape before passing to QR renderer.
+  if (!qrResponse || typeof qrResponse.qrcode_img_content !== 'string' ||
+      typeof qrResponse.qrcode !== 'string') {
+    throw new Error('Upstream WeChat API returned malformed QR response');
+  }
   const qrDataUrl = renderQrPngDataUrl(qrResponse.qrcode_img_content);
 
   activeLogins.set(sessionKey, {
@@ -635,6 +704,12 @@ async function handleWeChatStatus(sessionKey) {
 
   const result = await pollWeChatQrStatus(login.apiBaseUrl, login.qrcode);
 
+  // Defensive: result might be null/undefined or non-object if upstream
+  // misbehaves. Treat anything malformed as a transient wait.
+  if (!result || typeof result !== 'object') {
+    return { status: 'wait' };
+  }
+
   if (result.status === 'expired') {
     // Try to refresh QR code
   login.refreshCount = (login.refreshCount || 0) + 1;
@@ -643,6 +718,11 @@ async function handleWeChatStatus(sessionKey) {
       return { status: 'expired', message: 'QR expired too many times' };
     }
     const refreshed = await fetchWeChatQrCode(login.apiBaseUrl);
+    if (!refreshed || typeof refreshed.qrcode_img_content !== 'string' ||
+        typeof refreshed.qrcode !== 'string') {
+      activeLogins.delete(sessionKey);
+      return { status: 'expired', message: 'QR refresh upstream malformed' };
+    }
     const newQr = renderQrPngDataUrl(refreshed.qrcode_img_content);
     login.qrcode = refreshed.qrcode;
     login.qrcodeUrl = newQr;
@@ -652,8 +732,12 @@ async function handleWeChatStatus(sessionKey) {
 
   if (result.status === 'confirmed') {
     activeLogins.delete(sessionKey);
-    if (!result.ilink_bot_id || !result.bot_token) {
-      return { status: 'error', message: 'Server did not return credentials' };
+    // Validate credential types — defends against upstream returning
+    // numbers, objects, or arrays for what should be strings.
+    if (!result.ilink_bot_id || !result.bot_token ||
+        typeof result.ilink_bot_id !== 'string' ||
+        typeof result.bot_token !== 'string') {
+      return { status: 'error', message: 'Server did not return valid credentials' };
     }
 
     // 1. Install plugin
@@ -839,11 +923,24 @@ const server = http.createServer((req, res) => {
 
   // API: WeChat poll status
   if (req.url && req.url.startsWith('/api/wechat/status') && req.method === 'GET') {
-    const urlObj = new URL(req.url, 'http://localhost');
-    const session = urlObj.searchParams.get('session');
+    let session;
+    try {
+      const urlObj = new URL(req.url, 'http://localhost');
+      session = urlObj.searchParams.get('session');
+    } catch (urlErr) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Malformed URL' }));
+      return;
+    }
     if (!session) {
       res.writeHead(400, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Missing session parameter' }));
+      return;
+    }
+    // Validate format: UUID v4 hex with dashes, max 64 chars defensively.
+    if (typeof session !== 'string' || session.length > 64 || !/^[a-zA-Z0-9-]+$/.test(session)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid session format' }));
       return;
     }
     handleWeChatStatus(session)
