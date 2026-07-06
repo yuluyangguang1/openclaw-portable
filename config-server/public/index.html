@@ -191,32 +191,15 @@
  cursor: pointer;
  font-family: var(--font-mono);
  }
- .step-ind.active {
- color: var(--emerald);
- background: var(--secondary);
- border-color: var(--emerald-dim);
- }
+ .step-ind
  .step-ind.done { color: var(--fg); border-color: var(--border); }
- .step-ind .num {
- display: inline-flex; align-items: center; justify-content: center;
- width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
- background: var(--muted);
- border: 1px solid var(--border);
- color: var(--fg-muted);
- font-size: 0.85em;
- }
- .step-ind.active .num { background: var(--emerald); color: var(--bg); border-color: var(--emerald); }
- .step-ind.done .num { background: var(--secondary); color: var(--fg); border-color: var(--border); }
+ .step-ind 
+ .step-ind.active 
+ .step-ind.done 
 
  /* Sections */
- .step-section {
- background: var(--card);
- border: 1px solid var(--border);
- border-radius: 12px;
- overflow: hidden;
- transition: max-height 0.4s ease, opacity 0.3s ease, margin 0.3s ease;
- }
- .step-section.active { max-height: 12000px; opacity: 1; margin-bottom: 16px; }
+ 
+ .step-section
  .step-section.collapsed { max-height: 0; opacity: 0; margin-bottom: 0; border-color: transparent; }
  .step-section h2 {
  color: var(--fg); font-size: 1.05em; font-weight: 600;
@@ -264,12 +247,7 @@
  letter-spacing: 0.04em;
  }
  .filter-chip:hover { color: var(--fg); border-color: var(--fg-muted); }
- .filter-chip.active {
- background: var(--emerald);
- border-color: var(--emerald);
- color: var(--bg);
- font-weight: 600;
- }
+ .filter-chip
 
  /* Provider expand */
  .provider-expand {
@@ -285,20 +263,9 @@
  margin-top: 12px;
  }
  .provider-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
- .provider-card .input {
- display: block; width: 100%; min-height: 40px; padding: 9px 12px;
- background: var(--bg);
- border: 1px solid var(--border);
- border-radius: 8px;
- color: var(--fg);
- font-size: 0.88em;
- font-family: var(--font-mono);
- outline: none;
- transition: border-color 0.2s;
- margin-bottom: 10px;
- }
+ .provider-card 
  .provider-card .input:focus { border-color: var(--fg); }
- .provider-card select.input { appearance: none; -webkit-appearance: none; cursor: pointer; }
+ .provider-card select
  .provider-card select.input option { background: var(--bg); color: var(--fg); }
  .provider-card .input-group input { flex: 1; padding-right: 44px; margin-bottom: 0; }
  .provider-card .btn-icon {
@@ -368,17 +335,10 @@
  }
 
  /* Command grid */
- .cmd-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 20px; }
- .cmd-card {
- background: var(--secondary);
- border: 1px solid var(--border);
- border-radius: 10px;
- padding: 16px;
- cursor: pointer;
- transition: all 0.15s;
- text-align: center;
- }
- .cmd-card:hover { border-color: var(--fg); transform: translateY(-1px); }
+ 
+ 
+ .cmd-card { will-change: transform; }
+  .cmd-card:hover { border-color: var(--fg); transform: translateY(-1px); }
  .cmd-card .cmd-icon { font-size: 1.3em; margin-bottom: 6px; color: var(--emerald); font-family: var(--font-mono); }
  .cmd-card .cmd-name { color: var(--fg); font-size: 0.85em; font-weight: 500; letter-spacing: 1px; }
  .cmd-card .cmd-desc { color: var(--fg-muted); font-size: 0.72em; margin-top: 4px; font-family: var(--font-mono); }
@@ -396,12 +356,7 @@
  .channel-card.selected { border-color: var(--emerald-dim); background: oklch(0.18 0.02 170); }
  .channel-card .channel-name { color: var(--fg); font-size: 0.9em; font-weight: 500; }
  .channel-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
- .channel-card .input {
- display: block; width: 100%; min-height: 38px; padding: 8px 12px;
- background: var(--bg); border: 1px solid var(--border);
- border-radius: 8px; color: var(--fg); font-size: 0.85em;
- outline: none; margin-bottom: 8px; font-family: var(--font-mono);
- }
+ .channel-card 
  .channel-card .input:focus { border-color: var(--fg); }
  .channel-card .input-group input { flex: 1; padding-right: 44px; margin-bottom: 0; }
  .channel-card .btn-icon {
@@ -530,9 +485,9 @@
  .container { padding: 0 16px 40px; }
  .hero h1 { font-size: 24px; }
  .steps { flex-direction: column; }
- .cmd-grid { grid-template-columns: 1fr 1fr; }
+ 
  }
- @media (max-width: 400px) { .cmd-grid { grid-template-columns: 1fr; } }
+ @media (max-width: 400px) {  }
 
 
  /* ─────── yu.ai aligned shell ─────── */
@@ -631,32 +586,15 @@
  transition: color 0.2s;
  }
  .steps > .step-ind:last-child { border-right: none; }
- .step-ind .num {
- background: transparent;
- border: 1px solid var(--border);
- color: var(--fg-muted);
- border-radius: 50%;
- font-family: var(--font-mono);
- width: 22px; height: 22px;
- font-size: 0.7rem;
- margin-right: 10px;
- }
+ .step-ind 
  .step-ind:hover { color: var(--fg); }
- .step-ind.active {
- background: rgba(255,230,203,0.04);
- color: var(--fg);
- border-color: transparent;
- }
- .step-ind.active .num {
- background: var(--accent);
- color: var(--bg);
- border-color: var(--accent);
- }
+ .step-ind
+ .step-ind.active 
  .step-ind.done { color: var(--fg-muted); }
  .step-ind.done .num { background: transparent; border-color: var(--accent); color: var(--accent); }
 
  /* Step section frame — borderless, content area */
- .step-section { border: none; }
+ 
  .step-section > div[style*="padding"] { padding: 24px 0 !important; }
  .step-section h2 {
  font-family: var(--font-serif);
@@ -683,7 +621,7 @@
  }
 
  /* Provider / channel cards — flatter, hover gets accent border */
- .provider-card, .channel-card {
+ .provider-card, .channel-card { contain: layout;
  background: transparent;
  border: 1px solid var(--border);
  border-radius: 0;
@@ -720,11 +658,7 @@
  letter-spacing: 0.12em;
  text-transform: uppercase;
  }
- .filter-chip.active {
- background: var(--accent);
- color: var(--bg);
- border-color: var(--accent);
- }
+ .filter-chip
 
  /* Tag chips inside cards */
  .tag {
@@ -797,7 +731,8 @@
  padding: 18px 14px;
  }
  .cmd-grid > .cmd-card:last-child { border-right: none !important; }
- .cmd-card:hover { background: rgba(255,230,203,0.04) !important; }
+ .cmd-card { will-change: transform; }
+  .cmd-card:hover { background: rgba(255,230,203,0.04) !important; }
  .cmd-card .cmd-icon {
  font-family: var(--font-mono);
  color: var(--accent);
@@ -830,10 +765,7 @@
  letter-spacing: 0.12em;
  text-transform: uppercase;
  }
- .tab.active {
- color: var(--accent);
- border-bottom-color: var(--accent);
- }
+ .tab
 
  /* Toast container fits below nav */
  .toast-container { z-index: 1000; }
@@ -898,11 +830,7 @@
 
 
  /* Step section panel — was a filled card; flatten to match yu.ai */
- .step-section {
- background: transparent !important;
- border: none !important;
- border-radius: 0 !important;
- }
+ 
  /* Both step1 and step2 also have inline `padding:24px / 28px 24px`
  on their inner wrapper div — keep the padding but make sure no
  residual fills come from the inner wrapper either. */
@@ -922,7 +850,7 @@
 }
 
 /* Card hover effects */
-.provider-card, .channel-card {
+.provider-card, .channel-card { contain: layout;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s;
   cursor: pointer;
 }
@@ -978,10 +906,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .filter-chip:active {
   transform: translateY(0);
 }
-.filter-chip.active {
-  background: var(--emerald);
-  color: var(--bg);
-}
+.filter-chip
 
 /* Toast animations */
 .toast-item {
