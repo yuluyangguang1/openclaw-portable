@@ -915,6 +915,137 @@
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
+
+/* Card hover effects */
+.provider-card, .channel-card {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s;
+  cursor: pointer;
+}
+.provider-card:hover, .channel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  border-color: var(--emerald-dim);
+}
+.provider-card:active, .channel-card:active {
+  transform: translateY(0);
+}
+
+/* Focus styles */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.filter-chip:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+}
+
+/* Button hover effects */
+.btn, .btn-primary, .btn-launch, .io-btn {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s;
+}
+.btn:hover, .btn-primary:hover, .btn-launch:hover, .io-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.btn:active, .btn-primary:active, .btn-launch:active, .io-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Input focus effects */
+.input, input[type="text"], input[type="password"], input[type="url"], select {
+  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+}
+.input:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="url"]:focus, select:focus {
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(0,255,200,0.1);
+}
+
+/* Filter chip animations */
+.filter-chip {
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s, transform 0.2s;
+}
+.filter-chip:hover {
+  transform: translateY(-1px);
+}
+.filter-chip:active {
+  transform: translateY(0);
+}
+.filter-chip.active {
+  background: var(--emerald);
+  color: var(--bg);
+}
+
+/* Toast animations */
+.toast-item {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.toast-item.show {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modal animations */
+.modal-overlay {
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-overlay.show {
+  animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-box {
+  animation: scaleIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Step transitions */
+.step-section {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s;
+}
+.step-section.collapsed {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+.step-section.active {
+  opacity: 1;
+  max-height: 2000px;
+}
+
+/* Provider card expand animation */
+.provider-expand, .channel-form {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s;
+  padding: 0 16px;
+}
+.provider-expand.open, .channel-form.open {
+  max-height: 500px;
+  padding: 16px;
+}
+
+/* Status dot animation */
+.dot {
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.dot.on {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,200,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0,255,200,0); }
+}
 </style>
 </head>
 <body>
@@ -936,10 +1067,7 @@
  <div class="y-cell s1" style="padding:0">
  <a class="y-nav-link" href="https://yuai-r.cn/#products"><span class="y-label">products <span class="y-blink"></span></span></a>
  </div>
- <div class="y-cell" style="justify-content:space-between">
- <span class="y-label y-op-5">github</span>
- <a href="https://github.com/yuluyangguang1/openclaw-portable" target="_blank" rel="noopener" aria-label="GitHub" style="opacity:.5;line-height:0;transition:opacity .2s;color:inherit" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 2C6.477 2 2 6.477 2 12a10 10 0 0 0 6.839 9.49c.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.934.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.48A10 10 0 0 0 22 12c0-5.523-4.477-10-10-10z"/></svg></a>
- </div>
+ 
  <div class="y-cell" style="justify-content:space-between">
  <span class="y-label y-op-5">theme</span>
  <button id="y-theme-btn" aria-label="切换主题" class="y-theme-toggle" type="button"><svg class="y-theme-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="y-theme-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
@@ -1142,7 +1270,7 @@
 <footer class="y-footer">
  <div class="c"><span class="y-label y-op-7">yu.ai</span></div>
  <div class="c"><a class="y-label" href="https://yuai-r.cn/" style="opacity:.7;color:inherit;text-decoration:none">home ↗</a></div>
- <div class="c"><a class="y-label" href="https://github.com/yuluyangguang1/openclaw-portable" target="_blank" rel="noopener" style="opacity:.7;color:inherit;text-decoration:none">github ↗</a></div>
+ 
  <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v1.0.0</span></div>
  <div class="c"><span class="y-label y-op-5" style="color:var(--accent)">openclaw config</span></div>
 </footer>
