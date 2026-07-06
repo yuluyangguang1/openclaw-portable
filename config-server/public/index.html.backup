@@ -4,58 +4,60 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenClaw Portable — 配置中心</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23170d02'/%3E%3Cg fill='none' stroke='%23f5f0e8' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
-<meta name="theme-color" content="#170d02" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23041c1c'/%3E%3Cg fill='none' stroke='%23ffe6cb' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#041c1c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f0e8" media="(prefers-color-scheme: light)">
 <style>
  :root {
  /* Existing OpenClaw variables (preserved for class compatibility) */
- --bg: #170d02;
- --card: rgba(23,13,2,0.6);
- --secondary: rgba(23,13,2,0.8);
- --muted: rgba(23,13,2,0.4);
- --fg: #f5f0e8;
- --fg-muted: #9a968e;
- --border: rgba(245,240,232,0.12);
- --accent: #edff45;
- --emerald: #edff45;
- --emerald-dim: rgba(237,255,69,0.8);
+ --bg: #041c1c;
+ --card: #062424;
+ --secondary: #0a2e2e;
+ --muted: #083030;
+ --fg: #ffe6cb;
+ --fg-muted: var(--fg-muted);
+ --border: #ffe6cb26;
+ --accent: #ffe6cb;
+ --emerald: oklch(0.765 0.177 163.223);
+ --emerald-dim: oklch(0.696 0.17 162.48);
+ --blue: oklch(0.707 0.165 254.624);
+ --purple: oklch(0.714 0.203 305.504);
  --warning: #ffbd38;
  --success: #4ade80;
- --destructive: #ff8a6b;
+ --destructive: #fb2c36;
  /* yu.ai-aligned aliases */
  --mid: var(--fg);
  --dim: var(--fg-muted);
  /* Font stack matched to yu.ai (system fallbacks for cross-platform) */
  --font-sans: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
- --font-serif: 'LXGW WenKai', Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif;
+ --font-serif: Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif;
  --font-mono: 'Courier New', 'Menlo', monospace;
  }
  /* Light theme — invert dark colors, keep accent recognizable */
  [data-theme="light"] {
- --bg: #f5f5f5;
- --card: rgba(245,245,245,0.8);
- --secondary: rgba(245,245,245,0.6);
- --muted: rgba(245,245,245,0.4);
- --fg: #170d02;
- --fg-muted: #8a7e6a;
- --border: rgba(23,13,2,0.14);
- --accent: #0000c8;
- --emerald: #0000c8;
- --emerald-dim: rgba(0,0,200,0.8);
+ --bg: #f5f0e8;
+ --card: #ebe5db;
+ --secondary: #ebe5db;
+ --muted: #d8d2c6;
+ --fg: #3d3a35;
+ --fg-muted: #736e63;
+ --border: rgba(61,58,53,0.14);
+ --accent: #02966a;
+ --emerald: #02966a;
+ --emerald-dim: #028a60;
  }
  @media (prefers-color-scheme: light) {
  :root:not([data-theme="dark"]) {
- --bg: #f5f5f5;
- --card: rgba(245,245,245,0.8);
- --secondary: rgba(245,245,245,0.6);
- --muted: rgba(245,245,245,0.4);
- --fg: #170d02;
- --fg-muted: #8a7e6a;
- --border: rgba(23,13,2,0.14);
- --accent: #0000c8;
- --emerald: #0000c8;
- --emerald-dim: rgba(0,0,200,0.8);
+ --bg: #f5f0e8;
+ --card: #ebe5db;
+ --secondary: #ebe5db;
+ --muted: #d8d2c6;
+ --fg: #3d3a35;
+ --fg-muted: #736e63;
+ --border: rgba(61,58,53,0.14);
+ --accent: #02966a;
+ --emerald: #02966a;
+ --emerald-dim: #028a60;
  }
  }
 
@@ -1045,7 +1047,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   50% { box-shadow: 0 0 0 8px rgba(0,255,200,0); }
 }
 </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
 </head>
 <body>
 
