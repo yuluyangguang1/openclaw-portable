@@ -906,11 +906,15 @@
  /* Mobile connect toggle switch */
  .mobile-switch { position:relative; display:inline-block; width:44px; height:24px; }
  .mobile-switch input { opacity:0; width:0; height:0; }
- .mobile-slider { position:absolute; cursor:pointer; inset:0; background:var(--muted); border:1px solid var(--border); border-radius:24px; transition:.3s; }
- .mobile-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--fg-muted); border-radius:50%; transition:.3s; }
+ .mobile-slider { position:absolute; cursor:pointer; inset:0; background:var(--muted); border:1px solid var(--border); border-radius:24px; transition:.3s cubic-bezier(0.4, 0, 0.2, 1); }
+ .mobile-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--fg-muted); border-radius:50%; transition:.3s cubic-bezier(0.4, 0, 0.2, 1); }
  .mobile-switch input:checked + .mobile-slider { background:var(--emerald-dim); border-color:var(--emerald); }
  .mobile-switch input:checked + .mobile-slider::before { transform:translateX(20px); background:var(--fg); }
 
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
 </style>
 </head>
 <body>
@@ -919,8 +923,11 @@
 <div class="bg-n" aria-hidden="true"></div>
 <div class="bg-g" aria-hidden="true"></div>
 
+<a href="#step1" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent);color:var(--bg);padding:8px 16px;z-index:1000;transition:top 0.2s;">跳到主要内容</a>
 <div class="y-page">
+<main role="main">
 
+<header>
 <nav class="y-row nav-row" aria-label="Primary">
  <div class="y-cell s1"><a href="https://yuai-r.cn/" class="y-title" style="text-decoration:none;color:inherit">yu.ai</a></div>
  <div class="y-cell s2" style="padding:0">
@@ -938,6 +945,7 @@
  <button id="y-theme-btn" aria-label="切换主题" class="y-theme-toggle" type="button"><svg class="y-theme-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="y-theme-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
  </div>
 </nav>
+</header>
 
 <div class="y-row">
  <div class="y-cell s6" style="border-right:none;padding:0">
@@ -960,7 +968,7 @@
 
 <div class="container">
 
-<div class="status-bar" style="display:none">
+<div class="status-bar" style="display:none" role="status" aria-live="polite">
  <div class="dot" id="statusDot"></div>
  <div class="status-text" id="statusText">检测中...</div>
 </div>
@@ -971,32 +979,32 @@
 </div>
 
 <!-- Step 1 -->
-<div class="step-section active" id="step1"><div style="padding:24px;">
+<section class="step-section active" id="step1" aria-label="配置模型"><div style="padding:24px;">
  <h2>选择模型平台</h2>
  <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">32</span> 个平台。</p>
 
  <!-- 搜索 + 标签筛选 -->
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
- <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费"
+ <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
  oninput="searchProviders(this.value)"
  style="flex:1;min-width:200px;padding:8px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;">
  <span id="providerCount" style="color:var(--fg-muted);font-size:0.78em;font-family:var(--font-mono);"></span>
  </div>
  <div id="providerFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
- <button class="filter-chip active" data-filter="hot" onclick="applyProviderFilter('hot')">推荐</button>
- <button class="filter-chip" data-filter="all" onclick="applyProviderFilter('all')">全部</button>
- <button class="filter-chip" data-filter="cn" onclick="applyProviderFilter('cn')">国产</button>
- <button class="filter-chip" data-filter="free" onclick="applyProviderFilter('free')">免费</button>
- <button class="filter-chip" data-filter="fast" onclick="applyProviderFilter('fast')">快</button>
- <button class="filter-chip" data-filter="cheap" onclick="applyProviderFilter('cheap')">便宜</button>
- <button class="filter-chip" data-filter="local" onclick="applyProviderFilter('local')">本地</button>
+ <button class="filter-chip active" data-filter="hot" onclick="applyProviderFilter('hot')" tabindex="0">推荐</button>
+ <button class="filter-chip" data-filter="all" onclick="applyProviderFilter('all')" tabindex="0">全部</button>
+ <button class="filter-chip" data-filter="cn" onclick="applyProviderFilter('cn')" tabindex="0">国产</button>
+ <button class="filter-chip" data-filter="free" onclick="applyProviderFilter('free')" tabindex="0">免费</button>
+ <button class="filter-chip" data-filter="fast" onclick="applyProviderFilter('fast')" tabindex="0">快</button>
+ <button class="filter-chip" data-filter="cheap" onclick="applyProviderFilter('cheap')" tabindex="0">便宜</button>
+ <button class="filter-chip" data-filter="local" onclick="applyProviderFilter('local')" tabindex="0">本地</button>
  </div>
 
  <!-- 一键预设 (推荐配置快速入口) -->
  <div id="presetArea" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
- <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.78em;">一键 DeepSeek</button>
- <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" style="font-size:0.78em;">一键 OpenRouter</button>
- <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" style="font-size:0.78em;">一键 Gemini (免费)</button>
+ <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.78em;" tabindex="0">一键 DeepSeek</button>
+ <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" style="font-size:0.78em;" tabindex="0">一键 OpenRouter</button>
+ <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" style="font-size:0.78em;" tabindex="0">一键 Gemini (免费)</button>
  </div>
 
  <!-- 本地模型自动检测 (auto-discovery) -->
@@ -1008,17 +1016,17 @@
  <div id="localRuntimes"></div>
  </div>
 
- <div class="model-grid" id="providerGrid"></div>
+ <div class="model-grid" id="providerGrid" role="listbox" aria-label="模型平台列表"></div>
  <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
  没有匹配的平台。<a href="#" onclick="event.preventDefault();applyProviderFilter('all');" style="color:var(--emerald);">点此显示全部</a>
  </div>
  <div class="btn-row">
- <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled>保存并继续 →</button>
+ <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled tabindex="0">保存并继续 →</button>
  </div>
-</div></div>
+</section>
 
 <!-- Step 2 -->
-<div class="step-section collapsed" id="step2"><div style="padding:28px 24px;">
+<section class="step-section collapsed" id="step2" aria-label="启动"><div style="padding:24px;">
  <div style="text-align:center;margin-bottom:28px;">
  <h2 style="font-size:1.2em;margin-bottom:6px;">配置完成</h2>
  <p class="desc" style="margin-bottom:0;">密钥仅保存在本地，不会上传到任何服务器</p>
@@ -1033,7 +1041,7 @@
  </div>
  </div>
 
- <button class="btn-launch" onclick="saveChannelsAndOpen()">打开聊天界面 →</button>
+ <button class="btn-launch" onclick="saveChannelsAndOpen()" tabindex="0">打开聊天界面 →</button>
 
  <div class="cmd-grid">
  <div class="cmd-card" onclick="runCmd('update')"><div class="cmd-icon">↑</div><div class="cmd-name">更新</div><div class="cmd-desc">升级到最新版</div></div>
@@ -1060,7 +1068,7 @@
  </button>
  <div id="channelPanel" style="display:none;margin-top:12px;">
  <p style="color:#8aaa9a;font-size:0.8em;margin-bottom:12px;">点击卡片展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
- <div class="model-grid" id="channelGrid"></div>
+ <div class="model-grid" id="channelGrid" role="listbox" aria-label="渠道列表"></div>
  </div>
  </div>
 
@@ -1128,6 +1136,7 @@
  </div>
 </div></div>
 
+</main>
 </div>
 
 <footer class="y-footer">
@@ -1140,15 +1149,15 @@
 
 </div>
 
-<div class="toast-container" id="toastContainer"></div>
-<div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
  <div class="modal-box" onclick="event.stopPropagation();"><h3 id="modalTitle"></h3><p id="modalBody"></p><div class="modal-btns" id="modalBtns"></div></div>
 </div>
 <div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#062424;border-top:1px solid rgba(0,255,200,0.15);padding:12px 24px;z-index:500;text-align:center;">
  <span style="color:#8aaa9a;font-size:0.85em;">配置已保存，重启后生效</span>
- <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#00ffc8;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">重启 Gateway</button>
+ <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">重启 Gateway</button>
 </div>
-<div id="disconnectOverlay" style="display:none;position:fixed;inset:0;background:rgba(4,28,28,0.9);z-index:600;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+<div id="disconnectOverlay" style="display:none;position:fixed;inset:0;background:rgba(4,28,28,0.9);z-index:600;align-items:center;justify-content:center;background:rgba(4,28,28,0.95);">
  <div style="background:#062424;padding:32px 40px;border-radius:14px;text-align:center;border:1px solid rgba(0,255,200,0.12);">
  <h3 style="color:#ffe6cb;margin-bottom:8px;font-size:1em;">连接已断开</h3>
  <p style="color:#8aaa9a;font-size:0.85em;">后端进程已停止，请重新启动。</p>
@@ -2196,7 +2205,7 @@ function runCmd(cmd) {
  setTimeout(checkGateway, 4000);
  }).catch(function(e){ showToast('\u5931\u8d25: '+e.message, 'error'); });
  } else {
- showModal('openclaw ' + cmd, '<p>\u8bf7\u5728\u7ec8\u7aef\u4e2d\u8fd0\u884c\uff1a</p><code style="display:block;margin-top:8px;padding:10px 14px;background:#041c1c;border:1px solid rgba(0,255,200,0.1);border-radius:8px;font-size:0.88em;color:#00ffc8;">openclaw ' + cmd + '</code>', [
+ showModal('openclaw ' + cmd, '<p>\u8bf7\u5728\u7ec8\u7aef\u4e2d\u8fd0\u884c\uff1a</p><code style="display:block;margin-top:8px;padding:10px 14px;background:#041c1c;border:1px solid rgba(0,255,200,0.1);border-radius:8px;font-size:0.88em;color:#ffe6cb;">openclaw ' + cmd + '</code>', [
  {text:'\u597d', cls:'btn btn-primary', action:'closeModal()'}
  ]);
  }
