@@ -2,7 +2,14 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta property="og:type" content="website">
+  <meta property="og:title" content="OpenClaw Portable — 配置中心">
+  <meta property="og:description" content="选择模型、配置 API Key、管理渠道、查看状态">
+  <meta property="og:url" content="https://yuai-r.cn/openclaw/">
+  <meta property="og:image" content="https://yuai-r.cn/egret-ink.jpg">
+  <meta property="og:locale" content="zh_CN">
+    <meta name="description" content="OpenClaw Portable 配置中心 — 选择模型、配置 API Key、管理渠道、查看状态">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenClaw Portable — 配置中心</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23170d02'/%3E%3Cg fill='none' stroke='%23f5f0e8' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="theme-color" content="#170d02" media="(prefers-color-scheme: dark)">
@@ -1096,6 +1103,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 </head>
 <body>
 
@@ -1186,7 +1195,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <div id="panel-usage" style="display:none;margin-bottom:20px;">
     <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">成本追踪</h3>
     <div id="usage-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
     </div>
   </div>
 
@@ -1194,7 +1203,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <div id="panel-monitor" style="display:none;margin-bottom:20px;">
     <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">实时监控</h3>
     <div id="monitor-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
     </div>
   </div>
 
@@ -1202,7 +1211,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <div id="panel-memory" style="display:none;margin-bottom:20px;">
     <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">内存浏览器</h3>
     <div id="memory-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
     </div>
   </div>
 
@@ -1210,7 +1219,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <div id="panel-sessions" style="display:none;margin-bottom:20px;">
     <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">会话管理</h3>
     <div id="sessions-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
     </div>
   </div>
 
@@ -1218,7 +1227,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   <div id="panel-skills" style="display:none;margin-bottom:20px;">
     <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">技能管理</h3>
     <div id="skills-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
     </div>
   </div>
 </div>
@@ -2928,7 +2937,7 @@ function loadUsage() {
   const el = document.getElementById('usage-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/usage').then(r => r.json()).then(data => {
     if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
@@ -2962,7 +2971,7 @@ function loadMonitor() {
   const el = document.getElementById('monitor-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/status').then(r => r.json()).then(data => {
     let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
@@ -2998,7 +3007,7 @@ function loadMemory() {
   const el = document.getElementById('memory-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/memory').then(r => r.json()).then(data => {
     if (!data.ok || !data.memories || data.memories.length === 0) {
@@ -3041,7 +3050,7 @@ function loadSessions() {
   const el = document.getElementById('sessions-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/sessions').then(r => r.json()).then(data => {
     if (!data.ok || !data.sessions || data.sessions.length === 0) {
@@ -3076,7 +3085,7 @@ function loadSkills() {
   const el = document.getElementById('skills-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/skills').then(r => r.json()).then(data => {
     if (!data.ok || !data.skills || data.skills.length === 0) {
@@ -3101,6 +3110,15 @@ function loadSkills() {
   } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
 }
 
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+    // Hide all feature panels
+    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  }
+});
 </script>
 
 <script>
@@ -3231,7 +3249,7 @@ function loadUsage() {
   const el = document.getElementById('usage-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/usage').then(r => r.json()).then(data => {
     if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
@@ -3265,7 +3283,7 @@ function loadMonitor() {
   const el = document.getElementById('monitor-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/status').then(r => r.json()).then(data => {
     let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
@@ -3301,7 +3319,7 @@ function loadMemory() {
   const el = document.getElementById('memory-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/memory').then(r => r.json()).then(data => {
     if (!data.ok || !data.memories || data.memories.length === 0) {
@@ -3344,7 +3362,7 @@ function loadSessions() {
   const el = document.getElementById('sessions-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/sessions').then(r => r.json()).then(data => {
     if (!data.ok || !data.sessions || data.sessions.length === 0) {
@@ -3379,7 +3397,7 @@ function loadSkills() {
   const el = document.getElementById('skills-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/skills').then(r => r.json()).then(data => {
     if (!data.ok || !data.skills || data.skills.length === 0) {
@@ -3404,6 +3422,15 @@ function loadSkills() {
   } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
 }
 
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+    // Hide all feature panels
+    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  }
+});
 </script>
 
 <script>
@@ -3455,7 +3482,7 @@ function loadUsage() {
   const el = document.getElementById('usage-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/usage').then(r => r.json()).then(data => {
     if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
@@ -3489,7 +3516,7 @@ function loadMonitor() {
   const el = document.getElementById('monitor-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/status').then(r => r.json()).then(data => {
     let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
@@ -3525,7 +3552,7 @@ function loadMemory() {
   const el = document.getElementById('memory-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/memory').then(r => r.json()).then(data => {
     if (!data.ok || !data.memories || data.memories.length === 0) {
@@ -3568,7 +3595,7 @@ function loadSessions() {
   const el = document.getElementById('sessions-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/sessions').then(r => r.json()).then(data => {
     if (!data.ok || !data.sessions || data.sessions.length === 0) {
@@ -3603,7 +3630,7 @@ function loadSkills() {
   const el = document.getElementById('skills-content');
   if (!el) return;
   try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
   
   apiFetch('/api/skills').then(r => r.json()).then(data => {
     if (!data.ok || !data.skills || data.skills.length === 0) {
@@ -3628,6 +3655,15 @@ function loadSkills() {
   } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
 }
 
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+    // Hide all feature panels
+    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  }
+});
 </script>
 </body>
 </html>
