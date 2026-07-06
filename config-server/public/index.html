@@ -573,9 +573,9 @@
  /* Terminal line clickable when gateway is up — turn cursor on */
  .y-term-b a { color: var(--accent); text-decoration: underline; }
 
- .y-footer { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--border); border-left: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 28px; }
- .y-footer .c { padding: 16px; border-right: 1px solid var(--border); display: flex; align-items: center; }
- @media (min-width: 1024px) { .y-footer { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; } }
+ .y-footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; opacity: .5; }
+ .y-footer .c { display: flex; align-items: center; }
+ 
 
  .y-theme-toggle { background: none; border: none; cursor: pointer; color: var(--fg); opacity: 0.5; padding: 8px; line-height: 0; transition: opacity 0.2s; display: flex; align-items: center; border-radius: 4px; }
  .y-theme-toggle:hover, .y-theme-toggle:focus-visible { opacity: 1; outline: 1px solid var(--border); }
