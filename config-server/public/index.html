@@ -1155,6 +1155,59 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div class="step-ind" id="stepInd2" onclick="goStep(2)"><span class="num">2</span>启动</div>
 </div>
 
+
+<!-- Feature Navigation -->
+<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+  <button class="io-btn" onclick="showFeature('usage')" style="font-size:0.78em;">成本追踪</button>
+  <button class="io-btn" onclick="showFeature('monitor')" style="font-size:0.78em;">实时监控</button>
+  <button class="io-btn" onclick="showFeature('memory')" style="font-size:0.78em;">内存浏览器</button>
+  <button class="io-btn" onclick="showFeature('sessions')" style="font-size:0.78em;">会话管理</button>
+  <button class="io-btn" onclick="showFeature('skills')" style="font-size:0.78em;">技能管理</button>
+</div>
+
+<!-- Feature Panels -->
+<div id="feature-panels">
+  <!-- Cost Tracking Panel -->
+  <div id="panel-usage" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">成本追踪</h3>
+    <div id="usage-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+    </div>
+  </div>
+
+  <!-- Real-time Monitoring Panel -->
+  <div id="panel-monitor" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">实时监控</h3>
+    <div id="monitor-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+    </div>
+  </div>
+
+  <!-- Memory Browser Panel -->
+  <div id="panel-memory" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">内存浏览器</h3>
+    <div id="memory-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+    </div>
+  </div>
+
+  <!-- Session Management Panel -->
+  <div id="panel-sessions" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">会话管理</h3>
+    <div id="sessions-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+    </div>
+  </div>
+
+  <!-- Skills Management Panel -->
+  <div id="panel-skills" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">技能管理</h3>
+    <div id="skills-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>
+    </div>
+  </div>
+</div>
+
 <!-- Step 1 -->
 <section class="step-section active" id="step1" aria-label="配置模型"><div style="padding:24px;">
  <h2>选择模型平台</h2>
@@ -2821,6 +2874,194 @@ function showLocalModelHints() {
  }).finally(function(){ _hbBusy = false; });
  }, 5000);
 })();
+
+// ═══════════════════════════════════════════════════════════
+// Feature Navigation
+// ═══════════════════════════════════════════════════════════
+function showFeature(name) {
+  // Hide all panels
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  // Show selected panel
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.style.display = 'block';
+  // Load data
+  switch(name) {
+    case 'usage': loadUsage(); break;
+    case 'monitor': loadMonitor(); break;
+    case 'memory': loadMemory(); break;
+    case 'sessions': loadSessions(); break;
+    case 'skills': loadSkills(); break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 1: Cost Tracking
+// ═══════════════════════════════════════════════════════════
+function loadUsage() {
+  const el = document.getElementById('usage-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/usage').then(r => r.json()).then(data => {
+    if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无使用数据。使用后会自动记录。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    const providers = Object.entries(data.usage);
+    providers.forEach(([provider, usage]) => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + provider + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      html += '请求: ' + (usage.requests || 0) + ' | ';
+      html += 'Token: ' + (usage.tokens || 0).toLocaleString() + ' | ';
+      html += '费用: $' + (usage.cost || 0).toFixed(4);
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 2: Real-time Monitoring
+// ═══════════════════════════════════════════════════════════
+function loadMonitor() {
+  const el = document.getElementById('monitor-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/status').then(r => r.json()).then(data => {
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    
+    // Gateway status
+    const gw = data.gateway || {};
+    const gwStatus = gw.online ? '在线' : '离线';
+    const gwColor = gw.online ? 'var(--emerald)' : 'var(--destructive)';
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="color:var(--fg);font-weight:500;">Gateway</div>';
+    html += '<div style="color:' + gwColor + ';">' + gwStatus + ' (:' + (gw.port || 18789) + ')</div>';
+    html += '</div>';
+    
+    // Config status
+    const cfg = data.config || {};
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="color:var(--fg);font-weight:500;">配置</div>';
+    html += '<div style="color:var(--fg-muted);">Provider: ' + (cfg.providers || 0) + ' 个</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 3: Memory Browser
+// ═══════════════════════════════════════════════════════════
+function loadMemory() {
+  const el = document.getElementById('memory-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/memory').then(r => r.json()).then(data => {
+    if (!data.ok || !data.memories || data.memories.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无记忆文件。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    data.memories.forEach(mem => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(\'' + mem.name + '\')">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + mem.name + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100) + '...</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+function viewMemory(name) {
+  apiFetch('/api/memory').then(r => r.json()).then(data => {
+    const mem = data.memories.find(m => m.name === name);
+    if (mem) {
+      showModal('记忆: ' + name, '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content + '</pre>', [
+        {text: '关闭', cls: 'btn', action: 'closeModal'}
+      ]);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 4: Session Management
+// ═══════════════════════════════════════════════════════════
+function loadSessions() {
+  const el = document.getElementById('sessions-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/sessions').then(r => r.json()).then(data => {
+    if (!data.ok || !data.sessions || data.sessions.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无会话记录。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
+    data.sessions.forEach(session => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + session.id + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      if (session.model) html += '模型: ' + session.model + ' | ';
+      html += '消息: ' + (session.messages || 0);
+      if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 5: Skills Management
+// ═══════════════════════════════════════════════════════════
+function loadSkills() {
+  const el = document.getElementById('skills-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/skills').then(r => r.json()).then(data => {
+    if (!data.ok || !data.skills || data.skills.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无已安装技能。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.skills.length + ' 个技能</div>';
+    data.skills.forEach(skill => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + skill.name + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      html += skill.hasSkill ? '✓ 已安装' : '⚠ 缺少 SKILL.md';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
 </script>
 
 <script>
@@ -2924,6 +3165,194 @@ function showMobileInfoFromData(data) {
  }
  document.getElementById('mobileUrls').innerHTML = html;
 }
+
+// ═══════════════════════════════════════════════════════════
+// Feature Navigation
+// ═══════════════════════════════════════════════════════════
+function showFeature(name) {
+  // Hide all panels
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  // Show selected panel
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.style.display = 'block';
+  // Load data
+  switch(name) {
+    case 'usage': loadUsage(); break;
+    case 'monitor': loadMonitor(); break;
+    case 'memory': loadMemory(); break;
+    case 'sessions': loadSessions(); break;
+    case 'skills': loadSkills(); break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 1: Cost Tracking
+// ═══════════════════════════════════════════════════════════
+function loadUsage() {
+  const el = document.getElementById('usage-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/usage').then(r => r.json()).then(data => {
+    if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无使用数据。使用后会自动记录。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    const providers = Object.entries(data.usage);
+    providers.forEach(([provider, usage]) => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + provider + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      html += '请求: ' + (usage.requests || 0) + ' | ';
+      html += 'Token: ' + (usage.tokens || 0).toLocaleString() + ' | ';
+      html += '费用: $' + (usage.cost || 0).toFixed(4);
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 2: Real-time Monitoring
+// ═══════════════════════════════════════════════════════════
+function loadMonitor() {
+  const el = document.getElementById('monitor-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/status').then(r => r.json()).then(data => {
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    
+    // Gateway status
+    const gw = data.gateway || {};
+    const gwStatus = gw.online ? '在线' : '离线';
+    const gwColor = gw.online ? 'var(--emerald)' : 'var(--destructive)';
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="color:var(--fg);font-weight:500;">Gateway</div>';
+    html += '<div style="color:' + gwColor + ';">' + gwStatus + ' (:' + (gw.port || 18789) + ')</div>';
+    html += '</div>';
+    
+    // Config status
+    const cfg = data.config || {};
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="color:var(--fg);font-weight:500;">配置</div>';
+    html += '<div style="color:var(--fg-muted);">Provider: ' + (cfg.providers || 0) + ' 个</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 3: Memory Browser
+// ═══════════════════════════════════════════════════════════
+function loadMemory() {
+  const el = document.getElementById('memory-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/memory').then(r => r.json()).then(data => {
+    if (!data.ok || !data.memories || data.memories.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无记忆文件。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    data.memories.forEach(mem => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(\'' + mem.name + '\')">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + mem.name + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100) + '...</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+function viewMemory(name) {
+  apiFetch('/api/memory').then(r => r.json()).then(data => {
+    const mem = data.memories.find(m => m.name === name);
+    if (mem) {
+      showModal('记忆: ' + name, '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content + '</pre>', [
+        {text: '关闭', cls: 'btn', action: 'closeModal'}
+      ]);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 4: Session Management
+// ═══════════════════════════════════════════════════════════
+function loadSessions() {
+  const el = document.getElementById('sessions-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/sessions').then(r => r.json()).then(data => {
+    if (!data.ok || !data.sessions || data.sessions.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无会话记录。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
+    data.sessions.forEach(session => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + session.id + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      if (session.model) html += '模型: ' + session.model + ' | ';
+      html += '消息: ' + (session.messages || 0);
+      if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 5: Skills Management
+// ═══════════════════════════════════════════════════════════
+function loadSkills() {
+  const el = document.getElementById('skills-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/skills').then(r => r.json()).then(data => {
+    if (!data.ok || !data.skills || data.skills.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无已安装技能。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.skills.length + ' 个技能</div>';
+    data.skills.forEach(skill => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + skill.name + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      html += skill.hasSkill ? '✓ 已安装' : '⚠ 缺少 SKILL.md';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
 </script>
 
 <script>
@@ -2948,6 +3377,194 @@ function showMobileInfoFromData(data) {
  syncIcons(nowLight);
  };
 })();
+
+// ═══════════════════════════════════════════════════════════
+// Feature Navigation
+// ═══════════════════════════════════════════════════════════
+function showFeature(name) {
+  // Hide all panels
+  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  // Show selected panel
+  const panel = document.getElementById('panel-' + name);
+  if (panel) panel.style.display = 'block';
+  // Load data
+  switch(name) {
+    case 'usage': loadUsage(); break;
+    case 'monitor': loadMonitor(); break;
+    case 'memory': loadMemory(); break;
+    case 'sessions': loadSessions(); break;
+    case 'skills': loadSkills(); break;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 1: Cost Tracking
+// ═══════════════════════════════════════════════════════════
+function loadUsage() {
+  const el = document.getElementById('usage-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/usage').then(r => r.json()).then(data => {
+    if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无使用数据。使用后会自动记录。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    const providers = Object.entries(data.usage);
+    providers.forEach(([provider, usage]) => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + provider + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      html += '请求: ' + (usage.requests || 0) + ' | ';
+      html += 'Token: ' + (usage.tokens || 0).toLocaleString() + ' | ';
+      html += '费用: $' + (usage.cost || 0).toFixed(4);
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 2: Real-time Monitoring
+// ═══════════════════════════════════════════════════════════
+function loadMonitor() {
+  const el = document.getElementById('monitor-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/status').then(r => r.json()).then(data => {
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    
+    // Gateway status
+    const gw = data.gateway || {};
+    const gwStatus = gw.online ? '在线' : '离线';
+    const gwColor = gw.online ? 'var(--emerald)' : 'var(--destructive)';
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="color:var(--fg);font-weight:500;">Gateway</div>';
+    html += '<div style="color:' + gwColor + ';">' + gwStatus + ' (:' + (gw.port || 18789) + ')</div>';
+    html += '</div>';
+    
+    // Config status
+    const cfg = data.config || {};
+    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+    html += '<div style="color:var(--fg);font-weight:500;">配置</div>';
+    html += '<div style="color:var(--fg-muted);">Provider: ' + (cfg.providers || 0) + ' 个</div>';
+    html += '</div>';
+    
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 3: Memory Browser
+// ═══════════════════════════════════════════════════════════
+function loadMemory() {
+  const el = document.getElementById('memory-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/memory').then(r => r.json()).then(data => {
+    if (!data.ok || !data.memories || data.memories.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无记忆文件。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    data.memories.forEach(mem => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(\'' + mem.name + '\')">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + mem.name + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100) + '...</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+function viewMemory(name) {
+  apiFetch('/api/memory').then(r => r.json()).then(data => {
+    const mem = data.memories.find(m => m.name === name);
+    if (mem) {
+      showModal('记忆: ' + name, '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content + '</pre>', [
+        {text: '关闭', cls: 'btn', action: 'closeModal'}
+      ]);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 4: Session Management
+// ═══════════════════════════════════════════════════════════
+function loadSessions() {
+  const el = document.getElementById('sessions-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/sessions').then(r => r.json()).then(data => {
+    if (!data.ok || !data.sessions || data.sessions.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无会话记录。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
+    data.sessions.forEach(session => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + session.id + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      if (session.model) html += '模型: ' + session.model + ' | ';
+      html += '消息: ' + (session.messages || 0);
+      if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 5: Skills Management
+// ═══════════════════════════════════════════════════════════
+function loadSkills() {
+  const el = document.getElementById('skills-content');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">加载中...</div>';
+  
+  apiFetch('/api/skills').then(r => r.json()).then(data => {
+    if (!data.ok || !data.skills || data.skills.length === 0) {
+      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无已安装技能。</div>';
+      return;
+    }
+    
+    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
+    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.skills.length + ' 个技能</div>';
+    data.skills.forEach(skill => {
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + skill.name + '</div>';
+      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
+      html += skill.hasSkill ? '✓ 已安装' : '⚠ 缺少 SKILL.md';
+      html += '</div></div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }).catch(() => {
+    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
+  });
+}
+
 </script>
 </body>
 </html>

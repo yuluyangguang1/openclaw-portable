@@ -1982,7 +1982,147 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Serve static files. Strip query string and fragment first;
+  
+// ═══════════════════════════════════════════════════════════
+// Feature 1: Cost Tracking - /api/usage
+// ═══════════════════════════════════════════════════════════
+if (req.url === '/api/usage' && req.method === 'GET') {
+  try {
+    const dataDir = process.env.OPENCLAW_STATE_DIR || path.join(__dirname, '../data/.openclaw');
+    const usagePath = path.join(dataDir, 'usage.json');
+    const usage = fs.existsSync(usagePath) ? JSON.parse(fs.readFileSync(usagePath, 'utf8')) : {};
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, usage }));
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, usage: {} }));
+  }
+  return;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 2: Real-time Monitoring - /api/status
+// ═══════════════════════════════════════════════════════════
+if (req.url === '/api/status' && req.method === 'GET') {
+  try {
+    const dataDir = process.env.OPENCLAW_STATE_DIR || path.join(__dirname, '../data/.openclaw');
+    const configPath = path.join(dataDir, 'openclaw.json');
+    const config = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, 'utf8')) : {};
+    const gatewayPort = config.gateway?.port || 18789;
+    
+    // Check gateway status
+    const http = require('http');
+    const checkGateway = () => new Promise((resolve) => {
+      const req = http.get(`http://127.0.0.1:${gatewayPort}/`, { timeout: 2000 }, (res) => {
+        resolve({ online: true, port: gatewayPort, status: res.statusCode });
+      });
+      req.on('error', () => resolve({ online: false, port: gatewayPort }));
+      req.on('timeout', () => { req.destroy(); resolve({ online: false, port: gatewayPort }); });
+    });
+    
+    checkGateway().then(status => {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, gateway: status, config: { providers: Object.keys(config.models?.providers || {}).length } }));
+    });
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, gateway: { online: false }, config: { providers: 0 } }));
+  }
+  return;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 3: Memory Browser - /api/memory
+// ═══════════════════════════════════════════════════════════
+if (req.url === '/api/memory' && req.method === 'GET') {
+  try {
+    const dataDir = process.env.OPENCLAW_STATE_DIR || path.join(__dirname, '../data/.openclaw');
+    const memoryDir = path.join(dataDir, 'memory');
+    const files = fs.existsSync(memoryDir) ? fs.readdirSync(memoryDir).filter(f => f.endsWith('.md') || f.endsWith('.json')) : [];
+    const memories = files.map(f => {
+      const content = fs.readFileSync(path.join(memoryDir, f), 'utf8');
+      return { name: f, content: content.slice(0, 500), size: content.length };
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, memories }));
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, memories: [] }));
+  }
+  return;
+}
+
+if (req.url === '/api/memory' && req.method === 'POST') {
+  let body = '';
+  req.on('data', chunk => body += chunk);
+  req.on('end', () => {
+    try {
+      const { name, content } = JSON.parse(body);
+      const dataDir = process.env.OPENCLAW_STATE_DIR || path.join(__dirname, '../data/.openclaw');
+      const memoryDir = path.join(dataDir, 'memory');
+      if (!fs.existsSync(memoryDir)) fs.mkdirSync(memoryDir, { recursive: true });
+      fs.writeFileSync(path.join(memoryDir, name), content);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+  });
+  return;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 4: Session Management - /api/sessions
+// ═══════════════════════════════════════════════════════════
+if (req.url === '/api/sessions' && req.method === 'GET') {
+  try {
+    const dataDir = process.env.OPENCLAW_STATE_DIR || path.join(__dirname, '../data/.openclaw');
+    const sessionsDir = path.join(dataDir, 'sessions');
+    const files = fs.existsSync(sessionsDir) ? fs.readdirSync(sessionsDir).filter(f => f.endsWith('.json')) : [];
+    const sessions = files.slice(0, 50).map(f => {
+      try {
+        const content = JSON.parse(fs.readFileSync(path.join(sessionsDir, f), 'utf8'));
+        return { 
+          id: f.replace('.json', ''), 
+          created: content.created || content.createdAt,
+          model: content.model || content.agentModel,
+          messages: content.messages?.length || 0
+        };
+      } catch { return { id: f.replace('.json', ''), error: 'parse failed' }; }
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, sessions }));
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, sessions: [] }));
+  }
+  return;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Feature 5: Skills Management - /api/skills
+// ═══════════════════════════════════════════════════════════
+if (req.url === '/api/skills' && req.method === 'GET') {
+  try {
+    const dataDir = process.env.OPENCLAW_STATE_DIR || path.join(__dirname, '../data/.openclaw');
+    const skillsDir = path.join(dataDir, 'skills');
+    const dirs = fs.existsSync(skillsDir) ? fs.readdirSync(skillsDir, { withFileTypes: true }).filter(d => d.isDirectory()) : [];
+    const skills = dirs.map(d => {
+      const skillPath = path.join(skillsDir, d.name, 'SKILL.md');
+      const hasSkill = fs.existsSync(skillPath);
+      return { name: d.name, hasSkill, path: skillPath };
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, skills }));
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, skills: [] }));
+  }
+  return;
+}
+
+// Serve static files. Strip query string and fragment first;
   // fs treats them as part of the filename which leads to confusing
   // 404s. Also reject URL bytes that could canonicalize differently
   // on Windows (backslash) before we hit path.join.
