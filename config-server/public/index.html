@@ -15,7 +15,7 @@
  --secondary: #0a2e2e;
  --muted: #083030;
  --fg: #ffe6cb;
- --fg-muted: #8aaa9a;
+ --fg-muted: var(--fg-muted);
  --border: #ffe6cb26;
  --accent: #ffe6cb;
  --emerald: oklch(0.765 0.177 163.223);
@@ -1116,9 +1116,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
  oninput="searchProviders(this.value)"
  style="flex:1;min-width:200px;padding:8px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;">
- <span id="providerCount" style="color:var(--fg-muted);font-size:0.78em;font-family:var(--font-mono);"></span>
+ <span id="providerCount" style="color:var(--fg-muted);font-size:0.75rem;font-family:var(--font-mono);"></span>
  </div>
- <div id="providerFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+ <div id="providerFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
  <button class="filter-chip active" data-filter="hot" onclick="applyProviderFilter('hot')" tabindex="0">推荐</button>
  <button class="filter-chip" data-filter="all" onclick="applyProviderFilter('all')" tabindex="0">全部</button>
  <button class="filter-chip" data-filter="cn" onclick="applyProviderFilter('cn')" tabindex="0">国产</button>
@@ -1129,10 +1129,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
 
  <!-- 一键预设 (推荐配置快速入口) -->
- <div id="presetArea" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;">
- <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.78em;" tabindex="0">一键 DeepSeek</button>
- <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" style="font-size:0.78em;" tabindex="0">一键 OpenRouter</button>
- <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" style="font-size:0.78em;" tabindex="0">一键 Gemini (免费)</button>
+ <div id="presetArea" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+ <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.75rem;" tabindex="0">一键 DeepSeek</button>
+ <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" style="font-size:0.75rem;" tabindex="0">一键 OpenRouter</button>
+ <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" style="font-size:0.75rem;" tabindex="0">一键 Gemini (免费)</button>
  </div>
 
  <!-- 本地模型自动检测 (auto-discovery) -->
@@ -1155,10 +1155,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 <!-- Step 2 -->
 <section class="step-section collapsed" id="step2" aria-label="启动"><div style="padding:24px;">
- <div style="text-align:center;margin-bottom:28px;">
+ <div style="text-align:left;margin-bottom:28px;">
  <h2 style="font-size:1.2em;margin-bottom:6px;">配置完成</h2>
  <p class="desc" style="margin-bottom:0;">密钥仅保存在本地，不会上传到任何服务器</p>
- <div id="configSummary" style="margin-top:14px;padding:8px 14px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78em;color:var(--fg-muted);display:none;text-align:left;"></div>
+ <div id="configSummary" style="margin-top:14px;padding:8px 14px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.75rem;color:var(--fg-muted);display:none;text-align:left;"></div>
  </div>
 
  <div id="quickSwitch" style="margin-bottom:16px;display:none;">
@@ -1195,7 +1195,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <span id="channelToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">v</span>
  </button>
  <div id="channelPanel" style="display:none;margin-top:12px;">
- <p style="color:#8aaa9a;font-size:0.8em;margin-bottom:12px;">点击卡片展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
+ <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:12px;">点击卡片展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
  <div class="model-grid" id="channelGrid" role="listbox" aria-label="渠道列表"></div>
  </div>
  </div>
@@ -1208,7 +1208,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <span id="mobileToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">v</span>
  </button>
  <div id="mobilePanel" style="display:none;margin-top:12px;padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
- <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:14px;">开启后 Gateway 将监听局域网，同一 WiFi 下的手机可直接连接。关闭后恢复仅本机访问。</p>
+ <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:12px;">开启后 Gateway 将监听局域网，同一 WiFi 下的手机可直接连接。关闭后恢复仅本机访问。</p>
 
  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
  <span style="font-family:var(--font-mono);font-size:0.88em;">局域网模式</span>
@@ -1282,13 +1282,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div class="modal-box" onclick="event.stopPropagation();"><h3 id="modalTitle"></h3><p id="modalBody"></p><div class="modal-btns" id="modalBtns"></div></div>
 </div>
 <div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#062424;border-top:1px solid rgba(0,255,200,0.15);padding:12px 24px;z-index:500;text-align:center;">
- <span style="color:#8aaa9a;font-size:0.85em;">配置已保存，重启后生效</span>
+ <span style="color:var(--fg-muted);font-size:0.85em;">配置已保存，重启后生效</span>
  <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">重启 Gateway</button>
 </div>
 <div id="disconnectOverlay" style="display:none;position:fixed;inset:0;background:rgba(4,28,28,0.9);z-index:600;align-items:center;justify-content:center;background:rgba(4,28,28,0.95);">
- <div style="background:#062424;padding:32px 40px;border-radius:14px;text-align:center;border:1px solid rgba(0,255,200,0.12);">
+ <div style="background:#062424;padding:32px 40px;border-radius:12px;text-align:center;border:1px solid rgba(0,255,200,0.12);">
  <h3 style="color:#ffe6cb;margin-bottom:8px;font-size:1em;">连接已断开</h3>
- <p style="color:#8aaa9a;font-size:0.85em;">后端进程已停止，请重新启动。</p>
+ <p style="color:var(--fg-muted);font-size:0.85em;">后端进程已停止，请重新启动。</p>
  </div>
 </div>
 <script>
@@ -2313,7 +2313,7 @@ function runCmd(cmd) {
  .replace(/'/g,'&#39;');
  };
  var bodyHtml = data.body
- ? '<p style="margin-top:12px;font-size:0.82em;color:#8aaa9a;max-height:120px;overflow:auto;">'
+ ? '<p style="margin-top:12px;font-size:0.82em;color:var(--fg-muted);max-height:120px;overflow:auto;">'
  + esc(data.body).replace(/\n/g,'<br>')
  + '</p>'
  : '';
