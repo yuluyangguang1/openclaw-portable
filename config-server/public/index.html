@@ -520,6 +520,11 @@
  .y-nav-link:hover::before { opacity: 0.05; }
 
  .y-hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 60px 20px 44px; width: 100%; }
+ .y-hero-split { flex-direction: row; align-items: center; justify-content: space-between; text-align: left; gap: 40px; padding: 36px 24px; }
+ .y-hero-split .hero-title { display: flex; flex-direction: column; gap: 8px; }
+ .y-hero-split .y-display { font-size: 2.4rem; line-height: 1.1; }
+ .y-hero-split .y-sub { font-size: 0.95rem; margin: 0; }
+ .y-hero-split .y-term { margin: 0; flex: 0 0 auto; width: auto; }
  .y-term { width: 100%; max-width: 560px; border: 4px double var(--border); }
  .y-term-h { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
  .y-td { width: 10px; height: 10px; border-radius: 50%; }
@@ -1060,11 +1065,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 <div class="y-row">
  <div class="y-cell s6" style="border-right:none;padding:0">
- <div class="y-hero">
+ <div class="y-hero y-hero-split">
+ <div class="hero-title">
  <span class="y-label-xs y-op-7" style="letter-spacing:.15rem">openclaw portable · config</span>
  <h1 class="y-display">openclaw</h1>
  <p class="y-sub">便携 AI 助手 · 配置模型 · 一键启动</p>
  <span class="y-label-xs y-op-5" id="hero-version">v1.0.0 · 零安装 · 跨平台</span>
+ </div>
  <div class="y-term" aria-hidden="true">
  <div class="y-term-h">
  <span class="y-td"></span><span class="y-td"></span><span class="y-td"></span>
