@@ -519,7 +519,13 @@
  .y-nav-link::before { content: ""; position: absolute; inset: -12px; background: var(--fg); pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: -1; }
  .y-nav-link:hover::before { opacity: 0.05; }
 
- .y-hero { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 60px 20px 44px; width: 100%; }
+/* Hero: text left, terminal right (was: centered column stack).
+   max-width 860 aligns the hero content with the .container below —
+   closes the 1100/860 double-width misalignment at least inside the
+   hero band. Wraps back to a stack on narrow screens. */
+ .y-hero { display: flex; flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 28px 48px; padding: 60px 20px 44px; width: 100%; max-width: 860px; margin: 0 auto; }
+ .y-hero-text { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 20px; min-width: 0; }
+ .y-hero .y-term { flex: 0 1 560px; width: auto; }
  .y-term { width: 100%; max-width: 560px; border: 4px double var(--border); }
  .y-term-h { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
  .y-td { width: 10px; height: 10px; border-radius: 50%; }
@@ -552,7 +558,9 @@
  @media (max-width: 640px) {
  .y-display { font-size: 2.2rem; }
  .y-sub { font-size: 0.95rem; }
- .y-hero { padding: 40px 16px 28px; }
+ /* Narrow screens: hero returns to the original centered stack. */
+ .y-hero { padding: 40px 16px 28px; flex-direction: column; align-items: center; }
+ .y-hero-text { align-items: center; text-align: center; }
  .y-term-b { font-size: 0.72rem; padding: 14px 12px; }
  }
 
@@ -1061,10 +1069,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 <div class="y-row">
  <div class="y-cell s6" style="border-right:none;padding:0">
  <div class="y-hero">
+ <div class="y-hero-text">
  <span class="y-label-xs y-op-7" style="letter-spacing:.15rem">openclaw portable · config</span>
  <h1 class="y-display">openclaw</h1>
  <p class="y-sub">便携 AI 助手 · 配置模型 · 一键启动</p>
  <span class="y-label-xs y-op-5" id="hero-version">v1.0.0 · 零安装 · 跨平台</span>
+ </div>
  <div class="y-term" aria-hidden="true">
  <div class="y-term-h">
  <span class="y-td"></span><span class="y-td"></span><span class="y-td"></span>
