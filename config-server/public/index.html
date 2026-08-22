@@ -876,6 +876,31 @@
  residual fills come from the inner wrapper either. */
  #step1 > div, #step2 > div { background: transparent !important; }
 
+ /* ── Insight strip: five-in-one panel switcher (step 2) ──
+    1px-gap + border-colored background draws separators correctly at
+    ANY column count — no per-cell border math needed. */
+ .insight-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); }
+ .insight-strip button { background: var(--bg); border: none; padding: 12px 6px 10px; text-align: center; cursor: pointer; font-family: var(--font-mono); color: var(--fg); font-size: 0.72rem; letter-spacing: 0.05em; }
+ .insight-strip button svg { display: block; margin: 0 auto 6px; opacity: 0.7; }
+ .insight-strip button:hover { background: var(--secondary); }
+ .insight-strip button.active { background: var(--secondary); box-shadow: inset 0 -2px 0 var(--accent); }
+ @media (max-width: 640px) { .insight-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+ /* ── Complete the flatten pass: square off the remaining rounded UI ──
+    (provider/channel cards, chips, tags, .btn family, launch button,
+    io-btns, dc-card, and every inline border-radius style). Round
+    things that are round FOR A REASON are untouched: .dot / .y-td
+    indicators, .mobile-slider switch, scrollbar thumb. */
+ .provider-card, .channel-card, .filter-chip, .tag, .btn, .btn-primary,
+ .btn-sm, .btn-icon, .io-btn, .btn-launch, .dc-card,
+ [style*="border-radius:6px"], [style*="border-radius: 6px"],
+ [style*="border-radius:8px"], [style*="border-radius: 8px"],
+ [style*="border-radius:10px"], [style*="border-radius: 10px"],
+ [style*="border-radius:12px"], [style*="border-radius: 12px"],
+ [style*="border-radius:14px"], [style*="border-radius: 14px"] {
+ border-radius: 0 !important;
+ }
+
  /* Mobile connect toggle switch */
  .mobile-switch { position:relative; display:inline-block; width:44px; height:24px; }
  .mobile-switch input { opacity:0; width:0; height:0; }
@@ -990,7 +1015,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .step-section.active {
   opacity: 1;
-  max-height: 2000px;
+  max-height: 4200px;
 }
 
 /* Provider card expand animation */
@@ -1130,73 +1155,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </div>
 
 
-<!-- Feature Navigation -->
-<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
-  <button class="io-btn" onclick="showFeature('usage')" style="font-size:0.78em;display:flex;align-items:center;gap:4px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-    成本追踪
-  </button>
-  <button class="io-btn" onclick="showFeature('monitor')" style="font-size:0.78em;display:flex;align-items:center;gap:4px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    实时监控
-  </button>
-  <button class="io-btn" onclick="showFeature('memory')" style="font-size:0.78em;display:flex;align-items:center;gap:4px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-    内存浏览器
-  </button>
-  <button class="io-btn" onclick="showFeature('sessions')" style="font-size:0.78em;display:flex;align-items:center;gap:4px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-    会话管理
-  </button>
-  <button class="io-btn" onclick="showFeature('skills')" style="font-size:0.78em;display:flex;align-items:center;gap:4px;">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-    技能管理
-  </button>
-</div>
-
-<!-- Feature Panels -->
-<div id="feature-panels">
-  <!-- Cost Tracking Panel -->
-  <div id="panel-usage" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">成本追踪</h3>
-    <div id="usage-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Real-time Monitoring Panel -->
-  <div id="panel-monitor" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">实时监控</h3>
-    <div id="monitor-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Memory Browser Panel -->
-  <div id="panel-memory" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">内存浏览器</h3>
-    <div id="memory-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Session Management Panel -->
-  <div id="panel-sessions" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">会话管理</h3>
-    <div id="sessions-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Skills Management Panel -->
-  <div id="panel-skills" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">技能管理</h3>
-    <div id="skills-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-</div>
-
 <!-- Step 1 -->
 <section class="step-section active" id="step1" aria-label="配置模型"><div style="padding:24px;">
  <h2>选择模型平台</h2>
@@ -1299,13 +1257,57 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </div>
  </div>
 
- <!-- 技能列表 -->
- <div style="margin-top:20px;">
- <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
- <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">已安装技能</h3>
- <button class="io-btn" onclick="loadSkills()" style="font-size:0.75em;">刷新</button>
+  <!-- 运行洞察：五合一面板（自页首迁入；替代从未被填充的旧"已安装技能"静态网格） -->
+ <div style="margin-top:24px;">
+ <div class="insight-strip" role="tablist" aria-label="运行洞察">
+ <button type="button" role="tab" aria-selected="false" data-feature="usage" onclick="showFeature('usage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>成本追踪</button>
+ <button type="button" role="tab" aria-selected="false" data-feature="monitor" onclick="showFeature('monitor')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>实时监控</button>
+ <button type="button" role="tab" aria-selected="false" data-feature="memory" onclick="showFeature('memory')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>内存浏览器</button>
+ <button type="button" role="tab" aria-selected="false" data-feature="sessions" onclick="showFeature('sessions')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>会话管理</button>
+ <button type="button" role="tab" aria-selected="false" data-feature="skills" onclick="showFeature('skills')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>技能管理</button>
  </div>
- <div id="skillsList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;"></div>
+<!-- Feature Panels -->
+<div id="feature-panels">
+  <!-- Cost Tracking Panel -->
+  <div id="panel-usage" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">成本追踪</h3>
+    <div id="usage-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
+    </div>
+  </div>
+
+  <!-- Real-time Monitoring Panel -->
+  <div id="panel-monitor" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">实时监控</h3>
+    <div id="monitor-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
+    </div>
+  </div>
+
+  <!-- Memory Browser Panel -->
+  <div id="panel-memory" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">内存浏览器</h3>
+    <div id="memory-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
+    </div>
+  </div>
+
+  <!-- Session Management Panel -->
+  <div id="panel-sessions" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">会话管理</h3>
+    <div id="sessions-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
+    </div>
+  </div>
+
+  <!-- Skills Management Panel -->
+  <div id="panel-skills" style="display:none;margin-bottom:20px;">
+    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">技能管理</h3>
+    <div id="skills-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
+    </div>
+  </div>
+</div>
  </div>
 
  <!-- 渠道配置 (默认折叠，避免淹没首屏) -->
@@ -3140,11 +3142,20 @@ function showLocalModelHints() {
 // Feature Navigation
 // ═══════════════════════════════════════════════════════════
 function showFeature(name) {
+  // Toggle: clicking the active feature's button closes its panel.
+  const panel = document.getElementById('panel-' + name);
+  const wasOpen = panel && panel.style.display !== 'none';
   // Hide all panels
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  // Sync insight-strip button states
+  document.querySelectorAll('.insight-strip button').forEach(b => {
+    const on = !wasOpen && b.getAttribute('data-feature') === name;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  if (wasOpen || !panel) return;
   // Show selected panel
-  const panel = document.getElementById('panel-' + name);
-  if (panel) panel.style.display = 'block';
+  panel.style.display = 'block';
   // Load data
   switch(name) {
     case 'usage': loadUsage(); break;
@@ -3455,11 +3466,20 @@ function showMobileInfoFromData(data) {
 // Feature Navigation
 // ═══════════════════════════════════════════════════════════
 function showFeature(name) {
+  // Toggle: clicking the active feature's button closes its panel.
+  const panel = document.getElementById('panel-' + name);
+  const wasOpen = panel && panel.style.display !== 'none';
   // Hide all panels
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  // Sync insight-strip button states
+  document.querySelectorAll('.insight-strip button').forEach(b => {
+    const on = !wasOpen && b.getAttribute('data-feature') === name;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  if (wasOpen || !panel) return;
   // Show selected panel
-  const panel = document.getElementById('panel-' + name);
-  if (panel) panel.style.display = 'block';
+  panel.style.display = 'block';
   // Load data
   switch(name) {
     case 'usage': loadUsage(); break;
@@ -3691,11 +3711,20 @@ document.addEventListener('keydown', function(e) {
 // Feature Navigation
 // ═══════════════════════════════════════════════════════════
 function showFeature(name) {
+  // Toggle: clicking the active feature's button closes its panel.
+  const panel = document.getElementById('panel-' + name);
+  const wasOpen = panel && panel.style.display !== 'none';
   // Hide all panels
   document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  // Sync insight-strip button states
+  document.querySelectorAll('.insight-strip button').forEach(b => {
+    const on = !wasOpen && b.getAttribute('data-feature') === name;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  if (wasOpen || !panel) return;
   // Show selected panel
-  const panel = document.getElementById('panel-' + name);
-  if (panel) panel.style.display = 'block';
+  panel.style.display = 'block';
   // Load data
   switch(name) {
     case 'usage': loadUsage(); break;
