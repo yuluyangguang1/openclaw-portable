@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.22",
-  "updatedAt": "2026-08-22T10:42:00.987Z",
+  "version": "2026.08.22-2",
+  "updatedAt": "2026-08-22T14:44:48.598Z",
   "providers": [
     {
       "id": "minimax",
@@ -51,13 +51,14 @@
         "cheap",
         "cn"
       ],
-      "desc": "V4 Pro / V4 Flash / V3.2 / R1 推理",
+      "desc": "V4 Pro / V4 Flash / Vision / V3.2 / R1 推理",
       "base": "https://api.deepseek.com/v1",
       "models": [
         "deepseek-v4-pro",
         "deepseek-v4-pro-0813",
         "deepseek-v4-flash",
         "deepseek-v4-flash-0731",
+        "deepseek-v4-flash-vision-exp",
         "deepseek-v3.2",
         "deepseek-r1",
         "deepseek-r1-0528",
@@ -72,9 +73,10 @@
         "hot",
         "cn"
       ],
-      "desc": "GLM-5.2 / GLM-5.1 / GLM-4.7",
+      "desc": "GLM-5.3 / GLM-5.2 / GLM-5.1 / GLM-4.7",
       "base": "https://open.bigmodel.cn/api/paas/v4",
       "models": [
+        "glm-5.3",
         "glm-5.2",
         "glm-5.1",
         "glm-5-turbo",
@@ -94,9 +96,10 @@
         "hot",
         "cn"
       ],
-      "desc": "Qwen 3.7 / 3.6 / Coder / VL 阿里云百炼",
+      "desc": "Qwen 3.8 / 3.7 / Coder / VL 阿里云百炼",
       "base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
       "models": [
+        "qwen3.8-max",
         "qwen3.7-max",
         "qwen3.7-plus",
         "qwen3.6-max",
@@ -106,6 +109,7 @@
         "qwen3-coder-plus",
         "qwen3-coder",
         "qwen3-vl-plus",
+        "qwen3.5-omni-flash",
         "qwen3-omni-flash",
         "qwen-max-latest",
         "qwen-plus-latest",
@@ -354,9 +358,10 @@
         "hot",
         "free"
       ],
-      "desc": "3.6-flash / 3.5-flash / 3.1-pro / 2.5-pro",
+      "desc": "3.7-flash / 3.6-flash / 3.1-pro / 2.5-pro",
       "base": "https://generativelanguage.googleapis.com/v1beta/openai",
       "models": [
+        "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
         "gemini-3.1-pro-preview",
@@ -425,7 +430,7 @@
       "tags": [
         "hot"
       ],
-      "desc": "模型聚合平台 · 最新 gpt-5.6 / claude-fable-5 / gemini-3",
+      "desc": "模型聚合平台 · 最新 glm-5.3 / qwen3.8 / gemini-3.7",
       "base": "https://openrouter.ai/api/v1",
       "models": [
         "anthropic/claude-fable-5",
@@ -446,6 +451,7 @@
         "openai/gpt-5.4-mini",
         "openai/gpt-5.4-nano",
         "openai/gpt-5.3-codex",
+        "google/gemini-3.7-flash",
         "google/gemini-3.6-flash",
         "google/gemini-3.5-flash",
         "google/gemini-3.1-pro-preview",
@@ -464,6 +470,7 @@
         "deepseek/deepseek-v4-pro",
         "deepseek/deepseek-v4-flash",
         "deepseek/deepseek-v4-flash-0731",
+        "z-ai/glm-5.3",
         "z-ai/glm-5.2",
         "z-ai/glm-5.1",
         "minimax/minimax-m3",
