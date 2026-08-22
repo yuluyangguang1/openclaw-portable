@@ -334,9 +334,11 @@
  transform: translateY(-1px);
  }
 
- /* Command grid */
- 
- 
+ /* Command grid — horizontal segmented action bar (4 across).
+   The grid definition used to live here but was lost in an earlier
+   edit, which made the cards fall back to a vertical block stack. */
+ .cmd-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
  .cmd-card { will-change: transform; }
   .cmd-card:hover { border-color: var(--fg); transform: translateY(-1px); }
  .cmd-card .cmd-icon { font-size: 1.3em; margin-bottom: 6px; color: var(--emerald); font-family: var(--font-mono); }
@@ -739,6 +741,7 @@
  border-right: 1px solid var(--border) !important;
  background: transparent !important;
  padding: 18px 14px;
+ text-align: center;
  }
  .cmd-grid > .cmd-card:last-child { border-right: none !important; }
  .cmd-card { will-change: transform; }
@@ -759,6 +762,13 @@
  font-size: 0.65rem;
  letter-spacing: 0.05em;
  opacity: 0.5;
+ }
+ /* Phones: 4-across is too cramped (~85px/card) — 2×2 with a row
+    separator. Must sit AFTER the !important override layer above to win. */
+ @media (max-width: 640px) {
+ .cmd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+ .cmd-grid > .cmd-card:nth-child(even) { border-right: none !important; }
+ .cmd-grid > .cmd-card:nth-child(-n+2) { border-bottom: 1px solid var(--border) !important; }
  }
 
  /* Container = no extra max-width inside y-page (y-page already has 1100) */
