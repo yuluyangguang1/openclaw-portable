@@ -2739,17 +2739,10 @@ var SKILLS_CN = [
  {id:'deepseek-helper', name:'DeepSeek增强', desc:'深度思考'}
 ];
 
-function loadSkills() {
- var el = document.getElementById('skillsList');
- if (!el) return;
- el.innerHTML = SKILLS_CN.map(function(s){
- return '<div style="background:var(--secondary);border:1px solid var(--border);border-radius:8px;padding:10px 12px;">' +
- '<div style="color:var(--fg);font-size:0.82em;font-weight:500;">' + s.name + '</div>' +
- '<div style="color:var(--fg-muted);font-size:0.7em;font-family:var(--font-mono);margin-top:3px;">' + s.desc + '</div>' +
- '</div>';
- }).join('');
-}
-
+// (block-1's static loadSkills was removed: it was shadowed by the
+// API-backed definitions in later script blocks and referenced the
+// deleted #skillsList element. The setTimeout below resolves to the
+// live definition at call time.)
 // 页面加载时显示技能
 setTimeout(loadSkills, 100);
 
@@ -2846,11 +2839,9 @@ function refreshLogs() {
 function loadVersion() {
  apiFetch('/api/version').then(function(r){return r.json();}).then(function(data){
  if (data.portable) {
- // Hero version element — uses #hero-version id (not class
- // .version which only exists in CSS as dead style).
- var heroEl = document.getElementById('hero-version');
- if (heroEl) heroEl.textContent = 'v' + data.portable + ' · 零安装 · 跨平台';
- // Update only the version cell in the structured footer.
+ // Update the version cell in the structured footer.
+ // (The hero #hero-version element was removed in the hero
+ // simplification pass — version now lives in the footer only.)
  // textContent on the whole <footer> would wipe the y-footer
  // grid (links, labels, theme toggle).
  var footYear = document.getElementById('footer-year');
