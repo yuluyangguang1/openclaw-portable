@@ -1,0 +1,990 @@
+{
+  "version": "2026.08.22",
+  "updatedAt": "2026-08-22T10:42:00.987Z",
+  "providers": [
+    {
+      "id": "minimax",
+      "name": "MiniMax",
+      "tags": [
+        "hot",
+        "cn"
+      ],
+      "desc": "M3 / M2.7 编码与 Agent",
+      "base": "https://api.minimax.chat/v1",
+      "models": [
+        "MiniMax-M3",
+        "MiniMax-M2.7",
+        "MiniMax-M2.7-highspeed",
+        "MiniMax-M2.5",
+        "MiniMax-M2.5-highspeed",
+        "MiniMax-M2"
+      ],
+      "link": "https://platform.minimaxi.com/"
+    },
+    {
+      "id": "kimi",
+      "name": "Kimi",
+      "tags": [
+        "hot",
+        "cn"
+      ],
+      "desc": "K3 / K2.7 最新 · 原生多模态 Agent",
+      "base": "https://api.moonshot.cn/v1",
+      "models": [
+        "kimi-k3",
+        "kimi-k2.7-code",
+        "kimi-k2.6",
+        "kimi-k2.5",
+        "kimi-k2-thinking-turbo",
+        "kimi-k2-thinking",
+        "kimi-k2",
+        "moonshot-v1-128k",
+        "moonshot-v1-32k"
+      ],
+      "link": "https://platform.moonshot.cn/"
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "tags": [
+        "hot",
+        "cheap",
+        "cn"
+      ],
+      "desc": "V4 Pro / V4 Flash / V3.2 / R1 推理",
+      "base": "https://api.deepseek.com/v1",
+      "models": [
+        "deepseek-v4-pro",
+        "deepseek-v4-pro-0813",
+        "deepseek-v4-flash",
+        "deepseek-v4-flash-0731",
+        "deepseek-v3.2",
+        "deepseek-r1",
+        "deepseek-r1-0528",
+        "deepseek-chat"
+      ],
+      "link": "https://platform.deepseek.com/"
+    },
+    {
+      "id": "zai",
+      "name": "智谱GLM",
+      "tags": [
+        "hot",
+        "cn"
+      ],
+      "desc": "GLM-5.2 / GLM-5.1 / GLM-4.7",
+      "base": "https://open.bigmodel.cn/api/paas/v4",
+      "models": [
+        "glm-5.2",
+        "glm-5.1",
+        "glm-5-turbo",
+        "glm-5",
+        "glm-4.7",
+        "glm-4.7-flash",
+        "glm-4.6",
+        "glm-4.5-air",
+        "glm-4.5-flash"
+      ],
+      "link": "https://open.bigmodel.cn/"
+    },
+    {
+      "id": "qwen",
+      "name": "通义千问",
+      "tags": [
+        "hot",
+        "cn"
+      ],
+      "desc": "Qwen 3.7 / 3.6 / Coder / VL 阿里云百炼",
+      "base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "models": [
+        "qwen3.7-max",
+        "qwen3.7-plus",
+        "qwen3.6-max",
+        "qwen3.6-plus",
+        "qwen3.6-35b-a3b",
+        "qwen3-max",
+        "qwen3-coder-plus",
+        "qwen3-coder",
+        "qwen3-vl-plus",
+        "qwen3-omni-flash",
+        "qwen-max-latest",
+        "qwen-plus-latest",
+        "qwen-turbo-latest",
+        "qwen-long"
+      ],
+      "link": "https://dashscope.console.aliyun.com/"
+    },
+    {
+      "id": "doubao",
+      "name": "豆包",
+      "tags": [
+        "cn",
+        "fast"
+      ],
+      "desc": "Seed 1.6 字节跳动火山引擎",
+      "base": "https://ark.cn-beijing.volces.com/api/v3",
+      "models": [
+        "doubao-seed-1.6",
+        "doubao-seed-1.6-thinking",
+        "doubao-1.5-pro-256k",
+        "doubao-1.5-pro-32k",
+        "doubao-1.5-lite-32k"
+      ],
+      "link": "https://www.volcengine.com/product/doubao"
+    },
+    {
+      "id": "baichuan",
+      "name": "百川",
+      "tags": [
+        "cn"
+      ],
+      "desc": "百川AI",
+      "base": "https://api.baichuan-ai.com/v1",
+      "models": [
+        "Baichuan4-Turbo",
+        "Baichuan4-Air",
+        "Baichuan4",
+        "Baichuan3-Turbo",
+        "Baichuan2-Turbo"
+      ],
+      "link": "https://platform.baichuan-ai.com/"
+    },
+    {
+      "id": "yi",
+      "name": "零一万物",
+      "tags": [
+        "cn"
+      ],
+      "desc": "零一万物",
+      "base": "https://api.lingyiwanwu.com/v1",
+      "models": [
+        "yi-lightning",
+        "yi-large",
+        "yi-large-turbo",
+        "yi-medium",
+        "yi-spark",
+        "yi-vision"
+      ],
+      "link": "https://platform.lingyiwanwu.com/"
+    },
+    {
+      "id": "stepfun",
+      "name": "阶跃星辰",
+      "tags": [
+        "cn"
+      ],
+      "desc": "Step 3.7 最新",
+      "base": "https://api.stepfun.com/v1",
+      "models": [
+        "step-3.7-flash",
+        "step-3.5-flash",
+        "step-3.5",
+        "step-2-16k",
+        "step-1v-8k"
+      ],
+      "link": "https://platform.stepfun.com/"
+    },
+    {
+      "id": "spark",
+      "name": "讯飞星火",
+      "tags": [
+        "cn",
+        "free"
+      ],
+      "desc": "科大讯飞",
+      "base": "https://spark-api-open.xf-yun.com/v1",
+      "models": [
+        "4.0Ultra",
+        "generalv3.5",
+        "generalv3",
+        "lite"
+      ],
+      "link": "https://xinghuo.xfyun.cn/"
+    },
+    {
+      "id": "hunyuan",
+      "name": "混元",
+      "tags": [
+        "cn"
+      ],
+      "desc": "腾讯混元",
+      "base": "https://api.hunyuan.cloud.tencent.com/v1",
+      "models": [
+        "hy3-preview",
+        "hunyuan-turbo",
+        "hunyuan-large",
+        "hunyuan-pro",
+        "hunyuan-standard",
+        "hunyuan-lite"
+      ],
+      "link": "https://hunyuan.tencent.com/"
+    },
+    {
+      "id": "ernie",
+      "name": "文心一言",
+      "tags": [
+        "cn"
+      ],
+      "desc": "百度文心一言",
+      "base": "https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat",
+      "models": [
+        "ernie-4.5-turbo-128k",
+        "ernie-x1-turbo",
+        "ernie-4.0-turbo",
+        "ernie-4.0-8k",
+        "ernie-3.5-8k",
+        "ernie-speed-128k"
+      ],
+      "link": "https://cloud.baidu.com/product/wenxinworkshop"
+    },
+    {
+      "id": "siliconflow",
+      "name": "SiliconFlow",
+      "tags": [
+        "cn",
+        "cheap"
+      ],
+      "desc": "国内模型聚合",
+      "base": "https://api.siliconflow.cn/v1",
+      "models": [
+        "deepseek-ai/DeepSeek-V4-Pro",
+        "Qwen/Qwen3.7-Max",
+        "moonshotai/Kimi-K2.6",
+        "THUDM/GLM-5.1",
+        "deepseek-ai/DeepSeek-R1",
+        "Qwen/Qwen3-235B-A22B",
+        "meta-llama/Llama-4-Scout-17B-Instruct"
+      ],
+      "link": "https://siliconflow.cn/"
+    },
+    {
+      "id": "xiaomi",
+      "name": "小米 MiMo",
+      "tags": [
+        "cn"
+      ],
+      "desc": "MiMo v2.5 Pro",
+      "base": "https://api.xiaomi.com/v1",
+      "models": [
+        "mimo-v2.5-pro",
+        "mimo-v2.5"
+      ],
+      "link": "https://ai.xiaomi.com/"
+    },
+    {
+      "id": "tencent",
+      "name": "腾讯混元",
+      "tags": [
+        "cn"
+      ],
+      "desc": "混元大模型",
+      "base": "https://api.hunyuan.cloud.tencent.com/v1",
+      "models": [
+        "hy3-preview",
+        "hunyuan-turbo",
+        "hunyuan-large",
+        "hunyuan-pro",
+        "hunyuan-standard"
+      ],
+      "link": "https://hunyuan.tencent.com/"
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "tags": [
+        "hot"
+      ],
+      "desc": "GPT-5.6 Sol/Terra/Luna / 5.5 Pro / Codex / o4-mini",
+      "base": "https://api.openai.com/v1",
+      "models": [
+        "gpt-5.6-sol",
+        "gpt-5.6-sol-pro",
+        "gpt-5.6-terra",
+        "gpt-5.6-terra-pro",
+        "gpt-5.6-luna",
+        "gpt-5.6-luna-pro",
+        "gpt-5.5-pro",
+        "gpt-5.5",
+        "gpt-5.5-mini",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.4-nano",
+        "gpt-5.3-codex",
+        "gpt-5.2",
+        "gpt-5",
+        "gpt-5-mini",
+        "gpt-5-nano",
+        "o3",
+        "o3-mini",
+        "o4-mini",
+        "o4-mini-high",
+        "gpt-4.1",
+        "gpt-4.1-mini"
+      ],
+      "link": "https://platform.openai.com/"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "tags": [
+        "hot"
+      ],
+      "desc": "Fable 5 / Opus 5 / Sonnet 5 / Haiku 4.5",
+      "base": "https://api.anthropic.com/v1",
+      "models": [
+        "claude-fable-5",
+        "claude-opus-5",
+        "claude-opus-5-fast",
+        "claude-opus-4-8",
+        "claude-opus-4-8-fast",
+        "claude-opus-4-7",
+        "claude-opus-4-6",
+        "claude-sonnet-5",
+        "claude-sonnet-4-6",
+        "claude-haiku-4-5",
+        "claude-3-7-sonnet-latest",
+        "claude-3-5-haiku-latest"
+      ],
+      "link": "https://console.anthropic.com/"
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini",
+      "tags": [
+        "hot",
+        "free"
+      ],
+      "desc": "3.6-flash / 3.5-flash / 3.1-pro / 2.5-pro",
+      "base": "https://generativelanguage.googleapis.com/v1beta/openai",
+      "models": [
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-3-flash-preview",
+        "gemini-3-pro-image-preview",
+        "gemini-2.5-pro",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-2.5-flash-image-preview"
+      ],
+      "link": "https://aistudio.google.com/"
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral",
+      "tags": [],
+      "desc": "large-3 / medium / codestral",
+      "base": "https://api.mistral.ai/v1",
+      "models": [
+        "mistral-large-3",
+        "mistral-large-2411",
+        "mistral-medium-latest",
+        "mistral-small-latest",
+        "codestral-latest",
+        "pixtral-large-latest",
+        "ministral-3b-latest",
+        "ministral-8b-latest"
+      ],
+      "link": "https://console.mistral.ai/"
+    },
+    {
+      "id": "xai",
+      "name": "xAI",
+      "tags": [
+        "fast"
+      ],
+      "desc": "Grok 4.6 / 4.5 / 4.3 / 4.20",
+      "base": "https://api.x.ai/v1",
+      "models": [
+        "grok-4.6",
+        "grok-4.5",
+        "grok-4.3",
+        "grok-4.20",
+        "grok-4.20-multi-agent"
+      ],
+      "link": "https://console.x.ai/"
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "tags": [],
+      "desc": "Command A / R+",
+      "base": "https://api.cohere.com/v2",
+      "models": [
+        "command-a-03-2025",
+        "command-r-plus",
+        "command-r",
+        "command-light"
+      ],
+      "link": "https://dashboard.cohere.com/"
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "tags": [
+        "hot"
+      ],
+      "desc": "模型聚合平台 · 最新 gpt-5.6 / claude-fable-5 / gemini-3",
+      "base": "https://openrouter.ai/api/v1",
+      "models": [
+        "anthropic/claude-fable-5",
+        "anthropic/claude-opus-5",
+        "anthropic/claude-opus-5-fast",
+        "anthropic/claude-opus-4.8",
+        "anthropic/claude-opus-4.8-fast",
+        "anthropic/claude-sonnet-5",
+        "anthropic/claude-haiku-4.5",
+        "openai/gpt-5.6-sol",
+        "openai/gpt-5.6-sol-pro",
+        "openai/gpt-5.6-terra",
+        "openai/gpt-5.6-terra-pro",
+        "openai/gpt-5.6-luna",
+        "openai/gpt-5.6-luna-pro",
+        "openai/gpt-5.5",
+        "openai/gpt-5.5-pro",
+        "openai/gpt-5.4-mini",
+        "openai/gpt-5.4-nano",
+        "openai/gpt-5.3-codex",
+        "google/gemini-3.6-flash",
+        "google/gemini-3.5-flash",
+        "google/gemini-3.1-pro-preview",
+        "google/gemini-3.1-flash-lite-preview",
+        "google/gemini-3-flash-preview",
+        "google/gemini-3-pro-image-preview",
+        "x-ai/grok-4.6",
+        "x-ai/grok-4.5",
+        "x-ai/grok-4.3",
+        "x-ai/grok-4.20",
+        "qwen/qwen3.8-max",
+        "qwen/qwen3.7-max",
+        "qwen/qwen3.7-plus",
+        "qwen/qwen3.6-plus",
+        "qwen/qwen3.6-35b-a3b",
+        "deepseek/deepseek-v4-pro",
+        "deepseek/deepseek-v4-flash",
+        "deepseek/deepseek-v4-flash-0731",
+        "z-ai/glm-5.2",
+        "z-ai/glm-5.1",
+        "minimax/minimax-m3",
+        "minimax/minimax-m2.7",
+        "stepfun/step-3.7-flash",
+        "stepfun/step-3.5-flash",
+        "xiaomi/mimo-v2.5-pro",
+        "tencent/hy3",
+        "tencent/hy3:free",
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3-super-120b-a12b:free",
+        "nvidia/nemotron-3-ultra-550b-a55b:free",
+        "openrouter/pareto-code",
+        "openrouter/elephant-alpha",
+        "sakana/fugu-ultra",
+        "poolside/laguna-m.1:free",
+        "inclusionai/ring-2.6-1t:free",
+        "meta-llama/llama-4-maverick",
+        "moonshotai/kimi-k3"
+      ],
+      "link": "https://openrouter.ai/"
+    },
+    {
+      "id": "together",
+      "name": "Together",
+      "tags": [
+        "cheap"
+      ],
+      "desc": "开源模型托管",
+      "base": "https://api.together.xyz/v1",
+      "models": [
+        "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
+        "deepseek-ai/DeepSeek-V4-Pro",
+        "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+        "Qwen/Qwen3-235B-A22B",
+        "moonshotai/Kimi-K2.6",
+        "zai-org/GLM-5.1",
+        "MiniMaxAI/MiniMax-M3",
+        "mistralai/Mistral-Small-3.2-24B-Instruct"
+      ],
+      "link": "https://api.together.xyz/"
+    },
+    {
+      "id": "fireworks",
+      "name": "Fireworks",
+      "tags": [
+        "fast"
+      ],
+      "desc": "高速推理",
+      "base": "https://api.fireworks.ai/inference/v1",
+      "models": [
+        "accounts/fireworks/models/llama4-maverick-instruct-basic",
+        "accounts/fireworks/models/llama4-scout-instruct-basic",
+        "accounts/fireworks/models/deepseek-v4-pro",
+        "accounts/fireworks/models/qwen3-coder-480b-a35b-instruct",
+        "accounts/fireworks/models/qwen3-235b-a22b"
+      ],
+      "link": "https://fireworks.ai/"
+    },
+    {
+      "id": "deepinfra",
+      "name": "DeepInfra",
+      "tags": [
+        "cheap"
+      ],
+      "desc": "极低价开源模型",
+      "base": "https://api.deepinfra.com/v1/openai",
+      "models": [
+        "deepseek-ai/DeepSeek-V4-Pro",
+        "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
+        "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+        "zai-org/GLM-5.1",
+        "moonshotai/Kimi-K2.6"
+      ],
+      "link": "https://deepinfra.com/"
+    },
+    {
+      "id": "replicate",
+      "name": "Replicate",
+      "tags": [],
+      "desc": "开源生态聚合",
+      "base": "https://api.replicate.com/v1",
+      "models": [
+        "meta/meta-llama-4-maverick-17b-128e-instruct",
+        "meta/meta-llama-3.3-70b-instruct",
+        "deepseek-ai/deepseek-v4-pro",
+        "mistralai/mistral-small-3.2-24b-instruct"
+      ],
+      "link": "https://replicate.com/"
+    },
+    {
+      "id": "novita",
+      "name": "Novita",
+      "tags": [
+        "cn",
+        "cheap"
+      ],
+      "desc": "国内访问快",
+      "base": "https://api.novita.ai/v3/openai",
+      "models": [
+        "meta-llama/llama-4-maverick-17b-128e-instruct",
+        "meta-llama/llama-3.3-70b-instruct",
+        "deepseek/deepseek-v4-pro",
+        "qwen/qwen3-coder-480b",
+        "mistralai/mistral-small-3.2-24b-instruct"
+      ],
+      "link": "https://novita.ai/"
+    },
+    {
+      "id": "hyperbolic",
+      "name": "Hyperbolic",
+      "tags": [
+        "cn",
+        "cheap"
+      ],
+      "desc": "DeepSeek / Qwen 镜像",
+      "base": "https://api.hyperbolic.xyz/v1",
+      "models": [
+        "deepseek-ai/DeepSeek-V4-Pro",
+        "meta-llama/Llama-4-Maverick-17B-128E-Instruct",
+        "Qwen/Qwen3-Coder-480B-A35B-Instruct"
+      ],
+      "link": "https://app.hyperbolic.xyz/"
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "tags": [
+        "fast",
+        "free"
+      ],
+      "desc": "极速推理 Llama 4 / R1",
+      "base": "https://api.groq.com/openai/v1",
+      "models": [
+        "llama-4-scout-17b-16e-instruct",
+        "llama-4-maverick",
+        "llama-3.3-70b-versatile",
+        "deepseek-r1-distill-llama-70b",
+        "qwen/qwen3-32b",
+        "moonshotai/kimi-k2-instruct",
+        "groq/compound",
+        "gemma2-9b-it"
+      ],
+      "link": "https://console.groq.com/"
+    },
+    {
+      "id": "cerebras",
+      "name": "Cerebras",
+      "tags": [
+        "fast",
+        "free"
+      ],
+      "desc": "1500 tok/s 极速推理",
+      "base": "https://api.cerebras.ai/v1",
+      "models": [
+        "llama-4-scout-17b-16e-instruct",
+        "llama-4-maverick-17b-128e-instruct",
+        "llama3.3-70b",
+        "qwen-3-coder-480b",
+        "qwen-3-32b",
+        "deepseek-r1-distill-llama-70b"
+      ],
+      "link": "https://cloud.cerebras.ai/"
+    },
+    {
+      "id": "nvidia",
+      "name": "NVIDIA NIM",
+      "tags": [
+        "fast",
+        "free"
+      ],
+      "desc": "NVIDIA 推理平台",
+      "base": "https://integrate.api.nvidia.com/v1",
+      "models": [
+        "nemotron-3-super-120b-a12b",
+        "nemotron-3-ultra-550b-a55b",
+        "llama-4-scout-17b-16e-instruct",
+        "llama-4-maverick-17b-128e-instruct"
+      ],
+      "link": "https://build.nvidia.com/"
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "tags": [],
+      "desc": "联网搜索",
+      "base": "https://api.perplexity.ai",
+      "models": [
+        "sonar-pro",
+        "sonar",
+        "sonar-reasoning-pro",
+        "sonar-reasoning",
+        "sonar-deep-research"
+      ],
+      "link": "https://www.perplexity.ai/settings/api"
+    },
+    {
+      "id": "huggingface",
+      "name": "HuggingFace",
+      "tags": [
+        "free"
+      ],
+      "desc": "开源模型推理",
+      "base": "https://api-inference.huggingface.co/v1",
+      "models": [
+        "Qwen/Qwen3.5-72B-Instruct",
+        "deepseek-ai/DeepSeek-V3.2",
+        "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "mistralai/Mistral-Small-3.2-24B-Instruct"
+      ],
+      "link": "https://huggingface.co/"
+    },
+    {
+      "id": "copilot",
+      "name": "GitHub Copilot",
+      "tags": [
+        "hot"
+      ],
+      "desc": "GitHub Copilot",
+      "base": "https://api.githubcopilot.com/v1",
+      "models": [
+        "gpt-4o",
+        "gpt-4o-mini",
+        "claude-sonnet-4",
+        "o3-mini"
+      ],
+      "link": "https://github.com/features/copilot"
+    },
+    {
+      "id": "sambanova",
+      "name": "SambaNova",
+      "tags": [
+        "fast"
+      ],
+      "desc": "高速推理",
+      "base": "https://api.sambanova.ai/v1",
+      "models": [
+        "Meta-Llama-3.3-70B-Instruct",
+        "DeepSeek-V3-0324",
+        "Qwen3-32B"
+      ],
+      "link": "https://cloud.sambanova.ai/"
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare AI",
+      "tags": [
+        "fast",
+        "free"
+      ],
+      "desc": "边缘推理",
+      "base": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
+      "models": [
+        "@cf/meta/llama-3.3-70b-instruct-fp8",
+        "@cf/deepseek-ai/deepseek-v3",
+        "@cf/qwen/qwen3-32b"
+      ],
+      "link": "https://developers.cloudflare.com/workers-ai/"
+    },
+    {
+      "id": "coze",
+      "name": "Coze / 扣子",
+      "tags": [
+        "cn"
+      ],
+      "desc": "字节跳动 agent 平台",
+      "base": "https://api.coze.cn/v1",
+      "models": [
+        "coze-gpt-4o",
+        "coze-claude-3.5-sonnet",
+        "coze-gemini-1.5-pro"
+      ],
+      "link": "https://www.coze.cn/"
+    },
+    {
+      "id": "amazon",
+      "name": "Amazon Bedrock",
+      "tags": [],
+      "desc": "AWS 原生模型",
+      "base": "https://bedrock-runtime.us-east-1.amazonaws.com/v1",
+      "models": [
+        "nova-premier-v1",
+        "nova-pro-v1",
+        "nova-lite-v1",
+        "nova-micro-v1"
+      ],
+      "link": "https://aws.amazon.com/bedrock/"
+    },
+    {
+      "id": "custom",
+      "name": "自定义/中转站",
+      "tags": [],
+      "desc": "自定义API端点",
+      "base": "",
+      "models": [],
+      "link": "",
+      "isCustom": true
+    },
+    {
+      "id": "lmstudio",
+      "name": "LM Studio",
+      "tags": [],
+      "desc": "本地运行",
+      "base": "http://127.0.0.1:1234/v1",
+      "models": [],
+      "link": "https://lmstudio.ai/",
+      "isLocal": true
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "tags": [],
+      "desc": "本地运行",
+      "base": "http://127.0.0.1:11434/v1",
+      "models": [],
+      "link": "https://ollama.com/",
+      "isLocal": true
+    },
+    {
+      "id": "nous",
+      "name": "Nous Portal",
+      "tags": [
+        "hot"
+      ],
+      "desc": "Hermes 4 405B/70B",
+      "base": "https://inference-api.nousresearch.com/v1",
+      "models": [
+        "Hermes-4-405B",
+        "Hermes-4-70B"
+      ],
+      "link": "https://portal.nousresearch.com/"
+    },
+    {
+      "id": "ark_agentplan",
+      "name": "火山 Agentplan",
+      "tags": [
+        "cn"
+      ],
+      "desc": "火山引擎代码专用",
+      "base": "https://ark.cn-beijing.volces.com/api/coding",
+      "models": [
+        "ark-code-latest"
+      ],
+      "link": "https://www.volcengine.com/activity/codingplan"
+    },
+    {
+      "id": "byteplus",
+      "name": "BytePlus",
+      "tags": [
+        "cn"
+      ],
+      "desc": "火山海外版",
+      "base": "https://ark.ap-southeast.bytepluses.com/api/coding",
+      "models": [
+        "ark-code-latest"
+      ],
+      "link": "https://www.byteplus.com/"
+    },
+    {
+      "id": "doubao_seed",
+      "name": "DouBao Seed",
+      "tags": [
+        "cn"
+      ],
+      "desc": "豆包 Seed 2.1 Pro",
+      "base": "https://ark.cn-beijing.volces.com/api/compatible",
+      "models": [
+        "doubao-seed-2-1-pro-260628"
+      ],
+      "link": "https://console.volcengine.com/ark/"
+    },
+    {
+      "id": "bailing",
+      "name": "百灵",
+      "tags": [
+        "cn"
+      ],
+      "desc": "支付宝百灵",
+      "base": "https://api.tbox.cn/api/anthropic",
+      "models": [
+        "Ling-2.5-1T"
+      ],
+      "link": "https://alipaytbox.yuque.com/"
+    },
+    {
+      "id": "kat_coder",
+      "name": "KAT-Coder",
+      "tags": [
+        "cn"
+      ],
+      "desc": "流水灯代码模型",
+      "base": "https://vanchin.streamlake.ai/api/gateway/v1",
+      "models": [
+        "KAT-Coder-Pro V1",
+        "KAT-Coder-Air V1"
+      ],
+      "link": "https://console.streamlake.ai/"
+    },
+    {
+      "id": "modelscope",
+      "name": "ModelScope",
+      "tags": [
+        "cn",
+        "cheap"
+      ],
+      "desc": "魔搭社区",
+      "base": "https://api-inference.modelscope.cn/v1",
+      "models": [
+        "ZhipuAI/GLM-5.1",
+        "Qwen/Qwen3-72B-Instruct"
+      ],
+      "link": "https://modelscope.cn/"
+    },
+    {
+      "id": "bailian_coding",
+      "name": "百炼代码版",
+      "tags": [
+        "cn"
+      ],
+      "desc": "百炼代码专用",
+      "base": "https://coding.dashscope.aliyuncs.com/apps/anthropic",
+      "models": [
+        "qwen3-coder-plus",
+        "qwen3-max"
+      ],
+      "link": "https://bailian.console.aliyun.com/"
+    },
+    {
+      "id": "longcat",
+      "name": "LongCat",
+      "tags": [
+        "cn"
+      ],
+      "desc": "LongCat 2.0",
+      "base": "https://api.longcat.chat/openai/v1",
+      "models": [
+        "LongCat-2.0"
+      ],
+      "link": "https://longcat.chat/platform"
+    },
+    {
+      "id": "cherryin",
+      "name": "CherryIN",
+      "tags": [
+        "hot"
+      ],
+      "desc": "Claude 中转",
+      "base": "https://open.cherryin.net",
+      "models": [
+        "anthropic/claude-opus-4.8",
+        "anthropic/claude-sonnet-5"
+      ],
+      "link": "https://open.cherryin.ai/"
+    },
+    {
+      "id": "therouter",
+      "name": "TheRouter",
+      "tags": [
+        "hot"
+      ],
+      "desc": "GPT 中转",
+      "base": "https://api.therouter.ai/v1",
+      "models": [
+        "openai/gpt-5.5",
+        "openai/gpt-5.4-mini",
+        "openai/gpt-5.4-nano"
+      ],
+      "link": "https://therouter.ai/"
+    },
+    {
+      "id": "gmi",
+      "name": "GMI Cloud",
+      "tags": [
+        "cheap"
+      ],
+      "desc": "云推理",
+      "base": "https://api.gmi-serving.com/v1",
+      "models": [
+        "Qwen/Qwen3-72B-Instruct"
+      ],
+      "link": "https://www.gmiml.com/"
+    },
+    {
+      "id": "arcee",
+      "name": "Arcee AI",
+      "tags": [
+        "cheap"
+      ],
+      "desc": "Arcee 模型",
+      "base": "https://api.arcee.ai/v2",
+      "models": [
+        "arcee-lfm-40b"
+      ],
+      "link": "https://www.arcee.ai/"
+    },
+    {
+      "id": "kilocode",
+      "name": "Kilo Code",
+      "tags": [
+        "cheap"
+      ],
+      "desc": "代码助手",
+      "base": "https://api.kilocode.ai/v1",
+      "models": [
+        "deepseek-ai/DeepSeek-V3.2"
+      ],
+      "link": "https://kilocode.ai/"
+    },
+    {
+      "id": "ai-gateway",
+      "name": "Vercel AI Gateway",
+      "tags": [
+        "hot"
+      ],
+      "desc": "Vercel 网关",
+      "base": "https://ai-gateway.vercel.sh/v1",
+      "models": [
+        "anthropic/claude-sonnet-5",
+        "openai/gpt-5.5"
+      ],
+      "link": "https://vercel.ai/"
+    }
+  ]
+}

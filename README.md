@@ -193,6 +193,16 @@ OpenClawPortable/
 - 手机连接：开启/关闭 LAN 模式
 - 运行日志：实时查看 Gateway 日志
 
+### 模型目录热更新
+
+配置中心的平台/模型列表无需等整包升级，用户可自行拉取最新目录：
+
+- **用户侧**：配置中心"选择模型平台"页顶部有目录工具栏（`更新目录 / 导入 / 导出 / 恢复内置`）。点击"更新目录"即从本仓库拉取最新列表；缓存超过 7 天会在打开页面时自动后台刷新。离线用户可先在其他设备下载 `models-catalog.json`，再点"导入"。
+- **缓存位置**：`data/.openclaw/models-catalog.json`（data/ 目录在整包升级时保留，升级不丢）。
+- **维护者侧**：只需修改仓库根目录的 [`models-catalog.json`](models-catalog.json)（`version` 字段建议用日期如 `2026.08.22`），提交后用户即可拉到。拉取源依次为 jsDelivr → raw.githubusercontent → ghproxy 镜像，国内网络可达。
+- **自定义源**：高级用户可在 `data/.openclaw/catalog-sources.json` 写入 URL 数组覆盖默认源（如自建镜像）。
+- 已保存的模型配置不受目录更新影响——目录只影响下拉选项，配置里的模型名原样保留。
+
 ---
 
 ## 内置技能

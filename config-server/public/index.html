@@ -1179,6 +1179,17 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <button class="filter-chip" data-filter="local" onclick="applyProviderFilter('local')" tabindex="0">本地</button>
  </div>
 
+ <!-- 模型目录热更新：从维护者仓库拉取最新平台/模型列表，无需升级整个便携版 -->
+ <div id="catalogBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;">
+ <span id="catalogInfo" style="color:var(--fg-muted);font-size:0.72rem;font-family:var(--font-mono);">模型目录：内置版本</span>
+ <span style="flex:1;"></span>
+ <button class="io-btn" onclick="refreshCatalog(false)" style="font-size:0.72rem;" tabindex="0" title="从 GitHub 拉取最新模型列表">⟳ 更新目录</button>
+ <button class="io-btn" onclick="document.getElementById('catalogFile').click()" style="font-size:0.72rem;" tabindex="0" title="导入本地 JSON 目录文件（离线可用）">导入</button>
+ <button class="io-btn" onclick="exportCatalog()" style="font-size:0.72rem;" tabindex="0" title="导出当前目录为 JSON">导出</button>
+ <button class="io-btn" onclick="resetCatalog()" style="font-size:0.72rem;" tabindex="0" title="放弃已拉取的目录，恢复安装包内置版本">恢复内置</button>
+ <input type="file" id="catalogFile" accept=".json,application/json" style="display:none;" onchange="onCatalogFile(this)">
+ </div>
+
  <!-- 一键预设 (推荐配置快速入口) -->
  <div id="presetArea" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
  <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.75rem;" tabindex="0">一键 DeepSeek</button>
@@ -1564,13 +1575,13 @@ function renderProviders() {
  grid.style.display = '';
  if (emptyEl) emptyEl.style.display = 'none';
  grid.innerHTML = visible.map(p => {
- const tagsHtml = p.tags.map(t => '<span class="tag ' + t + '">' + ({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t) + '</span>').join('');
- // Defense in depth: PROVIDERS data is currently a hardcoded
- // hostile-input-free constant in this file, but if it ever becomes
- // dynamic (loaded from /api/config or similar) the unescaped
- // interpolations below would become XSS sinks. Escape preemptively.
- // (B23-03)
+ // Defense in depth: PROVIDERS is now dynamic (hot-updatable catalog
+ // pulled from the maintainer's repo or imported by the user), so every
+ // interpolation below must be escaped. _e is defined BEFORE first use
+ // (tagsHtml) — the catalog path made tags/base untrusted inputs.
+ // (B23-03, extended for hot-update)
  const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+ const tagsHtml = (p.tags || []).map(t => '<span class="tag ' + _e(t) + '">' + _e(({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t)) + '</span>').join('');
  let formHtml = '';
  if (p.isCustom) {
  formHtml = '<div class="provider-expand">' +
@@ -1579,8 +1590,9 @@ function renderProviders() {
  '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
  '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div></div>';
  } else if (p.isLocal) {
+ var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
  formHtml = '<div class="provider-expand">' +
- '<input type="text" class="input" placeholder="Port (default: ' + (p.base.match(/:(\d+)/)||[])[1] + ')" data-field="port" value="' + (p.base.match(/:(\d+)/)||[])[1] + '">' +
+ '<input type="text" class="input" placeholder="Port (default: ' + _e(_port) + ')" data-field="port" value="' + _e(_port) + '">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
  '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button></div>';
  } else {
@@ -1611,6 +1623,124 @@ renderProviders();
  if (e.target.matches('[data-field]')) updateSaveBtn();
  });
 })();
+
+// ===== MODEL CATALOG HOT-UPDATE =====
+// The catalog above is the embedded offline default. On load we ask the
+// config-server for the hot-updatable copy (user-pulled cache in
+// data/.openclaw/models-catalog.json, falling back to the shipped
+// models-catalog.json). If the cache is stale (>7d) we refresh it from
+// the maintainer's repo in the background — the user never waits.
+var catalogInfo = { version: '', updatedAt: '', source: 'embedded' };
+
+function _catalogSourceLabel(src) {
+ return { 'cache': '已更新', 'built-in': '内置', 'embedded': '内置', 'manual': '手动导入', 'remote': '已更新' }[src] || src || '';
+}
+
+function updateCatalogBadge() {
+ var el = document.getElementById('catalogInfo');
+ if (!el) return;
+ var when = catalogInfo.updatedAt ? ' · ' + String(catalogInfo.updatedAt).slice(0, 10) : '';
+ el.textContent = '模型目录：' + (catalogInfo.version || '内置版本') + ' · ' + _catalogSourceLabel(catalogInfo.source) + when;
+}
+
+// Replace the catalog IN PLACE (splice, not reassign) so every closure
+// holding a reference to PROVIDERS (filters, presets, save flow) sees
+// the new data. Re-render picks up the change immediately.
+function applyCatalog(providers, info) {
+ if (!Array.isArray(providers) || providers.length === 0) return false;
+ PROVIDERS.length = 0;
+ Array.prototype.push.apply(PROVIDERS, providers);
+ if (info) catalogInfo = info;
+ updateCatalogBadge();
+ renderProviders();
+ return true;
+}
+
+function loadCatalog(auto) {
+ apiFetch('/api/models/catalog', { timeout: 8000 }).then(function(r){ return r.json(); }).then(function(data) {
+ if (!data || !data.ok) return;
+ if (data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: data.source });
+ }
+ // Background refresh when the cache is stale or only the embedded
+ // list is available. silent=true → no error toast if offline.
+ if (auto && data.stale) refreshCatalog(true);
+ }).catch(function() { /* offline / server not ready — keep embedded list */ });
+}
+
+function refreshCatalog(silent) {
+ if (!silent) showToast('正在拉取最新模型目录…', 'info');
+ apiFetch('/api/models/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+ .then(function(r){ return r.json(); })
+ .then(function(data) {
+ if (data && data.ok && data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: 'remote' });
+ showToast('模型目录已更新：v' + (data.version || '?') + '（' + data.providers.length + ' 个平台）', 'success');
+ } else if (!silent) {
+ showToast('目录更新失败：' + ((data && data.error) || '未知错误'), 'error');
+ }
+ })
+ .catch(function() { if (!silent) showToast('目录更新失败：网络错误', 'error'); });
+}
+
+function onCatalogFile(input) {
+ var f = input.files && input.files[0];
+ input.value = '';
+ if (!f) return;
+ var fr = new FileReader();
+ fr.onload = function() {
+ var parsed;
+ try { parsed = JSON.parse(fr.result); }
+ catch (e) { showToast('导入失败：文件不是有效 JSON', 'error'); return; }
+ apiFetch('/api/models/catalog', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ catalog: parsed }) })
+ .then(function(r){ return r.json(); })
+ .then(function(data) {
+ if (data && data.ok && data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: 'manual' });
+ showToast('已导入目录：v' + (data.version || '?') + '（' + data.providers.length + ' 个平台）', 'success');
+ } else {
+ showToast('导入失败：' + ((data && data.error) || '格式无效'), 'error');
+ }
+ })
+ .catch(function() { showToast('导入失败：网络错误', 'error'); });
+ };
+ fr.readAsText(f);
+}
+
+function exportCatalog() {
+ var payload = {
+ version: catalogInfo.version || 'export',
+ updatedAt: new Date().toISOString(),
+ providers: PROVIDERS
+ };
+ var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+ var a = document.createElement('a');
+ a.href = URL.createObjectURL(blob);
+ a.download = 'openclaw-models-catalog.json';
+ document.body.appendChild(a);
+ a.click();
+ setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function resetCatalog() {
+ apiFetch('/api/models/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+ .then(function(r){ return r.json(); })
+ .then(function(data) {
+ if (data && data.ok) {
+ if (data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: '', source: 'built-in' });
+ } else {
+ catalogInfo = { version: '', updatedAt: '', source: 'embedded' };
+ updateCatalogBadge();
+ renderProviders();
+ }
+ showToast('已恢复内置模型目录', 'success');
+ } else {
+ showToast('恢复失败：' + ((data && data.error) || '未知错误'), 'error');
+ }
+ })
+ .catch(function() { showToast('恢复失败：网络错误', 'error'); });
+}
 
 // ===== CHANNELS PANEL TOGGLE =====
 function toggleChannelsPanel() {
@@ -2780,6 +2910,9 @@ function showLocalModelHints() {
  });
 
  loadVersion();
+ // Hot-updatable model catalog: apply local cache (or shipped copy)
+ // immediately; auto-refresh in background if stale (>7d).
+ loadCatalog(true);
  // Auto-scan local model runtimes on load — silent if nothing is running.
  setTimeout(scanLocalModels, 200);
  // Check gateway
@@ -3610,36 +3743,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
     closeModal();
     // Hide all feature panels
-    document.querySelectorAll('[id^="panel-"
- {id:'baidu',name:'文心一言',tags:['cn'],desc:'百度文心一言',base:'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat',models:['ernie-4.5-turbo-128k','ernie-x1-turbo','ernie-4.0-turbo','ernie-4.0-8k','ernie-3.5-8k'],link:'https://cloud.baidu.com/product/wenxinworkshop'},
- {id:'volcengine',name:'火山引擎',tags:['cn'],desc:'豆包/火山引擎',base:'https://ark.cn-beijing.volces.com/api/v3',models:['doubao-seed-1.6','doubao-seed-1.6-thinking','doubao-1.5-pro-256k'],link:'https://www.volcengine.com/product/doubao'},
- {id:'alibaba',name:'阿里云',tags:['cn'],desc:'阿里云百炼',base:'https://dashscope.aliyuncs.com/compatible-mode/v1',models:['qwen3-coder-plus','qwen3-max','qwen-max-latest'],link:'https://dashscope.console.aliyun.com/'},
- {id:'zhipu',name:'智谱GLM',tags:['cn'],desc:'GLM-5.2 / GLM-5.1',base:'https://open.bigmodel.cn/api/paas/v4',models:['glm-5.2','glm-5.1','glm-5','glm-4.7','glm-4.6'],link:'https://open.bigmodel.cn/'},
- {id:'iflytek',name:'讯飞星火',tags:['cn'],desc:'科大讯飞',base:'https://spark-api-open.xf-yun.com/v1',models:['spark-max','spark-pro','spark-lite'],link:'https://xinghuo.xfyun.cn/'},
- {id:'dashscope',name:'通义千问',tags:['cn'],desc:'阿里云通义千问',base:'https://dashscope.aliyuncs.com/compatible-mode/v1',models:['qwen3.7-max','qwen3.7-plus','qwen3.6-max','qwen3.6-plus','qwen3-coder-plus'],link:'https://dashscope.console.aliyun.com/'},
- {id:'nous',name:'Nous Portal',tags:['hot'],desc:'Hermes 4 405B/70B',base:'https://inference-api.nousresearch.com/v1',models:['Hermes-4-405B','Hermes-4-70B'],link:'https://portal.nousresearch.com/'},
- {id:'google',name:'Google Gemini',tags:['hot','free'],desc:'Gemini 3.5-flash / 3.1-pro',base:'https://generativelanguage.googleapis.com/v1beta/openai',models:['gemini-3.5-flash','gemini-3.1-pro-preview','gemini-2.5-pro','gemini-2.5-flash'],link:'https://aistudio.google.com/'},
- {id:'huggingface',name:'HuggingFace',tags:['cheap'],desc:'开源模型推理',base:'https://api-inference.huggingface.co/v1',models:['Qwen/Qwen3.5-72B-Instruct','deepseek-ai/DeepSeek-V3.2'],link:'https://huggingface.co/'},
- {id:'sambanova',name:'SambaNova',tags:['fast'],desc:'高速推理',base:'https://api.sambanova.ai/v1',models:['Meta-Llama-3.3-70B-Instruct','DeepSeek-V3-0324'],link:'https://cloud.sambanova.ai/'},
- {id:'cloudflare',name:'Cloudflare AI',tags:['free'],desc:'Workers AI',base:'https://api.cloudflare.com/client/v4/accounts/{ACCOUNT_ID}/ai/v1',models:['@cf/meta/llama-3.3-70b-instruct-fp8','@cf/deepseek-ai/deepseek-r1-distill-qwen-32b'],link:'https://developers.cloudflare.com/workers-ai/'},
- {id:'coze',name:'Coze/扣子',tags:['cn'],desc:'字节跳动扣子平台',base:'https://api.coze.cn/v1',models:['coze-bot'],link:'https://www.coze.cn/'},
- {id:'amazon',name:'Amazon Bedrock',tags:['hot'],desc:'Amazon Nova',base:'https://bedrock-runtime.us-east-1.amazonaws.com',models:['amazon.nova-pro-v1:0','amazon.nova-lite-v1:0'],link:'https://aws.amazon.com/bedrock/'},
- {id:'ark_agentplan',name:'火山 Agentplan',tags:['cn'],desc:'火山引擎代码专用',base:'https://ark.cn-beijing.volces.com/api/coding',models:['ark-code-latest'],link:'https://www.volcengine.com/activity/codingplan'},
- {id:'byteplus',name:'BytePlus',tags:['cn'],desc:'火山海外版',base:'https://ark.ap-southeast.bytepluses.com/api/coding',models:['ark-code-latest'],link:'https://www.byteplus.com/'},
- {id:'doubao_seed',name:'DouBao Seed',tags:['cn'],desc:'豆包 Seed 2.1 Pro',base:'https://ark.cn-beijing.volces.com/api/compatible',models:['doubao-seed-2-1-pro-260628'],link:'https://console.volcengine.com/ark/'},
- {id:'bailing',name:'百灵',tags:['cn'],desc:'支付宝百灵',base:'https://api.tbox.cn/api/anthropic',models:['Ling-2.5-1T'],link:'https://alipaytbox.yuque.com/'},
- {id:'kat_coder',name:'KAT-Coder',tags:['cn'],desc:'流水灯代码模型',base:'https://vanchin.streamlake.ai/api/gateway/v1',models:['KAT-Coder-Pro V1','KAT-Coder-Air V1'],link:'https://console.streamlake.ai/'},
- {id:'modelscope',name:'ModelScope',tags:['cn','cheap'],desc:'魔搭社区',base:'https://api-inference.modelscope.cn/v1',models:['ZhipuAI/GLM-5.1','Qwen/Qwen3-72B-Instruct'],link:'https://modelscope.cn/'},
- {id:'bailian',name:'阿里百炼',tags:['cn'],desc:'阿里云百炼平台',base:'https://dashscope.aliyuncs.com/compatible-mode/v1',models:['qwen3-coder-plus','qwen3-max'],link:'https://bailian.console.aliyun.com/'},
- {id:'bailian_coding',name:'百炼代码版',tags:['cn'],desc:'百炼代码专用',base:'https://coding.dashscope.aliyuncs.com/apps/anthropic',models:['qwen3-coder-plus','qwen3-max'],link:'https://bailian.console.aliyun.com/'},
- {id:'longcat',name:'LongCat',tags:['cn'],desc:'LongCat 2.0',base:'https://api.longcat.chat/openai/v1',models:['LongCat-2.0'],link:'https://longcat.chat/platform'},
- {id:'cherryin',name:'CherryIN',tags:['hot'],desc:'Claude 中转',base:'https://open.cherryin.net',models:['anthropic/claude-opus-4.8','anthropic/claude-sonnet-5'],link:'https://open.cherryin.ai/'},
- {id:'therouter',name:'TheRouter',tags:['hot'],desc:'GPT 中转',base:'https://api.therouter.ai/v1',models:['openai/gpt-5.5','openai/gpt-5.4-mini','openai/gpt-5.4-nano'],link:'https://therouter.ai/'},
- {id:'gmi',name:'GMI Cloud',tags:['cheap'],desc:'云推理',base:'https://api.gmi-serving.com/v1',models:['Qwen/Qwen3-72B-Instruct'],link:'https://www.gmiml.com/'},
- {id:'arcee',name:'Arcee AI',tags:['cheap'],desc:'Arcee 模型',base:'https://api.arcee.ai/v2',models:['arcee-lfm-40b'],link:'https://www.arcee.ai/'},
- {id:'kilocode',name:'Kilo Code',tags:['cheap'],desc:'代码助手',base:'https://api.kilocode.ai/v1',models:['deepseek-ai/DeepSeek-V3.2'],link:'https://kilocode.ai/'},
- {id:'ai-gateway',name:'Vercel AI Gateway',tags:['hot'],desc:'Vercel 网关',base:'https://ai-gateway.vercel.sh/v1',models:['anthropic/claude-sonnet-5','openai/gpt-5.5'],link:'https://vercel.ai/'},
-]').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
   }
 });
 </script>

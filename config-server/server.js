@@ -873,6 +873,7 @@ const server = http.createServer((req, res) => {
     'GET /api/local/scan',        // Read-only local model scan
     'GET /api/update/check',      // Read-only version check
     'GET /api/mobile/info',       // Read-only LAN IPs for mobile connect
+    'GET /api/models/catalog',    // Read-only model catalog (no secrets — base URLs/model names)
     'GET /api/wechat/plugin-status',
     'POST /api/wechat/cancel',    // Only clears in-memory login state; no file writes
   ]);
@@ -2119,6 +2120,230 @@ if (req.url === '/api/skills' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ ok: true, skills: [] }));
   }
+  return;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Model catalog hot-update — /api/models/*
+// ═══════════════════════════════════════════════════════════
+//
+// The provider/model catalog used to be hardcoded in index.html, so it
+// could only change when the maintainer shipped a new portable build.
+// Now the catalog is data:
+//
+//   repo-root models-catalog.json  ← maintainer's single source (shipped)
+//   data/.openclaw/models-catalog.json  ← user-pulled cache (SURVIVES
+//                                          in-app updates — the updater
+//                                          skips data/)
+//
+// Users pull the latest via POST /api/models/refresh, which walks a
+// source list (jsDelivr → raw.githubusercontent → ghproxy mirror) so it
+// works from both global and CN networks. Advanced users can override
+// the source list by writing data/.openclaw/catalog-sources.json.
+const MODEL_CATALOG_USER = path.join(OPENCLAW_DIR, 'models-catalog.json');
+const MODEL_CATALOG_SHIPPED = path.join(__dirname, '../models-catalog.json');
+const MODEL_CATALOG_STALE_MS = 7 * 24 * 3600_000;
+const MODEL_CATALOG_FETCH_CAP = 2 * 1024 * 1024; // 2 MB — real catalogs are <300 KB
+const DEFAULT_CATALOG_SOURCES = [
+  'https://cdn.jsdelivr.net/gh/yuluyangguang1/openclaw-portable@main/models-catalog.json',
+  'https://raw.githubusercontent.com/yuluyangguang1/openclaw-portable/main/models-catalog.json',
+  'https://ghproxy.net/https://raw.githubusercontent.com/yuluyangguang1/openclaw-portable/main/models-catalog.json',
+];
+
+function readCatalogFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return null;
+    const j = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!j || !Array.isArray(j.providers)) return null;
+    return j;
+  } catch (_) { return null; }
+}
+
+// Normalize + sanitize an untrusted catalog (remote fetch or user import).
+// Returns a clean {version, updatedAt, providers} object, or null if the
+// input is too malformed/garbage to be a real catalog. Everything the
+// frontend interpolates into HTML flows through here first — length caps
+// and charset restrictions keep the render path safe even though the
+// frontend escapes as well (defense in depth).
+function sanitizeCatalog(raw) {
+  const list = Array.isArray(raw) ? raw
+    : (raw && typeof raw === 'object' && Array.isArray(raw.providers) ? raw.providers : null);
+  if (!list || list.length < 1 || list.length > 300) return null;
+  const seen = new Set();
+  const out = [];
+  let totalModels = 0;
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue;
+    const id = typeof item.id === 'string' ? item.id.trim().slice(0, 64) : '';
+    if (!id || /[\r\n"'\\<>/]/.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    // Strip markup from free-text fields server-side too — the frontend
+    // escapes, but a catalog that never carries angle brackets can't
+    // become an XSS payload even for future UI code paths.
+    const cleanText = (v, max) => String(v).replace(/[<>]/g, '').trim().slice(0, max);
+    const p = {
+      id,
+      name: (typeof item.name === 'string' && item.name.trim()) ? cleanText(item.name, 80) : id,
+      models: [],
+      tags: [],
+    };
+    if (Array.isArray(item.models)) {
+      p.models = item.models
+        .filter(m => typeof m === 'string' && m.trim())
+        .map(m => m.trim().slice(0, 200))
+        .slice(0, 1000);
+    }
+    totalModels += p.models.length;
+    if (totalModels > 20000) return null;
+    if (Array.isArray(item.tags)) {
+      p.tags = item.tags.filter(t => typeof t === 'string' && /^[a-z]{1,12}$/.test(t)).slice(0, 8);
+    }
+    if (typeof item.base === 'string') p.base = item.base.trim().slice(0, 500);
+    if (typeof item.desc === 'string') p.desc = cleanText(item.desc, 200);
+    if (typeof item.link === 'string' && /^https:\/\//.test(item.link)) p.link = item.link.slice(0, 300);
+    if (item.isLocal === true) p.isLocal = true;
+    if (item.isCustom === true) p.isCustom = true;
+    out.push(p);
+  }
+  // A real catalog has dozens of providers; a handful of valid entries
+  // inside garbage means we parsed the wrong thing — reject.
+  if (out.length < 3) return null;
+  return {
+    version: (raw && typeof raw.version === 'string') ? raw.version.slice(0, 40) : 'unknown',
+    updatedAt: (raw && typeof raw.updatedAt === 'string') ? raw.updatedAt.slice(0, 40) : new Date().toISOString(),
+    providers: out,
+  };
+}
+
+function writeUserCatalog(catalog, source) {
+  const toWrite = { ...catalog, fetchedAt: new Date().toISOString(), source };
+  atomicWriteJson(MODEL_CATALOG_USER, toWrite);
+  return toWrite;
+}
+
+// GET — current catalog with precedence: user cache > shipped > none
+// (frontend keeps its embedded hardcoded list when `providers` is empty).
+if (req.url === '/api/models/catalog' && req.method === 'GET') {
+  const userCat = readCatalogFile(MODEL_CATALOG_USER);
+  const shipCat = readCatalogFile(MODEL_CATALOG_SHIPPED);
+  const cat = userCat || shipCat;
+  const fetchedAt = userCat ? Date.parse(userCat.fetchedAt || '') || 0 : 0;
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  if (!cat) {
+    res.end(JSON.stringify({ ok: true, source: 'embedded', providers: [] }));
+    return;
+  }
+  res.end(JSON.stringify({
+    ok: true,
+    source: userCat ? 'cache' : 'built-in',
+    version: cat.version || '',
+    updatedAt: cat.updatedAt || '',
+    stale: userCat ? (Date.now() - fetchedAt > MODEL_CATALOG_STALE_MS) : true,
+    providers: cat.providers,
+  }));
+  return;
+}
+
+// POST /api/models/refresh — pull latest catalog from the source list.
+if (req.url === '/api/models/refresh' && req.method === 'POST') {
+  readBoundedJsonBody(req, res, 10_000).then(async (body) => {
+    if (body === null) return; // already responded (413/400)
+    try {
+      let sources = DEFAULT_CATALOG_SOURCES;
+      try {
+        const custom = JSON.parse(fs.readFileSync(path.join(OPENCLAW_DIR, 'catalog-sources.json'), 'utf8'));
+        if (Array.isArray(custom) && custom.length > 0 &&
+            custom.every(u => typeof u === 'string' && /^https?:\/\//.test(u))) {
+          sources = custom.slice(0, 8);
+        }
+      } catch (_) { /* no custom sources — use defaults */ }
+
+      const errors = [];
+      for (const url of sources) {
+        try {
+          const r = await fetchWithTimeout(url, { timeout: 12000, headers: { 'User-Agent': 'OpenClawPortable' } });
+          if (!r.ok) { errors.push(url + ' → HTTP ' + r.status); continue; }
+          const raw = await readJsonBounded(r, MODEL_CATALOG_FETCH_CAP);
+          const clean = sanitizeCatalog(raw);
+          if (!clean) { errors.push(url + ' → catalog invalid'); continue; }
+          const written = writeUserCatalog(clean, url);
+          if (!res.headersSent) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+              ok: true, updated: true, version: written.version,
+              updatedAt: written.updatedAt, source: url,
+              providers: written.providers,
+            }));
+          }
+          return;
+        } catch (e) {
+          errors.push(url + ' → ' + e.message);
+        }
+      }
+      if (!res.headersSent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: '所有源均失败: ' + errors.join('; ').slice(0, 300) }));
+      }
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    }
+  });
+  return;
+}
+
+// POST /api/models/catalog — manual import (offline users can paste a
+// catalog file they downloaded elsewhere). Body: {catalog: {...}} or a
+// bare array.
+if (req.url === '/api/models/catalog' && req.method === 'POST') {
+  readBoundedJsonBody(req, res, 2_000_000).then((body) => {
+    if (body === null) return; // already responded (413/400)
+    try {
+      const clean = sanitizeCatalog(body && body.catalog !== undefined ? body.catalog : body);
+      if (!clean) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: '目录格式无效（需要 {version, providers:[{id,name,base,models}]}）' }));
+        return;
+      }
+      const written = writeUserCatalog(clean, 'manual-import');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true, version: written.version, updatedAt: written.updatedAt,
+        source: 'manual', providers: written.providers,
+      }));
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    }
+  });
+  return;
+}
+
+// POST /api/models/reset — drop the user cache, fall back to the shipped
+// catalog. Returns the shipped catalog so the UI can apply it directly.
+if (req.url === '/api/models/reset' && req.method === 'POST') {
+  readBoundedJsonBody(req, res, 10_000).then((body) => {
+    if (body === null) return;
+    try {
+      try { fs.unlinkSync(MODEL_CATALOG_USER); } catch (_) {}
+      const shipCat = readCatalogFile(MODEL_CATALOG_SHIPPED);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        ok: true, source: 'built-in',
+        version: shipCat ? shipCat.version : '',
+        providers: shipCat ? shipCat.providers : [],
+      }));
+    } catch (err) {
+      if (!res.headersSent) {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: false, error: err.message }));
+      }
+    }
+  });
   return;
 }
 
