@@ -801,12 +801,32 @@
  border-top: 1px solid var(--accent) !important;
  backdrop-filter: blur(8px);
  }
- /* Disconnect overlay center card — transparent + accent border */
- #disconnectOverlay > div {
- background: transparent !important;
- border: 1px solid var(--accent) !important;
- border-radius: 0 !important;
+ /* Disconnect overlay — theme-aware flat card (was: hardcoded teal
+    inline styles + a !important override layer fighting each other,
+    which also broke in light theme) */
+ #disconnectOverlay {
+ position: fixed; inset: 0; z-index: 600; display: none;
+ align-items: center; justify-content: center;
+ background: color-mix(in srgb, var(--bg) 82%, transparent);
+ backdrop-filter: blur(6px);
  }
+ #disconnectOverlay.show { display: flex; }
+ #disconnectOverlay .dc-card {
+ background: var(--secondary); border: 1px solid var(--border);
+ border-top: 2px solid var(--warning);
+ padding: 26px 30px; max-width: 400px; width: calc(100% - 48px);
+ font-family: var(--font-mono);
+ }
+ #disconnectOverlay .dc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+ #disconnectOverlay .dc-dot {
+ width: 9px; height: 9px; border-radius: 50%; background: var(--warning);
+ animation: dcPulse 1.2s ease-in-out infinite; flex-shrink: 0;
+ }
+ @keyframes dcPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+ #disconnectOverlay .dc-title { color: var(--fg); font-weight: 600; font-size: 0.95em; letter-spacing: 0.04em; }
+ #disconnectOverlay .dc-desc { color: var(--fg-muted); font-size: 0.82em; line-height: 1.7; margin: 0 0 12px; }
+ #disconnectOverlay .dc-status { color: var(--warning); font-size: 0.75em; margin-bottom: 16px; min-height: 1em; }
+ #disconnectOverlay .dc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
  /* Modal stays filled (it floats above a dim backdrop) but flattened */
  .modal-box { border-radius: 0 !important; border: 1px solid var(--border); }
 
@@ -1378,10 +1398,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <span style="color:var(--fg-muted);font-size:0.85em;">配置已保存，重启后生效</span>
  <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">重启 Gateway</button>
 </div>
-<div id="disconnectOverlay" style="display:none;position:fixed;inset:0;background:rgba(4,28,28,0.9);z-index:600;align-items:center;justify-content:center;background:rgba(4,28,28,0.95);">
- <div style="background:#062424;padding:32px 40px;border-radius:12px;text-align:center;border:1px solid rgba(0,255,200,0.12);">
- <h3 style="color:#ffe6cb;margin-bottom:8px;font-size:1em;">连接已断开</h3>
- <p style="color:var(--fg-muted);font-size:0.85em;">后端进程已停止，请重新启动。</p>
+<div id="disconnectOverlay" role="alertdialog" aria-labelledby="dcTitle" aria-describedby="dcDesc">
+ <div class="dc-card">
+ <div class="dc-head">
+ <span class="dc-dot" aria-hidden="true"></span>
+ <span class="dc-title" id="dcTitle">已与配置服务断开</span>
+ </div>
+ <p class="dc-desc" id="dcDesc">保存配置等操作暂不可用。正在自动重连，恢复后此提示会自动消失。</p>
+ <div class="dc-status" id="dcStatus">自动重连中…</div>
+ <div class="dc-actions">
+ <button type="button" class="btn btn-primary" id="dcRetryBtn">立即重试</button>
+ <button type="button" class="btn" id="dcReloadBtn">重新加载页面</button>
+ </div>
  </div>
 </div>
 <script>
@@ -3045,18 +3073,26 @@ function showLocalModelHints() {
  // Previously the failure check was synchronous (ran before fetch
  // settled), so it always reflected the *previous* iteration's count.
  // Now the check happens inside .then/.catch.
+ //
+ // Static preview guard: opening index.html directly via file:// has
+ // NO config-server behind it — every heartbeat would fail and pop
+ // the overlay as a false alarm. Only poll when actually served.
+ if (location.protocol !== 'file:') {
  var _hbFails = 0;
  var _hbBusy = false;
  function _showOverlay(show) {
  var ov = document.getElementById('disconnectOverlay');
  if (!ov) return;
- ov.style.display = show ? 'flex' : 'none';
+ var wasShown = ov.classList.contains('show');
+ ov.classList.toggle('show', show);
+ if (show) {
+ var st = document.getElementById('dcStatus');
+ if (st) st.textContent = '自动重连中 · 已重试 ' + _hbFails + ' 次';
+ } else if (wasShown) {
+ showToast('连接已恢复', 'success');
  }
- setInterval(function() {
- // Skip when document is hidden — browser throttles intervals to
- // ~1/min in background tabs; resuming would burst-fire stale
- // pollers and falsely trip the offline overlay.
- if (typeof document !== 'undefined' && document.hidden) return;
+ }
+ function _hbCheck() {
  if (_hbBusy) return; // skip overlapping requests on slow links
  _hbBusy = true;
  apiFetch('/api/heartbeat', { timeout: 3000 }).then(function(r) {
@@ -3071,7 +3107,25 @@ function showLocalModelHints() {
  _hbFails++;
  if (_hbFails >= 3) _showOverlay(true);
  }).finally(function(){ _hbBusy = false; });
+ }
+ setInterval(function() {
+ // Skip when document is hidden — browser throttles intervals to
+ // ~1/min in background tabs; resuming would burst-fire stale
+ // pollers and falsely trip the offline overlay.
+ if (typeof document !== 'undefined' && document.hidden) return;
+ _hbCheck();
  }, 5000);
+ // Manual retry — immediate probe instead of waiting for the next
+ // 5s tick. Shares _hbBusy so it can't stack with the poller.
+ var _dcRetry = document.getElementById('dcRetryBtn');
+ if (_dcRetry) _dcRetry.addEventListener('click', function() {
+ var st = document.getElementById('dcStatus');
+ if (st) st.textContent = '正在重试…';
+ _hbCheck();
+ });
+ var _dcReload = document.getElementById('dcReloadBtn');
+ if (_dcReload) _dcReload.addEventListener('click', function() { location.reload(); });
+ }
 })();
 
 // ═══════════════════════════════════════════════════════════
