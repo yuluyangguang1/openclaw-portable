@@ -1398,6 +1398,21 @@ function apiFetch(url, opts) {
  return fetch(url, opts);
 }
 
+// Shared HTML-escape for values interpolated into markup. Used by the
+// memory/session panels whose names come from the filesystem (a hostile
+// filename like <img onerror=...>.md must never reach innerHTML raw).
+// Defined once here at top level so every script block can use it
+// (same pattern as apiFetch).
+function _escHtml(s) {
+ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+ });
+}
+// Snapshot of the last-rendered memory list. viewMemory receives an
+// INDEX into this list instead of a filename — filenames can contain
+// quotes that would break out of the inline onclick string.
+var _memList = null;
+
 // ===== PROVIDERS =====
 const PROVIDERS = [
  // ── 国内热门 ──
@@ -1646,13 +1661,49 @@ function updateCatalogBadge() {
 // Replace the catalog IN PLACE (splice, not reassign) so every closure
 // holding a reference to PROVIDERS (filters, presets, save flow) sees
 // the new data. Re-render picks up the change immediately.
-function applyCatalog(providers, info) {
+//
+// Lossless for the user: renderProviders() rebuilds the grid's innerHTML,
+// which would silently wipe half-typed API keys and collapse the open
+// card. We snapshot every non-empty [data-field] value + the open card
+// before re-rendering and restore them after. Automatic (background)
+// refreshes take the extra-safe path: if anything is dirty they skip
+// the swap entirely and let the next page load pick the catalog up.
+function applyCatalog(providers, info, auto) {
  if (!Array.isArray(providers) || providers.length === 0) return false;
+ var grid = document.getElementById('providerGrid');
+ var dirty = [];
+ if (grid) {
+ grid.querySelectorAll('[data-field]').forEach(function(el){
+ var v = String(el.value || '');
+ if (v.trim() === '') return;
+ var card = el.closest('.provider-card');
+ if (!card) return;
+ dirty.push({ id: card.getAttribute('data-id'), field: el.getAttribute('data-field'), value: v });
+ });
+ }
+ if (auto && dirty.length > 0) return false;
+ var openCard = grid && grid.querySelector('.provider-card.selected');
+ var openId = openCard ? openCard.getAttribute('data-id') : null;
  PROVIDERS.length = 0;
  Array.prototype.push.apply(PROVIDERS, providers);
  if (info) catalogInfo = info;
  updateCatalogBadge();
  renderProviders();
+ if (openId) {
+ var card = document.querySelector('.provider-card[data-id="' + openId + '"]');
+ if (card) {
+ card.classList.add('selected');
+ var ex = card.querySelector('.provider-expand');
+ if (ex) ex.classList.add('open');
+ }
+ }
+ dirty.forEach(function(d){
+ var card = document.querySelector('.provider-card[data-id="' + d.id + '"]');
+ if (!card) return;
+ var el = card.querySelector('[data-field="' + d.field + '"]');
+ if (el) el.value = d.value;
+ });
+ updateSaveBtn();
  return true;
 }
 
@@ -1660,7 +1711,9 @@ function loadCatalog(auto) {
  apiFetch('/api/models/catalog', { timeout: 8000 }).then(function(r){ return r.json(); }).then(function(data) {
  if (!data || !data.ok) return;
  if (data.providers && data.providers.length) {
- applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: data.source });
+ // auto=true: page-load apply — skip entirely if the user is already
+ // typing into a card (a background swap must never cost input).
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: data.source }, true);
  }
  // Background refresh when the cache is stale or only the embedded
  // list is available. silent=true → no error toast if offline.
@@ -1975,8 +2028,14 @@ function startWeChatLogin(e) {
 
 function pollWeChatStatus() {
  if (wechatPollTimer) clearInterval(wechatPollTimer);
+ // Consecutive-failure counter: if the config-server restarts mid-poll
+ // every request rejects and the catch swallowed it silently, leaving
+ // the UI stuck on "请扫码" forever. Stop after 10 misses (~20s) and
+ // tell the user to re-scan.
+ var wcFails = 0;
  wechatPollTimer = setInterval(() => {
  apiFetch('/api/wechat/status?session=' + encodeURIComponent(wechatSession || '')).then(function(r){return r.json();}).then(function(data) {
+ wcFails = 0;
  const statusEl = document.getElementById('wechat-status');
  const qrEl = document.getElementById('wechat-qr');
  // Server returns: 'wait' | 'refreshed' | 'confirmed' | 'expired' | 'error'
@@ -2009,7 +2068,15 @@ function pollWeChatStatus() {
  if (statusEl) statusEl.textContent = '\u274c ' + (data.message || data.error || 'Error');
  }
  // 'wait' = still waiting for scan, no UI update needed
- }).catch(() => {});
+ }).catch(() => {
+ wcFails++;
+ if (wcFails >= 10) {
+ clearInterval(wechatPollTimer);
+ wechatPollTimer = null;
+ var stEl = document.getElementById('wechat-status');
+ if (stEl) stEl.textContent = '\u274c \u8fde\u63a5\u4e2d\u65ad\uff0c\u8bf7\u91cd\u65b0\u626b\u7801';
+ }
+ });
  }, 2000);
 }
 
@@ -2206,7 +2273,9 @@ function saveConfig() {
  let base, model, apiKey;
  if (p.isLocal) {
  const portInput = card.querySelector('[data-field="port"]');
- const port = portInput ? portInput.value : (p.base.match(/:(\d+)/)||[])[1];
+ // p.base comes from the hot-updatable catalog and may be absent for
+ // imported entries — guard like renderProviders does.
+ const port = portInput ? portInput.value : ((String(p.base || '').match(/:(\d+)/)) || [])[1];
  base = 'http://127.0.0.1:' + port + '/v1';
  model = (card.querySelector('[data-field="model"]') || {}).value || '';
  apiKey = '';
@@ -3098,9 +3167,13 @@ function loadMemory() {
     }
     
     let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    data.memories.forEach(mem => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(\'' + mem.name + '\')">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + mem.name + '</div>';
+    _memList = data.memories;
+    data.memories.forEach((mem, mi) => {
+      // Pass the list INDEX, not the filename: names come from the
+      // filesystem and may contain quotes/markup that would break the
+      // inline onclick string. The display side is HTML-escaped.
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(' + mi + ')">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(mem.name) + '</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...</div>';
       html += '</div>';
@@ -3113,16 +3186,15 @@ function loadMemory() {
   } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
 }
 
-function viewMemory(name) {
-  apiFetch('/api/memory').then(r => r.json()).then(data => {
-    if (!data || !data.memories) return;
-    const mem = data.memories.find(m => m.name === name);
-    if (mem) {
-      showModal('记忆: ' + name.replace(/</g, '&lt;'), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
+function viewMemory(mi) {
+  // Look up by index in the render-time snapshot — no filename ever
+  // round-trips through JS string contexts.
+  const mem = _memList && _memList[mi];
+  if (mem) {
+    showModal('记忆: ' + _escHtml(mem.name), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
         {text: '关闭', cls: 'btn', action: 'closeModal'}
       ]);
-    }
-  });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3144,9 +3216,9 @@ function loadSessions() {
     html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
     data.sessions.forEach(session => {
       html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + session.id + '</div>';
+      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(session.id) + '</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      if (session.model) html += '模型: ' + session.model + ' | ';
+      if (session.model) html += '模型: ' + _escHtml(session.model) + ' | ';
       html += '消息: ' + (session.messages || 0);
       if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
       else html += ' | 创建: 未知';
@@ -3410,9 +3482,13 @@ function loadMemory() {
     }
     
     let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    data.memories.forEach(mem => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(\'' + mem.name + '\')">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + mem.name + '</div>';
+    _memList = data.memories;
+    data.memories.forEach((mem, mi) => {
+      // Pass the list INDEX, not the filename: names come from the
+      // filesystem and may contain quotes/markup that would break the
+      // inline onclick string. The display side is HTML-escaped.
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(' + mi + ')">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(mem.name) + '</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...</div>';
       html += '</div>';
@@ -3425,16 +3501,15 @@ function loadMemory() {
   } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
 }
 
-function viewMemory(name) {
-  apiFetch('/api/memory').then(r => r.json()).then(data => {
-    if (!data || !data.memories) return;
-    const mem = data.memories.find(m => m.name === name);
-    if (mem) {
-      showModal('记忆: ' + name.replace(/</g, '&lt;'), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
+function viewMemory(mi) {
+  // Look up by index in the render-time snapshot — no filename ever
+  // round-trips through JS string contexts.
+  const mem = _memList && _memList[mi];
+  if (mem) {
+    showModal('记忆: ' + _escHtml(mem.name), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
         {text: '关闭', cls: 'btn', action: 'closeModal'}
       ]);
-    }
-  });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3456,9 +3531,9 @@ function loadSessions() {
     html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
     data.sessions.forEach(session => {
       html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + session.id + '</div>';
+      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(session.id) + '</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      if (session.model) html += '模型: ' + session.model + ' | ';
+      if (session.model) html += '模型: ' + _escHtml(session.model) + ' | ';
       html += '消息: ' + (session.messages || 0);
       if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
       else html += ' | 创建: 未知';
@@ -3643,9 +3718,13 @@ function loadMemory() {
     }
     
     let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    data.memories.forEach(mem => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(\'' + mem.name + '\')">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + mem.name + '</div>';
+    _memList = data.memories;
+    data.memories.forEach((mem, mi) => {
+      // Pass the list INDEX, not the filename: names come from the
+      // filesystem and may contain quotes/markup that would break the
+      // inline onclick string. The display side is HTML-escaped.
+      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(' + mi + ')">';
+      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(mem.name) + '</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...</div>';
       html += '</div>';
@@ -3658,16 +3737,15 @@ function loadMemory() {
   } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
 }
 
-function viewMemory(name) {
-  apiFetch('/api/memory').then(r => r.json()).then(data => {
-    if (!data || !data.memories) return;
-    const mem = data.memories.find(m => m.name === name);
-    if (mem) {
-      showModal('记忆: ' + name.replace(/</g, '&lt;'), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
+function viewMemory(mi) {
+  // Look up by index in the render-time snapshot — no filename ever
+  // round-trips through JS string contexts.
+  const mem = _memList && _memList[mi];
+  if (mem) {
+    showModal('记忆: ' + _escHtml(mem.name), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
         {text: '关闭', cls: 'btn', action: 'closeModal'}
       ]);
-    }
-  });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -3689,9 +3767,9 @@ function loadSessions() {
     html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
     data.sessions.forEach(session => {
       html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + session.id + '</div>';
+      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(session.id) + '</div>';
       html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      if (session.model) html += '模型: ' + session.model + ' | ';
+      if (session.model) html += '模型: ' + _escHtml(session.model) + ' | ';
       html += '消息: ' + (session.messages || 0);
       if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
       else html += ' | 创建: 未知';
