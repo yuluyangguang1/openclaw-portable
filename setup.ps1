@@ -304,20 +304,13 @@ if ((Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Containe
     Write-Step "OK" "ACP / Codex harness ready." "Green"
 }
 
-$skillsCn = Join-Path $scriptDir "skills-zh"
-$skillsTarget = Join-Path $coreDir "node_modules\openclaw\skills"
-
-if ((Test-Path -Path $skillsCn -PathType Container) -and (Test-Path -Path $skillsTarget -PathType Container)) {
-    Write-Step "->" "Installing localized skills from skills-zh..." "Cyan"
-    $skillCount = 0
-    Get-ChildItem -Path $skillsCn -Directory | ForEach-Object {
-        $targetPath = Join-Path $skillsTarget $_.Name
-        if (-not (Test-Path -Path $targetPath -PathType Container)) {
-            Copy-Item -Path $_.FullName -Destination $targetPath -Recurse -Force
-            $skillCount++
-        }
-    }
-    Write-Step "OK" ("Localized skills installed (+{0})." -f $skillCount) "Green"
+# China-optimized skills (zero-copy): skills-zh\ is NOT copied into
+# node_modules. The Start launchers inject OPENCLAW_BUNDLED_SKILLS_DIR,
+# which OpenClaw resolves natively (env override in
+# resolveBundledSkillsDir(), both 6.11 and 2.0). Zero-copy survives
+# openclaw reinstalls and enables true hot-reload on 2.0.
+if (Test-Path -Path (Join-Path $scriptDir "skills-zh") -PathType Container) {
+    Write-Step "OK" "skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)." "Green"
 }
 
 Write-Host ""

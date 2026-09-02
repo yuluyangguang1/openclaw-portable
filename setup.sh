@@ -233,20 +233,14 @@ fi
 [ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}[ok]${NC} ACP / Codex harness 就绪"
 
 # ---- 4. Install China-optimized skills ----
-SKILLS_CN="$SCRIPT_DIR/skills-zh"
-SKILLS_TARGET="$CORE_DIR/node_modules/openclaw/skills"
-
-if [ -d "$SKILLS_CN" ] && [ -d "$SKILLS_TARGET" ]; then
-    echo -e "  ${CYAN}[v]${NC} 安装中国优化技能 (skills-zh)..."
-    SKILL_COUNT=0
-    for skill_dir in "$SKILLS_CN"/*/; do
-        skill_name=$(basename "$skill_dir")
-        if [ ! -d "$SKILLS_TARGET/$skill_name" ]; then
-            cp -R "$skill_dir" "$SKILLS_TARGET/$skill_name"
-            SKILL_COUNT=$((SKILL_COUNT + 1))
-        fi
-    done
-    echo -e "  ${GREEN}[ok]${NC} 中国技能安装完成 (+$SKILL_COUNT 个)"
+# ---- 4. China-optimized skills (zero-copy) ----
+# skills-zh/ is NOT copied into node_modules. The Start launchers inject
+# OPENCLAW_BUNDLED_SKILLS_DIR=<portable>/skills-zh, which OpenClaw resolves
+# natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
+# Zero-copy survives openclaw reinstalls/upgrades and enables true
+# hot-reload on 2.0 (the skills watcher ignores node_modules).
+if [ -d "$SCRIPT_DIR/skills-zh" ]; then
+    echo -e "  ${GREEN}[ok]${NC} skills-zh 就绪 (零拷贝，启动器经 OPENCLAW_BUNDLED_SKILLS_DIR 加载)"
 fi
 
 # ---- Done ----

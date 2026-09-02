@@ -217,25 +217,15 @@ if exist "%CORE_DIR%\node_modules\acpx" if exist "%CORE_DIR%\node_modules\@zed-i
     echo   [OK] ACP / Codex harness ready
 )
 
-REM ---- 4. Install China-optimized skills ----
-set "SKILLS_CN=%SCRIPT_DIR%skills-zh"
-set "SKILLS_TARGET=%CORE_DIR%\node_modules\openclaw\skills"
-
-if not exist "%SKILLS_CN%" goto skip_skills_install
-if not exist "%SKILLS_TARGET%" goto skip_skills_install
-
-echo   [COPY] Installing China-optimized skills (skills-zh)...
-set "SKILL_COUNT=0"
-for /d %%s in ("%SKILLS_CN%\*") do (
-    set "skill_name=%%~nxs"
-    if not exist "%SKILLS_TARGET%\!skill_name!" (
-        xcopy /s /e /q /y "%%s" "%SKILLS_TARGET%\!skill_name!\" >nul
-        set /a SKILL_COUNT+=1
-    )
+REM ---- 4. China-optimized skills (zero-copy) ----
+REM skills-zh\ is NOT copied into node_modules. The Start launchers inject
+REM OPENCLAW_BUNDLED_SKILLS_DIR=<portable>\skills-zh, which OpenClaw resolves
+REM natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
+REM Zero-copy survives openclaw reinstalls/upgrades and enables true
+REM hot-reload on 2.0 (the skills watcher ignores node_modules).
+if exist "%SCRIPT_DIR%skills-zh" (
+    echo   [OK] skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)
 )
-echo   [OK] China skills installed (+%SKILL_COUNT% skills)
-
-:skip_skills_install
 
 REM ---- Done ----
 echo.
