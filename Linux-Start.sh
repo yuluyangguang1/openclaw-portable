@@ -140,14 +140,27 @@ export OPENCLAW_HOME="$DATA_DIR"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 export OPENCLAW_DISABLE_BONJOUR=1
-# USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
-export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 # Zero-copy bundled skills dir (survives openclaw reinstalls; enables
 # true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
 export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/skills-zh"
 # OpenClaw 2.0: keep its native service supervisor out of the way -
 # the portable wrapper manages the gateway process itself.
 export OPENCLAW_SUPERVISOR_MODE=external
+
+# Strip host provider credentials inherited from the host machine (雷5):
+# leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
+# OpenClaw treat those providers as "configured" -> runtime plugin install
+# (exFAT: node_modules link fails -> gateway never ready) + silently burns
+# the host owner's quota. Clear them once here; every gateway spawn below
+# inherits a clean env.
+_STRIP_ENV="$("$NODE_BIN" "$PORTABLE_DIR/lib/strip-provider-env.mjs" 2>/dev/null | sed 's/^OPENCLAW_STRIP_ENV=//')"
+if [ -n "$_STRIP_ENV" ]; then
+    for _sv in $(printf '%s' "$_STRIP_ENV" | tr ',' ' '); do
+        unset "$_sv"
+    done
+    echo -e "  ${YELLOW}Stripped host provider env vars:${NC} $_STRIP_ENV"
+fi
+unset _STRIP_ENV _sv
 
 # ---- 6. Check dependencies ----
 if [ ! -d "$CORE_DIR/node_modules" ]; then

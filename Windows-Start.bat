@@ -72,8 +72,6 @@ set "NPM_BIN=!NODE_DIR!\npm.cmd"
 set "OPENCLAW_HOME=!DATA_DIR!"
 set "OPENCLAW_STATE_DIR=!STATE_DIR!"
 set "OPENCLAW_DISABLE_BONJOUR=1"
-rem USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
-set "OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1"
 set "OPENCLAW_CONFIG_PATH=!STATE_DIR!\openclaw.json"
 rem Zero-copy bundled skills dir (survives openclaw reinstalls; enables
 rem true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
@@ -314,6 +312,20 @@ set "_JS=%TEMP%\oc-write-port-%RANDOM%.js"
 >"!_JS!" echo var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" !PORT! >nul 2>&1
 del "!_JS!" 2>nul
+
+REM Strip host provider credentials inherited from the host machine (雷5):
+REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
+REM OpenClaw treat those providers as "configured" -> it tries a runtime plugin
+REM install (exFAT: node_modules link fails -> gateway never ready) and silently
+REM burns the host owner's API quota. Clear them before launching the gateway.
+set "OPENCLAW_STRIP_ENV="
+for /f "usebackq tokens=1,* delims==" %%a in (`""!NODE_BIN!" "!PORTABLE_DIR!lib\strip-provider-env.mjs" 2^>nul"`) do if "%%a"=="OPENCLAW_STRIP_ENV" set "OPENCLAW_STRIP_ENV=%%b"
+if defined OPENCLAW_STRIP_ENV (
+    for %%v in (!OPENCLAW_STRIP_ENV!) do set "%%v="
+    echo   Stripped host provider env vars: !OPENCLAW_STRIP_ENV!
+    echo.
+)
+set "OPENCLAW_STRIP_ENV="
 
 REM ── Gateway watchdog: auto-restart on crash, up to 3 times ──────
 REM cmd has no `wait` equivalent; we run gateway in foreground and
