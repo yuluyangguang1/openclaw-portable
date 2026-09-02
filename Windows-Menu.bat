@@ -151,6 +151,18 @@ if exist "%STATE_DIR%\openclaw.json" (
     del "!_OUT!" 2>nul
 )
 
+REM Strip host provider credentials inherited from the host machine (雷5):
+REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
+REM OpenClaw treat those providers as configured -> runtime plugin install
+REM (exFAT brick) + silently burns the host owner's quota.
+set "OPENCLAW_STRIP_ENV="
+for /f "usebackq tokens=1,* delims==" %%a in (`""!NODE_BIN!" "!PORTABLE_DIR!lib\strip-provider-env.mjs" 2^>nul"`) do if "%%a"=="OPENCLAW_STRIP_ENV" set "OPENCLAW_STRIP_ENV=%%b"
+if defined OPENCLAW_STRIP_ENV (
+    for %%v in (!OPENCLAW_STRIP_ENV!) do set "%%v="
+    echo   Stripped host provider env vars: !OPENCLAW_STRIP_ENV!
+)
+set "OPENCLAW_STRIP_ENV="
+
 start /B "" cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:!PORT!/#token=!TOKEN!"
 "%NODE_BIN%" "%OPENCLAW_MJS%" gateway run --allow-unconfigured --force --port !PORT!
 pause

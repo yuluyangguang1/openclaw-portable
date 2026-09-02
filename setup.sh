@@ -168,7 +168,7 @@ fi
 # already-installed AND the version matches.
 mkdir -p "$CORE_DIR"
 OPENCLAW_VERSION_FILE="$(dirname "$0")/OPENCLAW_VERSION"
-OPENCLAW_VERSION="2026.5.12"
+OPENCLAW_VERSION="2026.8.2"
 if [ -f "$OPENCLAW_VERSION_FILE" ]; then
     OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"
 fi
@@ -182,7 +182,21 @@ cat > "$CORE_DIR/package.json" << PKGJSON
     "@tencent-weixin/openclaw-weixin": "^2.4.4",
     "@zed-industries/codex-acp": "^0.14.0",
     "acpx": "^0.8.0",
-    "openclaw": "$OPENCLAW_VERSION"
+    "openclaw": "$OPENCLAW_VERSION",
+    "@openclaw/arcee-provider": "$OPENCLAW_VERSION",
+    "@openclaw/cerebras-provider": "$OPENCLAW_VERSION",
+    "@openclaw/cohere-provider": "$OPENCLAW_VERSION",
+    "@openclaw/deepinfra-provider": "$OPENCLAW_VERSION",
+    "@openclaw/deepseek-provider": "$OPENCLAW_VERSION",
+    "@openclaw/fireworks-provider": "$OPENCLAW_VERSION",
+    "@openclaw/gmi-provider": "$OPENCLAW_VERSION",
+    "@openclaw/groq-provider": "$OPENCLAW_VERSION",
+    "@openclaw/kilocode-provider": "$OPENCLAW_VERSION",
+    "@openclaw/kimi-provider": "$OPENCLAW_VERSION",
+    "@openclaw/longcat-provider": "$OPENCLAW_VERSION",
+    "@openclaw/qwen-provider": "$OPENCLAW_VERSION",
+    "@openclaw/stepfun-provider": "$OPENCLAW_VERSION",
+    "@openclaw/zai-provider": "$OPENCLAW_VERSION"
   }
 }
 PKGJSON
@@ -213,6 +227,17 @@ if [ "$NEED_INSTALL" = "true" ]; then
     echo -e "  ${GREEN}[ok]${NC} OpenClaw 安装完成"
 fi
 
+# ---- 2b. Verify official provider plugins are present ----
+MISSING_PROVIDERS=""
+for _p in deepseek kimi qwen zai stepfun; do
+    [ -d "$CORE_DIR/node_modules/@openclaw/$_p-provider" ] || MISSING_PROVIDERS="$MISSING_PROVIDERS $_p"
+done
+if [ -n "$MISSING_PROVIDERS" ]; then
+    echo -e "  ${RED}[!]${NC} 官方 provider 插件缺失:$MISSING_PROVIDERS (运行时会触发在线安装，exFAT 上会卡死)"
+else
+    echo -e "  ${GREEN}[ok]${NC} 14 个官方 provider 插件已预装"
+fi
+
 # ---- 3. Verify core deps ----
 # QQ plugin, WeChat plugin, acpx, and codex-acp are declared in package.json
 # and installed by the npm install above. Just verify + build if needed.
@@ -233,20 +258,24 @@ fi
 [ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}[ok]${NC} ACP / Codex harness 就绪"
 
 # ---- 4. Install China-optimized skills ----
-SKILLS_CN="$SCRIPT_DIR/skills-cn"
-SKILLS_TARGET="$CORE_DIR/node_modules/openclaw/skills"
+# ---- 4. China-optimized skills (zero-copy) ----
+# skills-zh/ is NOT copied into node_modules. The Start launchers inject
+# OPENCLAW_BUNDLED_SKILLS_DIR=<portable>/skills-zh, which OpenClaw resolves
+# natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
+# Zero-copy survives openclaw reinstalls/upgrades and enables true
+# hot-reload on 2.0 (the skills watcher ignores node_modules).
+if [ -d "$SCRIPT_DIR/skills-zh" ]; then
+    echo -e "  ${GREEN}[ok]${NC} skills-zh 就绪 (零拷贝，启动器经 OPENCLAW_BUNDLED_SKILLS_DIR 加载)"
+fi
 
-if [ -d "$SKILLS_CN" ] && [ -d "$SKILLS_TARGET" ]; then
-    echo -e "  ${CYAN}[v]${NC} 安装中国优化技能 (skills-cn)..."
-    SKILL_COUNT=0
-    for skill_dir in "$SKILLS_CN"/*/; do
-        skill_name=$(basename "$skill_dir")
-        if [ ! -d "$SKILLS_TARGET/$skill_name" ]; then
-            cp -R "$skill_dir" "$SKILLS_TARGET/$skill_name"
-            SKILL_COUNT=$((SKILL_COUNT + 1))
-        fi
-    done
-    echo -e "  ${GREEN}[ok]${NC} 中国技能安装完成 (+$SKILL_COUNT 个)"
+# ---- 5. Post-install doctor --fix (non-blocking) ----
+# OpenClaw 2.0 externalizes providers (byteplus/volcengine/deepseek/...)
+# and migrates codex/* -> openai/* routes; doctor --fix heals both plus
+# removes stale OpenProse config. Failure must not block setup.
+if [ -f "$CORE_DIR/node_modules/openclaw/openclaw.mjs" ]; then
+    echo -e "  ${CYAN}[v]${NC} 运行 openclaw doctor --fix（自动迁移配置，失败不阻断）..."
+    "$NODE_TARGET/bin/node" "$CORE_DIR/node_modules/openclaw/openclaw.mjs" doctor --fix >/dev/null 2>&1 \
+        || echo -e "  ${YELLOW}[WARN] doctor --fix 未通过（已忽略，可稍后手动执行）${NC}"
 fi
 
 # ---- Done ----

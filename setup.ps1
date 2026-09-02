@@ -209,7 +209,7 @@ $packageJsonPath = Join-Path $coreDir "package.json"
 # OPENCLAW_VERSION. Previously the file was git-tracked with a stale
 # version and the "if not exists" guard meant changes never took effect.
 $openclawVersionFile = Join-Path $PSScriptRoot "OPENCLAW_VERSION"
-$openclawVersion = "2026.5.12"
+$openclawVersion = "2026.8.2"
 if (Test-Path -Path $openclawVersionFile -PathType Leaf) {
     $openclawVersion = (Get-Content -Path $openclawVersionFile -Raw).Trim()
 }
@@ -222,7 +222,21 @@ $packageJson = @"
     "@sliverp/qqbot": "^1.6.1",
     "@zed-industries/codex-acp": "^0.14.0",
     "acpx": "^0.8.0",
-    "openclaw": "$openclawVersion"
+    "openclaw": "$openclawVersion",
+    "@openclaw/arcee-provider": "$openclawVersion",
+    "@openclaw/cerebras-provider": "$openclawVersion",
+    "@openclaw/cohere-provider": "$openclawVersion",
+    "@openclaw/deepinfra-provider": "$openclawVersion",
+    "@openclaw/deepseek-provider": "$openclawVersion",
+    "@openclaw/fireworks-provider": "$openclawVersion",
+    "@openclaw/gmi-provider": "$openclawVersion",
+    "@openclaw/groq-provider": "$openclawVersion",
+    "@openclaw/kilocode-provider": "$openclawVersion",
+    "@openclaw/kimi-provider": "$openclawVersion",
+    "@openclaw/longcat-provider": "$openclawVersion",
+    "@openclaw/qwen-provider": "$openclawVersion",
+    "@openclaw/stepfun-provider": "$openclawVersion",
+    "@openclaw/zai-provider": "$openclawVersion"
   }
 }
 "@
@@ -304,20 +318,13 @@ if ((Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Containe
     Write-Step "OK" "ACP / Codex harness ready." "Green"
 }
 
-$skillsCn = Join-Path $scriptDir "skills-cn"
-$skillsTarget = Join-Path $coreDir "node_modules\openclaw\skills"
-
-if ((Test-Path -Path $skillsCn -PathType Container) -and (Test-Path -Path $skillsTarget -PathType Container)) {
-    Write-Step "->" "Installing localized skills from skills-cn..." "Cyan"
-    $skillCount = 0
-    Get-ChildItem -Path $skillsCn -Directory | ForEach-Object {
-        $targetPath = Join-Path $skillsTarget $_.Name
-        if (-not (Test-Path -Path $targetPath -PathType Container)) {
-            Copy-Item -Path $_.FullName -Destination $targetPath -Recurse -Force
-            $skillCount++
-        }
-    }
-    Write-Step "OK" ("Localized skills installed (+{0})." -f $skillCount) "Green"
+# China-optimized skills (zero-copy): skills-zh\ is NOT copied into
+# node_modules. The Start launchers inject OPENCLAW_BUNDLED_SKILLS_DIR,
+# which OpenClaw resolves natively (env override in
+# resolveBundledSkillsDir(), both 6.11 and 2.0). Zero-copy survives
+# openclaw reinstalls and enables true hot-reload on 2.0.
+if (Test-Path -Path (Join-Path $scriptDir "skills-zh") -PathType Container) {
+    Write-Step "OK" "skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)." "Green"
 }
 
 Write-Host ""

@@ -120,7 +120,7 @@ if not exist "%CORE_DIR%" mkdir "%CORE_DIR%" 2>nul
 
 REM Read pinned OpenClaw version from repo root
 set "OPENCLAW_VERSION_FILE=%~dp0OPENCLAW_VERSION"
-set "OPENCLAW_VERSION=2026.5.12"
+set "OPENCLAW_VERSION=2026.8.2"
 if exist "%OPENCLAW_VERSION_FILE%" (
     for /f "usebackq delims=" %%v in ("%OPENCLAW_VERSION_FILE%") do set "OPENCLAW_VERSION=%%v"
 )
@@ -132,7 +132,7 @@ REM Always regenerate package.json so OPENCLAW_VERSION takes effect
 REM even on re-run / upgrade. Include both deps so the file matches
 REM the post-install state and avoids dropping qqbot.
 set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
->"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+>"!_JS!" echo var fs=require('fs');var V=process.argv[1];var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:V,'@openclaw/arcee-provider':V,'@openclaw/cerebras-provider':V,'@openclaw/cohere-provider':V,'@openclaw/deepinfra-provider':V,'@openclaw/deepseek-provider':V,'@openclaw/fireworks-provider':V,'@openclaw/gmi-provider':V,'@openclaw/groq-provider':V,'@openclaw/kilocode-provider':V,'@openclaw/kimi-provider':V,'@openclaw/longcat-provider':V,'@openclaw/qwen-provider':V,'@openclaw/stepfun-provider':V,'@openclaw/zai-provider':V}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
 "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
 del "!_JS!" 2>nul
 
@@ -217,25 +217,25 @@ if exist "%CORE_DIR%\node_modules\acpx" if exist "%CORE_DIR%\node_modules\@zed-i
     echo   [OK] ACP / Codex harness ready
 )
 
-REM ---- 4. Install China-optimized skills ----
-set "SKILLS_CN=%SCRIPT_DIR%skills-cn"
-set "SKILLS_TARGET=%CORE_DIR%\node_modules\openclaw\skills"
-
-if not exist "%SKILLS_CN%" goto skip_skills_install
-if not exist "%SKILLS_TARGET%" goto skip_skills_install
-
-echo   [COPY] Installing China-optimized skills (skills-cn)...
-set "SKILL_COUNT=0"
-for /d %%s in ("%SKILLS_CN%\*") do (
-    set "skill_name=%%~nxs"
-    if not exist "%SKILLS_TARGET%\!skill_name!" (
-        xcopy /s /e /q /y "%%s" "%SKILLS_TARGET%\!skill_name!\" >nul
-        set /a SKILL_COUNT+=1
-    )
+REM ---- 4. China-optimized skills (zero-copy) ----
+REM skills-zh\ is NOT copied into node_modules. The Start launchers inject
+REM OPENCLAW_BUNDLED_SKILLS_DIR=<portable>\skills-zh, which OpenClaw resolves
+REM natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
+REM Zero-copy survives openclaw reinstalls/upgrades and enables true
+REM hot-reload on 2.0 (the skills watcher ignores node_modules).
+if exist "%SCRIPT_DIR%skills-zh" (
+    echo   [OK] skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)
 )
-echo   [OK] China skills installed (+%SKILL_COUNT% skills)
 
-:skip_skills_install
+REM ---- 5. Post-install doctor --fix (non-blocking) ----
+REM OpenClaw 2.0 externalizes providers (byteplus/volcengine/deepseek/...)
+REM and migrates codex/* -> openai/* routes; doctor --fix heals both plus
+REM removes stale OpenProse config. Failure must not block setup.
+if exist "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" (
+    echo   [RUN] openclaw doctor --fix (auto-migrate config, non-blocking^)...
+    "%NODE_TARGET%\node.exe" "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" doctor --fix >nul 2>&1
+    if errorlevel 1 echo   [WARN] doctor --fix failed (ignored, can run manually later)
+)
 
 REM ---- Done ----
 echo.
