@@ -75,6 +75,9 @@ set "OPENCLAW_DISABLE_BONJOUR=1"
 rem USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
 set "OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1"
 set "OPENCLAW_CONFIG_PATH=!STATE_DIR!\openclaw.json"
+rem Zero-copy bundled skills dir (survives openclaw reinstalls; enables
+rem true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
+set "OPENCLAW_BUNDLED_SKILLS_DIR=!_SCRIPT_DIR!\skills-zh"
 
 REM Check runtime
 if not exist "!NODE_BIN!" (

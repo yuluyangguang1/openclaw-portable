@@ -173,6 +173,9 @@ export OPENCLAW_DISABLE_BONJOUR=1
 # on a portable USB this is a false positive (the user owns the stick).
 # Skip the check so all bundled plugins load normally.
 export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
+# Zero-copy bundled skills dir (survives openclaw reinstalls; enables
+# true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
+export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/skills-zh"
 
 # ---- 7. Check dependencies ----
 if [ ! -d "$CORE_DIR/node_modules" ]; then

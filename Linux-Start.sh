@@ -142,6 +142,9 @@ export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 export OPENCLAW_DISABLE_BONJOUR=1
 # USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
 export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
+# Zero-copy bundled skills dir (survives openclaw reinstalls; enables
+# true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
+export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/skills-zh"
 
 # ---- 6. Check dependencies ----
 if [ ! -d "$CORE_DIR/node_modules" ]; then
