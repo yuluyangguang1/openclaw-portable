@@ -45,6 +45,9 @@ set "OPENCLAW_STATE_DIR=!STATE_DIR!"
 REM 不设 OPENCLAW_DISABLE_BONJOUR — 让手机 App 自动发现
 REM USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
 set "OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1"
+REM OpenClaw 2.0: keep its native service supervisor out of the way -
+REM the portable wrapper manages the gateway process itself.
+set "OPENCLAW_SUPERVISOR_MODE=external"
 
 REM Read version
 set "OPENCLAW_VER=unknown"

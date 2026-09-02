@@ -111,6 +111,9 @@ export OPENCLAW_CONFIG_PATH="$MOBILE_CONFIG"
 # 不禁用 Bonjour — 让手机 App 通过 mDNS 自动发现
 # USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
 export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
+# OpenClaw 2.0: keep its native service supervisor out of the way -
+# the portable wrapper manages the gateway process itself.
+export OPENCLAW_SUPERVISOR_MODE=external
 
 # ---- 7. Find available port ----
 PORT=18789

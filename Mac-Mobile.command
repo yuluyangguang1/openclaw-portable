@@ -127,6 +127,9 @@ export OPENCLAW_CONFIG_PATH="$MOBILE_CONFIG"
 # export OPENCLAW_DISABLE_BONJOUR=1
 # USB sticks (exFAT/FAT32) report mode=777; skip plugin permission check.
 export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
+# OpenClaw 2.0: keep its native service supervisor out of the way -
+# the portable wrapper manages the gateway process itself.
+export OPENCLAW_SUPERVISOR_MODE=external
 
 # ---- 8. Find available port ----
 for stale_port in $(seq 18789 18799); do
