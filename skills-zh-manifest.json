@@ -1,0 +1,424 @@
+{
+  "generated_at": "2026-09-01T17:18:33.458747+00:00",
+  "root": "skills-zh/",
+  "algorithm": "sha256 (LF-normalized)",
+  "file_count": 83,
+  "total_bytes": 619448,
+  "files": [
+    {
+      "path": "SuperDesign-zh/LICENSE",
+      "sha256": "030a7bcdfc9030e8cf946b790a027ee89604d4aaad39fa7d9ebf2099354de338",
+      "size": 10759
+    },
+    {
+      "path": "SuperDesign-zh/README.md",
+      "sha256": "69c530c82dfc011196e5bd8a6a0d39ab4dbab59b6ba2bde895c73abf3e0cc1cb",
+      "size": 3534
+    },
+    {
+      "path": "SuperDesign-zh/SKILL.md",
+      "sha256": "2084659db1acc0fea547b98eb416225ccb05f09a3abdbcf86ea36f8b9b50dbd2",
+      "size": 10532
+    },
+    {
+      "path": "SuperDesign-zh/VERSION",
+      "sha256": "e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67",
+      "size": 6
+    },
+    {
+      "path": "SuperDesign-zh/agents/openai.yaml",
+      "sha256": "3bd1c14d2d441813932bb73871ca3874efc0554c494dfc7b692855f30b4f0479",
+      "size": 1094
+    },
+    {
+      "path": "SuperDesign-zh/references/design-philosophy.md",
+      "sha256": "ac8f7c3b423288b97ac87ffd5b4b35a57fac10e9e5a8e8823f958f4f6b268217",
+      "size": 7202
+    },
+    {
+      "path": "SuperDesign-zh/references/mobile-patterns.md",
+      "sha256": "c098a60e71a2adc5b12305d46dcc19b7ed859a37bfa724a6a8af87f3a55856af",
+      "size": 9187
+    },
+    {
+      "path": "SuperDesign-zh/references/shadcn-components.md",
+      "sha256": "7d779fd8c408d79a5ce4644cd1d1fd837738a956c0ac2f5bef8900f743e87db8",
+      "size": 8915
+    },
+    {
+      "path": "SuperDesign-zh/scripts/bundle-artifact.sh",
+      "sha256": "6ebafd9a1fcef69b16a61bfc634332a79c0ae56f60279b8ddb1c7c32f7b20e4a",
+      "size": 1473
+    },
+    {
+      "path": "SuperDesign-zh/scripts/init-nextjs.sh",
+      "sha256": "51814a13f71bb6534b756f069a4af42ea9cc8104d035d0fdaee0b45f446182d7",
+      "size": 3756
+    },
+    {
+      "path": "SuperDesign-zh/scripts/init-vite.sh",
+      "sha256": "06cc823d7a8be4e82eac9043bb65a420c0cbc6701308996e07088dde530499b9",
+      "size": 9629
+    },
+    {
+      "path": "SuperDesign-zh/templates/site-config.ts",
+      "sha256": "27806e4af0d0fdd95c626f21dd6050f728988895a262563d9046e2856c4f57ef",
+      "size": 7787
+    },
+    {
+      "path": "bilibili-helper/SKILL.md",
+      "sha256": "01026d386026a5d91d452bdc1f79f21c189e1cdd722d16fe9f5a6896fdc809d4",
+      "size": 3258
+    },
+    {
+      "path": "clawddocs-zh/.clawhub/origin.json",
+      "sha256": "29ec6431ddc1dd1a8093f269074cde6e9054371acf29794b07d98eb33eb95015",
+      "size": 141
+    },
+    {
+      "path": "clawddocs-zh/SKILL.md",
+      "sha256": "161602bf152d52a1ae23901f9c16efd4fa1dfd93fc09a85e00d4828e54943abb",
+      "size": 4932
+    },
+    {
+      "path": "clawddocs-zh/_meta.json",
+      "sha256": "7a5d4796844399ca1c26be669d32838f82afa473fa607df4bfbe6d38b5928cab",
+      "size": 132
+    },
+    {
+      "path": "clawddocs-zh/package.json",
+      "sha256": "565737a1cb30d8a01d74c0c4dd67c8337f1c5407ee542430417ff47c0c22dbb1",
+      "size": 345
+    },
+    {
+      "path": "clawddocs-zh/scripts/build-index.sh",
+      "sha256": "f213b8280f1aeb0b6355ece48316a530db2a57efdb55fcda43442c9527e0c725",
+      "size": 310
+    },
+    {
+      "path": "clawddocs-zh/scripts/cache.sh",
+      "sha256": "d1650819bb32c7551c961f74505ad9f487eab9b616c8f8e7075f355f7a8504bc",
+      "size": 246
+    },
+    {
+      "path": "clawddocs-zh/scripts/fetch-doc.sh",
+      "sha256": "6e7506a0800d6b19d5d44d1354e93b568908b31cf422e99f2ec676f151d90af5",
+      "size": 154
+    },
+    {
+      "path": "clawddocs-zh/scripts/recent.sh",
+      "sha256": "be8de017603a67c0ce92d374392de38045e23f6738a8ab7f23d402b103ec1768",
+      "size": 145
+    },
+    {
+      "path": "clawddocs-zh/scripts/search.sh",
+      "sha256": "e6192228c4bddba10df88b36526568120b6f5ced041cb2ee3852742c1e0b5f19",
+      "size": 191
+    },
+    {
+      "path": "clawddocs-zh/scripts/sitemap.sh",
+      "sha256": "7d498f3f69da1e76b6a7f12ba2c5d742fd9e2dc1a5183e4efd80b03858129948",
+      "size": 374
+    },
+    {
+      "path": "clawddocs-zh/scripts/track-changes.sh",
+      "sha256": "3eadccf089e08e6be966b4029a4e5fe5edf36708f6a7b8ccd2446e9581be2904",
+      "size": 290
+    },
+    {
+      "path": "clawddocs-zh/snippets/common-configs.md",
+      "sha256": "9dec0f43badec5089af287b65af13afa3468a945d259bb14601f2d39be299784",
+      "size": 743
+    },
+    {
+      "path": "content-ideas-generator-zh/SKILL.md",
+      "sha256": "9658c1fec58a93d068aacae8bfa5df1e9876f441ad6a902ce282d2709b2e8b61",
+      "size": 8512
+    },
+    {
+      "path": "content-ideas-generator-zh/_meta.json",
+      "sha256": "3edf8110c1d60cbb8d2926d625fc8530fd94ab8e686fbc54782772b2359f2ab9",
+      "size": 235
+    },
+    {
+      "path": "gongwen-writing-zh/SKILL.md",
+      "sha256": "f1149dc559ece8cc9f5cb9f49b4756c6bdc5f9a25593dbe24ec6bbcc9bd99dee",
+      "size": 10124
+    },
+    {
+      "path": "gongwen-zh/SKILL.md",
+      "sha256": "08977ecb5629d04ffc67acf975fd87c2c0a3d6018a641b8d2b4abe687dcf74ff",
+      "size": 5605
+    },
+    {
+      "path": "humanizer-zh/README.md",
+      "sha256": "7eb2f3b06605c0cf06a0830339c247abe5ad449d40771f6b5332cde83a4b68dd",
+      "size": 6951
+    },
+    {
+      "path": "humanizer-zh/SKILL.md",
+      "sha256": "30c0c8fc416544ad6395dc45cfcfc1407e0ef2aa2ba24287d931e716b494bc31",
+      "size": 23058
+    },
+    {
+      "path": "humanizer-zh/WARP.md",
+      "sha256": "4b4944d4109e584aca45e3f042ea60f7b326174afff3a51c7df178bbdaaacdc5",
+      "size": 2039
+    },
+    {
+      "path": "marketing-skills-zh/SKILL.md",
+      "sha256": "5f1af7633259229ea93017adcabf34eb666d1e10910a93aaff305dad50ca0dcd",
+      "size": 3366
+    },
+    {
+      "path": "marketing-skills-zh/_meta.json",
+      "sha256": "379d179e246ebee1c2d173bec0f71c5dcfe869bb8a17221342c2c64a9bbab323",
+      "size": 135
+    },
+    {
+      "path": "marketing-skills-zh/references/ab-test-setup/SKILL.md",
+      "sha256": "f0f3d76443141409bcef6b37d77b84d0cb4dc1c181d11d6a18b0be1c8cff931f",
+      "size": 10295
+    },
+    {
+      "path": "marketing-skills-zh/references/analytics-tracking/SKILL.md",
+      "sha256": "83e4ec3bacd13aa35ca3d7575fcb309b3443c6394397770dc33faf01734a0d36",
+      "size": 10170
+    },
+    {
+      "path": "marketing-skills-zh/references/competitor-alternatives/SKILL.md",
+      "sha256": "65163e8d909dcae1b73455a9daf72b30f480b3dda16568fc670ecddf1529a9e5",
+      "size": 19111
+    },
+    {
+      "path": "marketing-skills-zh/references/copy-editing/SKILL.md",
+      "sha256": "daea1848b52b7219aa0f29eb2cd1e544de3513fa93beb8c1a02bfcf8594dba6b",
+      "size": 12133
+    },
+    {
+      "path": "marketing-skills-zh/references/copywriting/SKILL.md",
+      "sha256": "2ac5f9a48dc8ffdf6374f510abdd16be400812f63d6fef22ca9997d2cf9edf0d",
+      "size": 12379
+    },
+    {
+      "path": "marketing-skills-zh/references/email-sequence/SKILL.md",
+      "sha256": "3db17b4bfcb1bbcf1487891b95391561db7f5a2ca6c397392d64c0aea7abd00e",
+      "size": 23016
+    },
+    {
+      "path": "marketing-skills-zh/references/form-cro/SKILL.md",
+      "sha256": "0d41e83de9863a51e7fa420766798387556b427656a1c18bbb3505ff52b8e7bf",
+      "size": 10481
+    },
+    {
+      "path": "marketing-skills-zh/references/free-tool-strategy/SKILL.md",
+      "sha256": "afd05058a2b0a4df3f32db31f01230e97008d0838d20efb7764effa8677db541",
+      "size": 11297
+    },
+    {
+      "path": "marketing-skills-zh/references/launch-strategy/SKILL.md",
+      "sha256": "f4bb88f62b9217214a9362f7ab2787cf1f3c47065623c9ae43aab0f932c5e84d",
+      "size": 12221
+    },
+    {
+      "path": "marketing-skills-zh/references/marketing-ideas/SKILL.md",
+      "sha256": "27528960d32a0dd30d556f360d47357abf6051ac4a563af1506af92aff231983",
+      "size": 24473
+    },
+    {
+      "path": "marketing-skills-zh/references/marketing-psychology/SKILL.md",
+      "sha256": "793332c9374bc4c28f23590e01bff5e5730ff5900ef2c8ffbc9ba4337a1a9f5d",
+      "size": 21332
+    },
+    {
+      "path": "marketing-skills-zh/references/onboarding-cro/SKILL.md",
+      "sha256": "c973ee1520d800fb68c39965d6c99526489c834440d7b2c254ab059cb54dab8d",
+      "size": 11289
+    },
+    {
+      "path": "marketing-skills-zh/references/page-cro/SKILL.md",
+      "sha256": "ea4ac2ac8400f1853ae386785f63a0a9c445e1c08c981a9f6b734bc7c810cfc9",
+      "size": 10723
+    },
+    {
+      "path": "marketing-skills-zh/references/paid-ads/SKILL.md",
+      "sha256": "0d00d270771f28b74f6243389f73f413fa539612215595757680fa5c95f25b53",
+      "size": 15000
+    },
+    {
+      "path": "marketing-skills-zh/references/paywall-upgrade-cro/SKILL.md",
+      "sha256": "8104b18390db197707ad9b44ec4e68ee8f79326cc9ebb3a143e4c57b30857ef1",
+      "size": 14192
+    },
+    {
+      "path": "marketing-skills-zh/references/popup-cro/SKILL.md",
+      "sha256": "7284678a518ff9dedb125ce39d04732fb532e32adea6fe0913e64928ab7e8282",
+      "size": 11218
+    },
+    {
+      "path": "marketing-skills-zh/references/pricing-strategy/SKILL.md",
+      "sha256": "44cd0b6d3dfc1921d1a3eefdcbc43ef2fbb909bb913af44db1923c5f68e1ebb1",
+      "size": 22239
+    },
+    {
+      "path": "marketing-skills-zh/references/programmatic-seo/SKILL.md",
+      "sha256": "f54fd1731b67cf7d3b0e2f418790c589a56c7076913df13c63c7bdd3a6bd72df",
+      "size": 16478
+    },
+    {
+      "path": "marketing-skills-zh/references/referral-program/SKILL.md",
+      "sha256": "4ea4a7fd3bb9fd66b45e1643bc107d330038d44cc830676590117fae8a4fe710",
+      "size": 16793
+    },
+    {
+      "path": "marketing-skills-zh/references/schema-markup/SKILL.md",
+      "sha256": "b43f80e20747a21f7b459d22d605858cf1d3586fd99388ec2941115e0e043fd8",
+      "size": 13192
+    },
+    {
+      "path": "marketing-skills-zh/references/seo-audit/SKILL.md",
+      "sha256": "746cc57c51afc93da2d2f4f06e1270b3a4360ef8b3b49d1e416bf2c0c49bb454",
+      "size": 8453
+    },
+    {
+      "path": "marketing-skills-zh/references/signup-flow-cro/SKILL.md",
+      "sha256": "d52fe97c2712260cbba0832e5747dcc6f189e131000be0df762abd7c85562812",
+      "size": 9759
+    },
+    {
+      "path": "marketing-skills-zh/references/social-content/SKILL.md",
+      "sha256": "9c40b9ceda9094b3ce256d62ca8a33e8f82f323cff357da294e14262ed429b69",
+      "size": 21040
+    },
+    {
+      "path": "ontology-zh/SKILL.md",
+      "sha256": "f74bdb70072fa7272c4f435be66e1ed02429846894c4fcfdcb8f6f47bd21016b",
+      "size": 6537
+    },
+    {
+      "path": "ontology-zh/_meta.json",
+      "sha256": "8982e4c21b604c9be7aaa401537b0c475a94127a37624d41d1ea439c5507d062",
+      "size": 127
+    },
+    {
+      "path": "ontology-zh/references/queries.md",
+      "sha256": "c0c44480267d848af0f5fb943f4b704011d849fc2e15bc305ebb3581e1d56887",
+      "size": 5579
+    },
+    {
+      "path": "ontology-zh/references/schema.md",
+      "sha256": "bddd4287e3401876adc11b93445f67b4c2152874733ede5e3b12e6148d7caae5",
+      "size": 6548
+    },
+    {
+      "path": "ontology-zh/scripts/ontology.py",
+      "sha256": "25e10809ab4f809f2fd3b475989a882e6fcdd9127655ec40fccf44d10f0c0491",
+      "size": 21596
+    },
+    {
+      "path": "proactive-self-improving-agent-zh/.learnings/CHANGELOG.md",
+      "sha256": "0c098b709cd8210dd6670c447841c3ec35226607a0325564a06fabc6f806ceff",
+      "size": 203
+    },
+    {
+      "path": "proactive-self-improving-agent-zh/.learnings/ERRORS.md",
+      "sha256": "9917987c84df77ab40cdd89a53354c37e7c09a834b25e7a6d21a1df22027508e",
+      "size": 142
+    },
+    {
+      "path": "proactive-self-improving-agent-zh/.learnings/FEATURE_REQUESTS.md",
+      "sha256": "753ff208a043d47dc4bba307f592db88755f0ad4a2ccea623a83f900ff1a7ac7",
+      "size": 94
+    },
+    {
+      "path": "proactive-self-improving-agent-zh/.learnings/LEARNINGS.md",
+      "sha256": "f9fdb4bc78a7d97b6b476800a870a501ab008303212a9fa9c4d6e30851e53776",
+      "size": 273
+    },
+    {
+      "path": "proactive-self-improving-agent-zh/README.md",
+      "sha256": "208c50124a96b0e4c6c31780b481b87a047d5af9c0f2169e73e7c8a916aab708",
+      "size": 1171
+    },
+    {
+      "path": "proactive-self-improving-agent-zh/SKILL.md",
+      "sha256": "8502c14ed668baaddc0e58fd2d0b9f1e944deb7d546732fea37e603cb53366c3",
+      "size": 13689
+    },
+    {
+      "path": "qa-engineer-zh/SKILL.md",
+      "sha256": "a92b5bb1d34d6a7eb843d8ebd683dbc9b4bb8435bc5bfd5ed87f9a4d5ee913bf",
+      "size": 6677
+    },
+    {
+      "path": "self-improving-zh/SKILL.md",
+      "sha256": "9fec3220f9af7e0a4e285a4452e87e0c776fe3f2ad6c02053b4266fa1a8554fb",
+      "size": 8430
+    },
+    {
+      "path": "self-improving-zh/boundaries.md",
+      "sha256": "881e2ea94f91a9e03ad1eb1ef5ac71bd3d91a5c60f4f5a8cc032f3d6612b7559",
+      "size": 2069
+    },
+    {
+      "path": "self-improving-zh/learning.md",
+      "sha256": "cd30e37aec72066443133d1b4e2d6cc62f5c6cdae6b240f081d94a0b975991aa",
+      "size": 2828
+    },
+    {
+      "path": "self-improving-zh/operations.md",
+      "sha256": "92ff088fa63bed5e4d801207d474f45f0dc5df5c9de9dc004f07905673ca5db9",
+      "size": 3473
+    },
+    {
+      "path": "self-improving-zh/setup.md",
+      "sha256": "d0be45f591ca44fe986f2b92c73aa9fc65397959fab2ce2d559300046929ce46",
+      "size": 5964
+    },
+    {
+      "path": "skill-creator-zh/SKILL.md",
+      "sha256": "c9f7f8aeac307a95c24e061ea59b6ed323157f6762b152e2f982ea5cd73333e2",
+      "size": 17059
+    },
+    {
+      "path": "skill-creator-zh/references/output-patterns.md",
+      "sha256": "549440d9f76e5e2bc67495b2025161c82bd5870449776793b925799e6a77df09",
+      "size": 1399
+    },
+    {
+      "path": "skill-creator-zh/references/workflows.md",
+      "sha256": "d9bf3a914501f09ddedece8f47b9e5cfb554b883dd533826116cf614bc424741",
+      "size": 1532
+    },
+    {
+      "path": "skill-creator-zh/scripts/init_skill.py",
+      "sha256": "e5e94a6fdd08de4169b6b4b2bebfb38276e41acb3fc6c11eb8fb36b8ace5ae38",
+      "size": 12970
+    },
+    {
+      "path": "skill-creator-zh/scripts/package_skill.py",
+      "sha256": "c39d77ba61f1dab42953958ee134a26535011ba86fb316c6b62a31adc9e1fa84",
+      "size": 4334
+    },
+    {
+      "path": "skill-creator-zh/scripts/quick_validate.py",
+      "sha256": "8f5829c53bc5a5d477232b3f1ca5f4d962bdc6cc45d61502df41d2a98c9a891d",
+      "size": 5135
+    },
+    {
+      "path": "wechat-article/SKILL.md",
+      "sha256": "7af5476d7f98a7059552227c34d94106ed74773e84b30928b76042c10835dd2f",
+      "size": 3136
+    },
+    {
+      "path": "xiaohongshu-writer/SKILL.md",
+      "sha256": "bce1985dc85f27120e9c439a45f399e36afa9c90b07025e63a91a45f26a64bfe",
+      "size": 2815
+    },
+    {
+      "path": "zhihu-writer/SKILL.md",
+      "sha256": "7ef9c739b723184c6c48195521d7eda7207b73b94b76709dcca7571908f961f5",
+      "size": 3224
+    }
+  ]
+}
