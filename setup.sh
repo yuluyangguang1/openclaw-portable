@@ -233,11 +233,11 @@ fi
 [ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}[ok]${NC} ACP / Codex harness 就绪"
 
 # ---- 4. Install China-optimized skills ----
-SKILLS_CN="$SCRIPT_DIR/skills-cn"
+SKILLS_CN="$SCRIPT_DIR/skills-zh"
 SKILLS_TARGET="$CORE_DIR/node_modules/openclaw/skills"
 
 if [ -d "$SKILLS_CN" ] && [ -d "$SKILLS_TARGET" ]; then
-    echo -e "  ${CYAN}[v]${NC} 安装中国优化技能 (skills-cn)..."
+    echo -e "  ${CYAN}[v]${NC} 安装中国优化技能 (skills-zh)..."
     SKILL_COUNT=0
     for skill_dir in "$SKILLS_CN"/*/; do
         skill_name=$(basename "$skill_dir")

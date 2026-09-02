@@ -218,13 +218,13 @@ if exist "%CORE_DIR%\node_modules\acpx" if exist "%CORE_DIR%\node_modules\@zed-i
 )
 
 REM ---- 4. Install China-optimized skills ----
-set "SKILLS_CN=%SCRIPT_DIR%skills-cn"
+set "SKILLS_CN=%SCRIPT_DIR%skills-zh"
 set "SKILLS_TARGET=%CORE_DIR%\node_modules\openclaw\skills"
 
 if not exist "%SKILLS_CN%" goto skip_skills_install
 if not exist "%SKILLS_TARGET%" goto skip_skills_install
 
-echo   [COPY] Installing China-optimized skills (skills-cn)...
+echo   [COPY] Installing China-optimized skills (skills-zh)...
 set "SKILL_COUNT=0"
 for /d %%s in ("%SKILLS_CN%\*") do (
     set "skill_name=%%~nxs"

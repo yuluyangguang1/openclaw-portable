@@ -304,11 +304,11 @@ if ((Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Containe
     Write-Step "OK" "ACP / Codex harness ready." "Green"
 }
 
-$skillsCn = Join-Path $scriptDir "skills-cn"
+$skillsCn = Join-Path $scriptDir "skills-zh"
 $skillsTarget = Join-Path $coreDir "node_modules\openclaw\skills"
 
 if ((Test-Path -Path $skillsCn -PathType Container) -and (Test-Path -Path $skillsTarget -PathType Container)) {
-    Write-Step "->" "Installing localized skills from skills-cn..." "Cyan"
+    Write-Step "->" "Installing localized skills from skills-zh..." "Cyan"
     $skillCount = 0
     Get-ChildItem -Path $skillsCn -Directory | ForEach-Object {
         $targetPath = Join-Path $skillsTarget $_.Name

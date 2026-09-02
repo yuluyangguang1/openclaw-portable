@@ -220,7 +220,7 @@ OpenClawPortable/
 | douyin-script | 抖音脚本 |
 | deepseek-helper | DeepSeek 增强 |
 
-技能在 `skills-cn/` 目录下，启动时自动加载。
+技能在 `skills-zh/` 目录下，启动时自动加载。
 
 ---
 
