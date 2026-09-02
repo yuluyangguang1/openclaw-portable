@@ -227,6 +227,16 @@ if exist "%SCRIPT_DIR%skills-zh" (
     echo   [OK] skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)
 )
 
+REM ---- 5. Post-install doctor --fix (non-blocking) ----
+REM OpenClaw 2.0 externalizes providers (byteplus/volcengine/deepseek/...)
+REM and migrates codex/* -> openai/* routes; doctor --fix heals both plus
+REM removes stale OpenProse config. Failure must not block setup.
+if exist "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" (
+    echo   [RUN] openclaw doctor --fix (auto-migrate config, non-blocking^)...
+    "%NODE_TARGET%\node.exe" "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" doctor --fix >nul 2>&1
+    if errorlevel 1 echo   [WARN] doctor --fix failed (ignored, can run manually later)
+)
+
 REM ---- Done ----
 echo.
 echo   ========================================

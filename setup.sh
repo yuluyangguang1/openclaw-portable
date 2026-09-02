@@ -243,6 +243,16 @@ if [ -d "$SCRIPT_DIR/skills-zh" ]; then
     echo -e "  ${GREEN}[ok]${NC} skills-zh 就绪 (零拷贝，启动器经 OPENCLAW_BUNDLED_SKILLS_DIR 加载)"
 fi
 
+# ---- 5. Post-install doctor --fix (non-blocking) ----
+# OpenClaw 2.0 externalizes providers (byteplus/volcengine/deepseek/...)
+# and migrates codex/* -> openai/* routes; doctor --fix heals both plus
+# removes stale OpenProse config. Failure must not block setup.
+if [ -f "$CORE_DIR/node_modules/openclaw/openclaw.mjs" ]; then
+    echo -e "  ${CYAN}[v]${NC} 运行 openclaw doctor --fix（自动迁移配置，失败不阻断）..."
+    "$NODE_TARGET/bin/node" "$CORE_DIR/node_modules/openclaw/openclaw.mjs" doctor --fix >/dev/null 2>&1 \
+        || echo -e "  ${YELLOW}[WARN] doctor --fix 未通过（已忽略，可稍后手动执行）${NC}"
+fi
+
 # ---- Done ----
 echo ""
 echo -e "${GREEN}════════════════════════════════════════${NC}"
