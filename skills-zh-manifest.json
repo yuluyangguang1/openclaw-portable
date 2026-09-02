@@ -1,9 +1,11 @@
 {
-  "generated_at": "2026-09-01T17:18:33.458747+00:00",
+  "generated_at": "2026-09-02T00:47:33.425509+00:00",
   "root": "skills-zh/",
   "algorithm": "sha256 (LF-normalized)",
+  "size_basis": "LF-normalized byte count (matches the hash basis; raw on-disk size differs by 1 byte/line on CRLF checkouts)",
   "file_count": 83,
-  "total_bytes": 619448,
+  "total_bytes": 618710,
+  "raw_bytes_on_windows_checkout": 619448,
   "files": [
     {
       "path": "SuperDesign-zh/LICENSE",
@@ -68,7 +70,7 @@
     {
       "path": "bilibili-helper/SKILL.md",
       "sha256": "01026d386026a5d91d452bdc1f79f21c189e1cdd722d16fe9f5a6896fdc809d4",
-      "size": 3258
+      "size": 3146
     },
     {
       "path": "clawddocs-zh/.clawhub/origin.json",
@@ -143,7 +145,7 @@
     {
       "path": "gongwen-writing-zh/SKILL.md",
       "sha256": "f1149dc559ece8cc9f5cb9f49b4756c6bdc5f9a25593dbe24ec6bbcc9bd99dee",
-      "size": 10124
+      "size": 9806
     },
     {
       "path": "gongwen-zh/SKILL.md",
@@ -408,17 +410,17 @@
     {
       "path": "wechat-article/SKILL.md",
       "sha256": "7af5476d7f98a7059552227c34d94106ed74773e84b30928b76042c10835dd2f",
-      "size": 3136
+      "size": 3030
     },
     {
       "path": "xiaohongshu-writer/SKILL.md",
       "sha256": "bce1985dc85f27120e9c439a45f399e36afa9c90b07025e63a91a45f26a64bfe",
-      "size": 2815
+      "size": 2724
     },
     {
       "path": "zhihu-writer/SKILL.md",
       "sha256": "7ef9c739b723184c6c48195521d7eda7207b73b94b76709dcca7571908f961f5",
-      "size": 3224
+      "size": 3113
     }
   ]
 }

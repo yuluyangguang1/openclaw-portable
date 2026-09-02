@@ -20,15 +20,24 @@ import os
 import sys
 
 
-def sha256_of(path: str) -> str:
-    """Hash LF-normalized content so the check is checkout-stable:
-    git may materialize CRLF on Windows (core.autocrlf) while the
-    manifest is computed from LF blobs."""
+def sha256_and_size(path: str):
+    """Return (sha256, size) of the LF-normalized content.
+
+    Normalization is mandatory for both values: git stores LF in blobs but
+    materializes CRLF in the working tree when core.autocrlf=true (Windows).
+    CI (Linux, autocrlf off) checks out LF. Recording the raw on-disk size
+    alongside a normalized hash makes the two disagree by exactly one byte
+    per line on Windows-authored files - the manifest must therefore store
+    the normalized size too, so both platforms verify identically.
+    """
     h = hashlib.sha256()
+    size = 0
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk.replace(b"\r\n", b"\n"))
-    return h.hexdigest()
+            normalized = chunk.replace(b"\r\n", b"\n")
+            h.update(normalized)
+            size += len(normalized)
+    return h.hexdigest(), size
 
 
 def main() -> int:
@@ -55,10 +64,11 @@ def main() -> int:
         if not os.path.isfile(fp):
             errors.append(f"缺失: {rel}")
             continue
-        if os.path.getsize(fp) != meta.get("size"):
-            errors.append(f"大小不符: {rel} (清单 {meta.get('size')} / 实际 {os.path.getsize(fp)})")
+        digest, norm_size = sha256_and_size(fp)
+        if norm_size != meta.get("size"):
+            errors.append(f"大小不符: {rel} (清单 {meta.get('size')} / 实际 {norm_size})")
             continue
-        if sha256_of(fp) != meta.get("sha256"):
+        if digest != meta.get("sha256"):
             errors.append(f"内容篡改: {rel} (sha256 不一致)")
 
     # 2) 反向扫描，找出清单之外的多余文件
