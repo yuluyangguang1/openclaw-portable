@@ -183,10 +183,11 @@ jobs:
           [ -f OpenClaw.desktop ] && mv OpenClaw.desktop system/
           # README (users can find it in system/ if needed)
           [ -f README.md ] && mv README.md system/
-          # Helpers
-          mv lib/preflight.sh    system/lib/preflight.sh
-          mv lib/maintain.sh     system/lib/maintain.sh
-          mv lib/mobile.sh       system/lib/mobile.sh
+          # Helpers — move the whole lib/ tree instead of a hardcoded file
+          # list. A fixed list silently leaves newly added helpers behind
+          # (which then makes `rmdir lib` fail and kills the whole build),
+          # e.g. lib/strip-provider-env.mjs broke the v2.0.0-beta.1 build.
+          mv lib/* system/lib/
           rmdir lib
           echo "Root after move:"
           ls -1 | head -20

@@ -155,13 +155,24 @@ REM Strip host provider credentials inherited from the host machine (雷5):
 REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
 REM OpenClaw treat those providers as configured -> runtime plugin install
 REM (exFAT brick) + silently burns the host owner's quota.
-set "OPENCLAW_STRIP_ENV="
-for /f "usebackq tokens=1,* delims==" %%a in (`""!NODE_BIN!" "!PORTABLE_DIR!lib\strip-provider-env.mjs" 2^>nul"`) do if "%%a"=="OPENCLAW_STRIP_ENV" set "OPENCLAW_STRIP_ENV=%%b"
-if defined OPENCLAW_STRIP_ENV (
-    for %%v in (!OPENCLAW_STRIP_ENV!) do set "%%v="
-    echo   Stripped host provider env vars: !OPENCLAW_STRIP_ENV!
+REM Resolve the helper next to this script first (release zip puts scripts +
+REM lib/ under system/), then fall back to the portable-root layout.
+set "_STRIP_MJS="
+if exist "!_SCRIPT_DIR!\lib\strip-provider-env.mjs" (
+    set "_STRIP_MJS=!_SCRIPT_DIR!\lib\strip-provider-env.mjs"
+) else (
+    if exist "!PORTABLE_DIR!lib\strip-provider-env.mjs" set "_STRIP_MJS=!PORTABLE_DIR!lib\strip-provider-env.mjs"
 )
-set "OPENCLAW_STRIP_ENV="
+if defined _STRIP_MJS (
+    set "OPENCLAW_STRIP_ENV="
+    for /f "usebackq tokens=1,* delims==" %%a in (`""!NODE_BIN!" "!_STRIP_MJS!" 2^>nul"`) do if "%%a"=="OPENCLAW_STRIP_ENV" set "OPENCLAW_STRIP_ENV=%%b"
+    if defined OPENCLAW_STRIP_ENV (
+        for %%v in (!OPENCLAW_STRIP_ENV!) do set "%%v="
+        echo   Stripped host provider env vars: !OPENCLAW_STRIP_ENV!
+    )
+    set "OPENCLAW_STRIP_ENV="
+)
+set "_STRIP_MJS="
 
 start /B "" cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:!PORT!/#token=!TOKEN!"
 "%NODE_BIN%" "%OPENCLAW_MJS%" gateway run --allow-unconfigured --force --port !PORT!

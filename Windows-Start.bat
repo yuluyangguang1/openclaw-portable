@@ -318,14 +318,25 @@ REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
 REM OpenClaw treat those providers as "configured" -> it tries a runtime plugin
 REM install (exFAT: node_modules link fails -> gateway never ready) and silently
 REM burns the host owner's API quota. Clear them before launching the gateway.
-set "OPENCLAW_STRIP_ENV="
-for /f "usebackq tokens=1,* delims==" %%a in (`""!NODE_BIN!" "!PORTABLE_DIR!lib\strip-provider-env.mjs" 2^>nul"`) do if "%%a"=="OPENCLAW_STRIP_ENV" set "OPENCLAW_STRIP_ENV=%%b"
-if defined OPENCLAW_STRIP_ENV (
-    for %%v in (!OPENCLAW_STRIP_ENV!) do set "%%v="
-    echo   Stripped host provider env vars: !OPENCLAW_STRIP_ENV!
-    echo.
+REM Resolve the helper next to this script first (release zip puts scripts +
+REM lib/ under system/), then fall back to the portable-root layout.
+set "_STRIP_MJS="
+if exist "!_SCRIPT_DIR!\lib\strip-provider-env.mjs" (
+    set "_STRIP_MJS=!_SCRIPT_DIR!\lib\strip-provider-env.mjs"
+) else (
+    if exist "!PORTABLE_DIR!lib\strip-provider-env.mjs" set "_STRIP_MJS=!PORTABLE_DIR!lib\strip-provider-env.mjs"
 )
-set "OPENCLAW_STRIP_ENV="
+if defined _STRIP_MJS (
+    set "OPENCLAW_STRIP_ENV="
+    for /f "usebackq tokens=1,* delims==" %%a in (`""!NODE_BIN!" "!_STRIP_MJS!" 2^>nul"`) do if "%%a"=="OPENCLAW_STRIP_ENV" set "OPENCLAW_STRIP_ENV=%%b"
+    if defined OPENCLAW_STRIP_ENV (
+        for %%v in (!OPENCLAW_STRIP_ENV!) do set "%%v="
+        echo   Stripped host provider env vars: !OPENCLAW_STRIP_ENV!
+        echo.
+    )
+    set "OPENCLAW_STRIP_ENV="
+)
+set "_STRIP_MJS="
 
 REM ── Gateway watchdog: auto-restart on crash, up to 3 times ──────
 REM cmd has no `wait` equivalent; we run gateway in foreground and

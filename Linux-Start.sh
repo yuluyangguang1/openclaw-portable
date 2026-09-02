@@ -153,14 +153,24 @@ export OPENCLAW_SUPERVISOR_MODE=external
 # (exFAT: node_modules link fails -> gateway never ready) + silently burns
 # the host owner's quota. Clear them once here; every gateway spawn below
 # inherits a clean env.
-_STRIP_ENV="$("$NODE_BIN" "$PORTABLE_DIR/lib/strip-provider-env.mjs" 2>/dev/null | sed 's/^OPENCLAW_STRIP_ENV=//')"
-if [ -n "$_STRIP_ENV" ]; then
-    for _sv in $(printf '%s' "$_STRIP_ENV" | tr ',' ' '); do
-        unset "$_sv"
-    done
-    echo -e "  ${YELLOW}Stripped host provider env vars:${NC} $_STRIP_ENV"
+# Resolve the helper next to this script first (release zip puts scripts +
+# lib/ under system/), then fall back to the portable-root layout.
+_STRIP_MJS=""
+if [ -f "$_SCRIPT_DIR/lib/strip-provider-env.mjs" ]; then
+    _STRIP_MJS="$_SCRIPT_DIR/lib/strip-provider-env.mjs"
+elif [ -f "$PORTABLE_DIR/lib/strip-provider-env.mjs" ]; then
+    _STRIP_MJS="$PORTABLE_DIR/lib/strip-provider-env.mjs"
 fi
-unset _STRIP_ENV _sv
+if [ -n "$_STRIP_MJS" ]; then
+    _STRIP_ENV="$("$NODE_BIN" "$_STRIP_MJS" 2>/dev/null | sed 's/^OPENCLAW_STRIP_ENV=//')"
+    if [ -n "$_STRIP_ENV" ]; then
+        for _sv in $(printf '%s' "$_STRIP_ENV" | tr ',' ' '); do
+            unset "$_sv"
+        done
+        echo -e "  ${YELLOW}Stripped host provider env vars:${NC} $_STRIP_ENV"
+    fi
+fi
+unset _STRIP_ENV _sv _STRIP_MJS
 
 # ---- 6. Check dependencies ----
 if [ ! -d "$CORE_DIR/node_modules" ]; then
