@@ -132,7 +132,7 @@ REM Always regenerate package.json so OPENCLAW_VERSION takes effect
 REM even on re-run / upgrade. Include both deps so the file matches
 REM the post-install state and avoids dropping qqbot.
 set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
->"!_JS!" echo var fs=require('fs');var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:process.argv[1]}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+>"!_JS!" echo var fs=require('fs');var V=process.argv[1];var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:V,'@openclaw/arcee-provider':V,'@openclaw/cerebras-provider':V,'@openclaw/cohere-provider':V,'@openclaw/deepinfra-provider':V,'@openclaw/deepseek-provider':V,'@openclaw/fireworks-provider':V,'@openclaw/gmi-provider':V,'@openclaw/groq-provider':V,'@openclaw/kilocode-provider':V,'@openclaw/kimi-provider':V,'@openclaw/longcat-provider':V,'@openclaw/qwen-provider':V,'@openclaw/stepfun-provider':V,'@openclaw/zai-provider':V}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
 "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
 del "!_JS!" 2>nul
 

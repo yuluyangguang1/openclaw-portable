@@ -222,7 +222,21 @@ $packageJson = @"
     "@sliverp/qqbot": "^1.6.1",
     "@zed-industries/codex-acp": "^0.14.0",
     "acpx": "^0.8.0",
-    "openclaw": "$openclawVersion"
+    "openclaw": "$openclawVersion",
+    "@openclaw/arcee-provider": "$openclawVersion",
+    "@openclaw/cerebras-provider": "$openclawVersion",
+    "@openclaw/cohere-provider": "$openclawVersion",
+    "@openclaw/deepinfra-provider": "$openclawVersion",
+    "@openclaw/deepseek-provider": "$openclawVersion",
+    "@openclaw/fireworks-provider": "$openclawVersion",
+    "@openclaw/gmi-provider": "$openclawVersion",
+    "@openclaw/groq-provider": "$openclawVersion",
+    "@openclaw/kilocode-provider": "$openclawVersion",
+    "@openclaw/kimi-provider": "$openclawVersion",
+    "@openclaw/longcat-provider": "$openclawVersion",
+    "@openclaw/qwen-provider": "$openclawVersion",
+    "@openclaw/stepfun-provider": "$openclawVersion",
+    "@openclaw/zai-provider": "$openclawVersion"
   }
 }
 "@

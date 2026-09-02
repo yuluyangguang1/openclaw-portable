@@ -182,7 +182,21 @@ cat > "$CORE_DIR/package.json" << PKGJSON
     "@tencent-weixin/openclaw-weixin": "^2.4.4",
     "@zed-industries/codex-acp": "^0.14.0",
     "acpx": "^0.8.0",
-    "openclaw": "$OPENCLAW_VERSION"
+    "openclaw": "$OPENCLAW_VERSION",
+    "@openclaw/arcee-provider": "$OPENCLAW_VERSION",
+    "@openclaw/cerebras-provider": "$OPENCLAW_VERSION",
+    "@openclaw/cohere-provider": "$OPENCLAW_VERSION",
+    "@openclaw/deepinfra-provider": "$OPENCLAW_VERSION",
+    "@openclaw/deepseek-provider": "$OPENCLAW_VERSION",
+    "@openclaw/fireworks-provider": "$OPENCLAW_VERSION",
+    "@openclaw/gmi-provider": "$OPENCLAW_VERSION",
+    "@openclaw/groq-provider": "$OPENCLAW_VERSION",
+    "@openclaw/kilocode-provider": "$OPENCLAW_VERSION",
+    "@openclaw/kimi-provider": "$OPENCLAW_VERSION",
+    "@openclaw/longcat-provider": "$OPENCLAW_VERSION",
+    "@openclaw/qwen-provider": "$OPENCLAW_VERSION",
+    "@openclaw/stepfun-provider": "$OPENCLAW_VERSION",
+    "@openclaw/zai-provider": "$OPENCLAW_VERSION"
   }
 }
 PKGJSON
@@ -211,6 +225,17 @@ if [ "$NEED_INSTALL" = "true" ]; then
     "$NODE_BIN" "$NPM_BIN" install --prefix "$CORE_DIR" --registry="$MIRROR"
 
     echo -e "  ${GREEN}[ok]${NC} OpenClaw 安装完成"
+fi
+
+# ---- 2b. Verify official provider plugins are present ----
+MISSING_PROVIDERS=""
+for _p in deepseek kimi qwen zai stepfun; do
+    [ -d "$CORE_DIR/node_modules/@openclaw/$_p-provider" ] || MISSING_PROVIDERS="$MISSING_PROVIDERS $_p"
+done
+if [ -n "$MISSING_PROVIDERS" ]; then
+    echo -e "  ${RED}[!]${NC} 官方 provider 插件缺失:$MISSING_PROVIDERS (运行时会触发在线安装，exFAT 上会卡死)"
+else
+    echo -e "  ${GREEN}[ok]${NC} 14 个官方 provider 插件已预装"
 fi
 
 # ---- 3. Verify core deps ----
