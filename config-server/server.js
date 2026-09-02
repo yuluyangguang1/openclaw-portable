@@ -272,6 +272,160 @@ function atomicWriteConfig(config) {
   }
 }
 
+// ── Secret store + official-plugin guards (OpenClaw 2026.8.1+) ─────────────
+//
+// Two behaviors changed in 8.1 that the config-server must handle:
+//
+// 1. MASKED SECRETS: OpenClaw rewrites plaintext sensitive values in
+//    openclaw.json into masked strings ("sk-ab12cd...wx9yz") whenever IT
+//    persists the file. If we ever persist a masked string as if it were a
+//    real key, that provider silently breaks (auth failures) with no way
+//    to recover the original. Model keys therefore go through the local
+//    secret store (`openclaw secrets store set`) and are written to the
+//    config as a SecretRef ({source:'store',...}); masked strings are
+//    refused outright so the user is told to re-enter the full key.
+//
+// 2. OFFICIAL PLUGIN AUTO-INSTALL: a provider id that matches the official
+//    plugin catalog makes OpenClaw install `@openclaw/<id>-provider` at
+//    RUNTIME. On exFAT the node_modules link cannot be created (no
+//    symlinks) and the gateway never becomes ready; on NTFS first boot
+//    blocks on an interactive consent prompt. 14 high-traffic ids are
+//    preinstalled by setup (see setup.sh); the remaining ids are renamed
+//    `<id>-api` here so OpenClaw treats them as plain custom providers
+//    (they carry explicit baseUrl + models, so nothing is lost).
+const OPENCLAW_MJS = path.join(__dirname, '../app/core/node_modules/openclaw/openclaw.mjs');
+
+// Official plugin catalog ids (kind:"provider"), extracted from
+// openclaw dist official-external-plugin-bundled-catalogs. Preinstalled
+// ids are excluded from renaming — the plugin is already on disk.
+const PREINSTALLED_PROVIDER_IDS = new Set([
+  'arcee', 'cerebras', 'cohere', 'deepinfra', 'deepseek', 'fireworks',
+  'gmi', 'groq', 'kilocode', 'kimi', 'longcat', 'qwen', 'stepfun', 'zai',
+]);
+const OFFICIAL_PROVIDER_IDS = new Set([
+  ...PREINSTALLED_PROVIDER_IDS,
+  'amazon-bedrock', 'amazon-bedrock-mantle', 'anthropic-vertex', 'baseten',
+  'byteplus', 'chutes', 'cloudflare-ai-gateway', 'comfy', 'featherless',
+  'meta', 'mistral', 'moonshot', 'novita', 'opencode', 'opencode-go',
+  'pixverse', 'qianfan', 'synthetic', 'tencent', 'venice',
+  'vercel-ai-gateway', 'volcengine', 'voyage', 'vydra', 'xiaomi',
+]);
+
+function isMaskedKey(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{3,12}\.\.\.[A-Za-z0-9_-]{3,8}$/.test(value);
+}
+
+function isSecretEnvName(name) {
+  return /(?:API[_-]?KEY|KEY|TOKEN|SECRET|PASSWORD)$/i.test(name);
+}
+
+function secretStoreEnv() {
+  return {
+    ...process.env,
+    OPENCLAW_STATE_DIR: process.env.OPENCLAW_STATE_DIR ||
+      path.join(__dirname, '../data/.openclaw'),
+    OPENCLAW_CONFIG_PATH: process.env.OPENCLAW_CONFIG_PATH || CONFIG_PATH,
+    OPENCLAW_HOME: process.env.OPENCLAW_HOME ||
+      path.join(__dirname, '../data'),
+  };
+}
+
+function secretName(prefix, id) {
+  return prefix + String(id).toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+}
+
+class SecretSaveError extends Error {}
+
+function runSecretsStoreSet(name, value) {
+  if (!fs.existsSync(OPENCLAW_MJS)) return Promise.resolve({ ok: false, reason: 'cli-missing' });
+  return new Promise((resolve) => {
+    const { execFile } = require('child_process');
+    const child = execFile(process.execPath, [
+      OPENCLAW_MJS, 'secrets', 'store', 'set', name, '--kind', 'secret', '--value-file', '-',
+    ], {
+      env: secretStoreEnv(),
+      timeout: 60000,
+      windowsHide: true,
+      maxBuffer: 1024 * 1024,
+    }, (error, _stdout, stderr) => {
+      if (!error) return resolve({ ok: true });
+      resolve({ ok: false, reason: String((stderr || error.message || error.code || 'store-failed')).trim().slice(0, 300) });
+    });
+    try {
+      child.stdin.write(value);
+      child.stdin.end();
+    } catch (e) {
+      resolve({ ok: false, reason: 'stdin-failed' });
+    }
+  });
+}
+
+async function storeSecretRef(name, value) {
+  if (isMaskedKey(value)) {
+    throw new SecretSaveError('检测到已脱敏的密钥串（OpenClaw 会将明文改写为掩码），请在输入框重新粘贴完整 API Key');
+  }
+  // SecretRef objects and empty values pass through untouched.
+  if (!value || typeof value !== 'string') return value;
+
+  const result = await runSecretsStoreSet(name, value);
+  if (!result.ok) {
+    if (result.reason === 'cli-missing') return value; // core not installed yet: legacy plaintext behavior
+    throw new SecretSaveError('无法安全保存 API Key（' + result.reason + '）');
+  }
+  return { source: 'store', provider: 'default', id: name };
+}
+
+async function moveIncomingSecretsToStore(incoming) {
+  const providers = incoming && incoming.models && incoming.models.providers;
+  if (providers && typeof providers === 'object') {
+    for (const [providerId, provider] of Object.entries(providers)) {
+      if (!provider || typeof provider !== 'object' || !Object.prototype.hasOwnProperty.call(provider, 'apiKey')) continue;
+      provider.apiKey = await storeSecretRef(secretName('OPENCLAW_MODEL_', providerId), provider.apiKey);
+    }
+  }
+  if (incoming && incoming.env && typeof incoming.env === 'object') {
+    for (const [envName, value] of Object.entries(incoming.env)) {
+      if (!isSecretEnvName(envName)) continue;
+      if (isMaskedKey(value)) {
+        throw new SecretSaveError('检测到已脱敏的密钥串（env.' + envName + '），请重新输入完整 API Key');
+      }
+      incoming.env[envName] = await storeSecretRef(secretName('OPENCLAW_ENV_', envName), value);
+    }
+  }
+}
+
+// Rename providers whose id collides with an official (non-preinstalled)
+// plugin id so OpenClaw never triggers a runtime plugin install. Also
+// rewrites `agents.defaults.model` references ("oldId/model" form).
+function sanitizeOfficialProviderCollisions(config) {
+  const renamed = [];
+  const provs = config && config.models && config.models.providers;
+  if (provs && typeof provs === 'object') {
+    for (const id of Object.keys(provs)) {
+      if (!OFFICIAL_PROVIDER_IDS.has(id)) continue;    // not an official plugin id
+      if (PREINSTALLED_PROVIDER_IDS.has(id)) continue; // plugin already bundled by setup
+      let nid = id + '-api', n = 2;
+      while (provs[nid]) nid = `${id}-api-${n++}`;
+      provs[nid] = provs[id];
+      delete provs[id];
+      renamed.push({ from: id, to: nid });
+    }
+  }
+  if (renamed.length) {
+    const refs = config && config.agents && config.agents.defaults && config.agents.defaults.model;
+    for (const r of renamed) {
+      const re = new RegExp('^' + r.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/');
+      if (refs) {
+        if (typeof refs.primary === 'string' && re.test(refs.primary)) refs.primary = r.to + refs.primary.slice(r.from.length);
+        if (Array.isArray(refs.fallbacks)) refs.fallbacks = refs.fallbacks.map(m => (typeof m === 'string' && re.test(m)) ? r.to + m.slice(r.from.length) : m);
+      }
+    }
+    console.warn('[config] renamed official-plugin-colliding providers:', renamed.map(r => r.from + '->' + r.to).join(', '));
+  }
+  return renamed;
+}
+
+
 // ── WeChat Login State ──────────────────────────────────────────────────────
 const DEFAULT_WECHAT_BASE_URL = 'https://ilinkai.weixin.qq.com';
 const DEFAULT_ILINK_BOT_TYPE = '3';
@@ -1038,12 +1192,27 @@ const server = http.createServer((req, res) => {
 
   // API: Save config
   if (req.url === '/api/config' && req.method === 'POST') {
-    readBoundedJsonBody(req, res, 1_000_000).then((config) => {
+    readBoundedJsonBody(req, res, 1_000_000).then(async (config) => {
       if (config === null) return;  // already responded with 413/400
       try {
+        // Route plaintext model keys through the local secret store and
+        // refuse masked strings (OpenClaw 2026.8.1+ behavior, see the
+        // guards block above). Legacy SecretRef objects pass through.
+        let renamed = [];
+        try {
+          await moveIncomingSecretsToStore(config);
+        } catch (err) {
+          if (err instanceof SecretSaveError) {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ ok: false, error: err.message }));
+            return;
+          }
+          throw err;
+        }
+        renamed = sanitizeOfficialProviderCollisions(config);
         atomicWriteConfig(config);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true }));
+        res.end(JSON.stringify({ ok: true, renamedProviders: renamed }));
       } catch (err) {
         if (!res.headersSent) {
           res.writeHead(500, { 'Content-Type': 'application/json' });

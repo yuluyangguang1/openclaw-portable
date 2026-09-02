@@ -2272,6 +2272,8 @@ function quickSwitchModel() {
  apiFetch('/api/restart', {method:'POST'}).then(function(){
  setTimeout(checkGateway, 4000);
  });
+ } else {
+ showToast('\u274c ' + (data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
  }
  });
 }
@@ -2456,6 +2458,8 @@ function doReset() {
  });
  goStep(1);
  updateSaveBtn();
+ } else {
+ showToast('\u274c ' + (data.error || '\u91cd\u7f6e\u5931\u8d25'), 'error');
  }
  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
