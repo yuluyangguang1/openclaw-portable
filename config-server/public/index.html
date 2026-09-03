@@ -232,6 +232,12 @@
  color: var(--emerald); font-size: 1em; display: none;
  }
  .provider-card.selected .check { display: block; }
+ /* DIRECTION-A: official-managed provider cards are informational (non-editable) */
+ .provider-card.managed-card { cursor: default; border-style: dashed; }
+ .provider-card.managed-card:hover { border-color: var(--emerald-dim); }
+ .provider-card.managed-card.selected { background: var(--secondary); border-color: var(--emerald-dim); }
+ .managed-card .provider-expand.managed-expand.open { padding: 12px 0 6px; }
+ .tag.managed-tag { border-color: var(--emerald); color: var(--emerald); }
 
  /* Filter chips for provider search */
  .filter-chip {
@@ -1464,6 +1470,27 @@ function _escHtml(s) {
 var _memList = null;
 
 // ===== PROVIDERS =====
+// "官方托管" provider ids (OpenClaw built-in provider extensions). These are
+// configured in OpenClaw's OWN Control UI + setup wizard (key → auth profile +
+// SecretRef, model catalog owned by the extension), NOT by writing
+// `models.providers.<id>` here — doing so triggers a silent hijack (雷14).
+//
+// The authoritative list is discovered at RUNTIME on the config-server
+// (dist/extensions/*/openclaw.plugin.json) and returned as `builtIn:true` on
+// each catalog provider + a `managedProviders[]` array. This embedded set is
+// only a conservative offline FALLBACK so the first paint is correct before
+// loadCatalog() replaces PROVIDERS with the server's precise copy. Local
+// runtimes (ollama/lmstudio) are intentionally NOT in it — they stay editable.
+var OFFICIAL_MANAGED_IDS = ['minimax','openai','anthropic','xai','openrouter','together','nvidia','huggingface'];
+// True when a provider entry is owned by OpenClaw's own extension (builtIn
+// flag from server, or id falls in the offline fallback set).
+function isOfficialManaged(p) {
+  if (!p) return false;
+  if (p.builtIn) return true;
+  if (p.isLocal || p.isCustom) return false;
+  return OFFICIAL_MANAGED_IDS.indexOf(p.id) !== -1;
+}
+
 const PROVIDERS = [
  // ── 国内热门 ──
  {id:'minimax',name:'MiniMax',tags:['hot','cn'],desc:'M3 / M2.7 编码与 Agent',base:'https://api.minimax.chat/v1',models:['MiniMax-M3','MiniMax-M2.7','MiniMax-M2.7-highspeed','MiniMax-M2.5','MiniMax-M2.5-highspeed','MiniMax-M2'],link:'https://platform.minimaxi.com/'},
@@ -1647,6 +1674,20 @@ function renderProviders() {
  // (B23-03, extended for hot-update)
  const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
  const tagsHtml = (p.tags || []).map(t => '<span class="tag ' + _e(t) + '">' + _e(({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t)) + '</span>').join('');
+ // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
+ // configured in the official Control UI, NOT here. Show an informational
+ // card (no editable form) that points the user to the official UI.
+ if (isOfficialManaged(p)) {
+  return '<div class="provider-card managed-card" data-id="' + _e(p.id) + '" data-managed="1">' +
+   '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' +
+   '<span class="tag managed-tag">官方托管</span></div>' +
+   '<div class="provider-desc">' + _e(p.desc) + '</div>' +
+   '<div class="provider-expand managed-expand">' +
+   '<p class="hint" style="margin:2px 0 4px;color:var(--emerald);font-size:0.85em;">此平台由 OpenClaw 官方扩展内置。</p>' +
+   '<p class="hint" style="margin:0 0 6px;font-size:0.8em;line-height:1.6;">请在 <strong>OpenClaw 官方界面</strong>（配置中心的 <code>打开 Dashboard</code> 或浏览器访问网关首页）中选择 ' + _e(p.name) + ' 并填写 API Key，保存后重启即生效。配置中心不直接写入该平台。</p>' +
+   '<button class="btn btn-sm" style="margin-top:4px;" onclick="event.stopPropagation(); openGateway();">前往官方界面配置 →</button>' +
+   '</div></div>';
+ }
  let formHtml = '';
  if (p.isCustom) {
  formHtml = '<div class="provider-expand">' +
@@ -2194,25 +2235,109 @@ function applyPreset(providerId, modelName) {
  }
 }
 
+// ===== MODEL REF SCHEMA COMPAT (OpenClaw 2.0) =====
+// OpenClaw 2026.8.x migrates the legacy
+//     agents.defaults.model.primary = "provider/model"
+// into the scoped shape
+//     agents.entries.main.model  = "provider/model@<authProfile>"
+//     agents.entries.main.models = { "provider/model": {...} }
+//     auth.profiles              = { "<authProfile>": { provider, mode } }
+// and moves API keys into the local secret store (SecretRef objects).
+// The config center must understand BOTH shapes. Reading only the legacy one
+// made the summary show "当前: ?/?", hid the quick-switch, and — worst — the
+// next save rewrote the migrated config back into the legacy shape, so the UI
+// displayed the model the user picked while the gateway ran a different one.
+function splitModelRef(ref) {
+  var s = String(ref || '');
+  var at = s.indexOf('@');
+  var head = (at === -1) ? s : s.slice(0, at);
+  var profile = (at === -1) ? '' : s.slice(at + 1);
+  var slash = head.indexOf('/');
+  return {
+    provider: (slash === -1) ? head : head.slice(0, slash),
+    model: (slash === -1) ? '' : head.slice(slash + 1),
+    profile: profile
+  };
+}
+
+function getPrimaryModelRef(cfg) {
+  if (!cfg) return '';
+  var d = cfg.agents && cfg.agents.defaults;
+  if (d && d.model && typeof d.model.primary === 'string' && d.model.primary) return d.model.primary;
+  var entries = cfg.agents && cfg.agents.entries;
+  if (entries && typeof entries === 'object') {
+    var main = entries.main || entries.default;
+    if (!main && Object.keys(entries).length) main = entries[Object.keys(entries)[0]];
+    if (main && typeof main.model === 'string' && main.model) return main.model;
+  }
+  return '';
+}
+
+// Provider ids that collide with a built-in OpenClaw provider extension are
+// renamed to `<id>-api` on save (see config-server). Map them back to the
+// catalog id so the card highlight and quick-switch keep working.
+function catalogProviderId(provider) {
+  if (!provider) return '';
+  for (var i = 0; i < PROVIDERS.length; i++) if (PROVIDERS[i].id === provider) return provider;
+  var m = String(provider).match(/^(.*?)-api(?:-\d+)?$/);
+  if (m) {
+    for (var j = 0; j < PROVIDERS.length; j++) if (PROVIDERS[j].id === m[1]) return m[1];
+  }
+  return provider;
+}
+
+// Write "provider/model" into every schema shape present, preserving the
+// "@<authProfile>" suffix while the provider is unchanged (dropping it would
+// orphan the auth profile and make the model unauthenticated).
+function setPrimaryModelRef(cfg, ref) {
+  if (!cfg) return cfg;
+  cfg.agents = cfg.agents || {};
+  var next = splitModelRef(ref);
+  var entries = cfg.agents.entries;
+  if (entries && typeof entries === 'object') {
+    Object.keys(entries).forEach(function (name) {
+      var e = entries[name];
+      if (!e || typeof e !== 'object' || typeof e.model !== 'string' || !e.model) return;
+      var cur = splitModelRef(e.model);
+      var suffix = (cur.profile && cur.provider === next.provider) ? ('@' + cur.profile) : '';
+      e.model = ref + suffix;
+      if (e.models && typeof e.models === 'object' && cur.provider && cur.provider !== next.provider) {
+        var oldKey = cur.provider + '/' + cur.model + (cur.profile ? '@' + cur.profile : '');
+        if (e.models[oldKey]) { e.models[ref + suffix] = e.models[oldKey]; delete e.models[oldKey]; }
+      }
+    });
+  }
+  cfg.agents.defaults = cfg.agents.defaults || {};
+  cfg.agents.defaults.model = cfg.agents.defaults.model || {};
+  cfg.agents.defaults.model.primary = ref;
+  return cfg;
+}
+
 // ===== CONFIG SUMMARY =====
 function showConfigSummary(cfg) {
- var el = document.getElementById('configSummary');
- if (!el) return;
- var provider = '?', model = '?', keyHint = '';
- if (cfg.agents && cfg.agents.defaults && cfg.agents.defaults.model) {
- var primary = cfg.agents.defaults.model.primary || '';
- var parts = primary.split('/');
- provider = parts[0] || '?';
- model = parts.slice(1).join('/') || '?';
- }
- if (cfg.models && cfg.models.providers) {
- var prov = cfg.models.providers[provider];
- if (prov && prov.apiKey) {
- var k = prov.apiKey;
- keyHint = k.slice(0,4) + '...' + k.slice(-4);
- }
- }
- el.style.display = 'block';
+  var el = document.getElementById('configSummary');
+  if (!el) return;
+  var ref = getPrimaryModelRef(cfg || {});
+  var parts = splitModelRef(ref);
+  var provider = parts.provider || '?';
+  var model = parts.model || '?';
+  var keyHint = '';
+  var prov = (cfg && cfg.models && cfg.models.providers) ? cfg.models.providers[provider] : null;
+  if (prov) {
+    if (typeof prov.apiKey === 'string' && prov.apiKey) {
+      keyHint = prov.apiKey.slice(0,4) + '...' + prov.apiKey.slice(-4);
+    } else if (prov.apiKey && typeof prov.apiKey === 'object') {
+      keyHint = 'Key 已存入本地密钥库';
+    } else if (cfg.auth && cfg.auth.profiles) {
+      // 2.0: the key lives in an auth profile, not on the provider entry.
+      var prefix = provider + ':';
+      var profiled = Object.keys(cfg.auth.profiles).some(function (k) {
+        return String(k).indexOf(prefix) === 0;
+      });
+      if (profiled || ref) keyHint = 'Key 已保存（本机）';
+    }
+  }
+  el.style.display = 'block';
  // Build with DOM nodes (not innerHTML) — provider/model come from the
  // user's openclaw.json which they may have imported from anywhere. A
  // string like "<img onerror=...>" would otherwise execute.
@@ -2230,14 +2355,15 @@ function populateQuickSwitch(cfg) {
  var el = document.getElementById('quickSwitch');
  var sel = document.getElementById('quickModel');
  if (!el || !sel) return;
- var provider = '';
- if (cfg.agents && cfg.agents.defaults && cfg.agents.defaults.model) {
- provider = (cfg.agents.defaults.model.primary || '').split('/')[0];
- }
- var p = PROVIDERS.find(function(x){return x.id === provider;});
+ // Legacy schema AND OpenClaw 2.0 scoped schema (agents.entries.<n>.model).
+ var parts = splitModelRef(getPrimaryModelRef(cfg));
+ // `minimax` may have been renamed to `minimax-api` on save (built-in
+ // extension collision) — map back to the catalog card so the dropdown
+ // still offers the right model list.
+ var p = PROVIDERS.find(function(x){return x.id === catalogProviderId(parts.provider);});
  if (!p || !p.models || p.models.length <= 1) { el.style.display = 'none'; return; }
  el.style.display = 'block';
- var currentModel = (cfg.agents.defaults.model.primary || '').split('/').slice(1).join('/');
+ var currentModel = parts.model;
  sel.innerHTML = p.models.map(function(m){
  var em = m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
  return '<option value="'+em+'"'+(m===currentModel?' selected':'')+'>'+em+'</option>';
@@ -2247,13 +2373,10 @@ function populateQuickSwitch(cfg) {
 function quickSwitchModel() {
  var sel = document.getElementById('quickModel');
  if (!sel || !sel.value || !configData) return;
- var provider = '';
- if (configData.agents && configData.agents.defaults && configData.agents.defaults.model) {
- provider = (configData.agents.defaults.model.primary || '').split('/')[0];
- }
+ var provider = splitModelRef(getPrimaryModelRef(configData)).provider;
  if (!provider) return;
- // 更新 configData
- configData.agents.defaults.model.primary = provider + '/' + sel.value;
+ // 更新 configData — 同时写入新旧两套 schema，保留 @authProfile 后缀
+ setPrimaryModelRef(configData, provider + '/' + sel.value);
  // 同时更新 models 数组里的 id
  if (configData.models && configData.models.providers && configData.models.providers[provider]) {
  var prov = configData.models.providers[provider];
@@ -2282,31 +2405,51 @@ function highlightCurrentProvider(cfg) {
  if (!cfg.models || !cfg.models.providers) return;
  var providerIds = Object.keys(cfg.models.providers);
  if (providerIds.length === 0) return;
+ // 高亮"当前生效"的 provider，而不是 providers 里第一个。
+ // providerIds[0] 来自用户的 openclaw.json —— 直接拼进 querySelector 既可能
+ // 选错卡片（顺序不保证），也会把不可信字符串带进选择器。改成遍历比较
+ // data-id，同时把重命名过的 `<id>-api` 映射回目录 id。
+ var preferred = catalogProviderId(splitModelRef(getPrimaryModelRef(cfg)).provider) ||
+                 catalogProviderId(providerIds[0]);
  // 等 DOM 渲染完再高亮
  setTimeout(function(){
- var card = document.querySelector('.provider-card[data-id="'+providerIds[0]+'"]');
- if (card) card.style.borderColor = 'var(--emerald-dim)';
+  var cards = document.querySelectorAll('.provider-card');
+  for (var i = 0; i < cards.length; i++) {
+   if (cards[i].getAttribute('data-id') === preferred) {
+    cards[i].style.borderColor = 'var(--emerald-dim)';
+    break;
+   }
+  }
  }, 500);
 }
 
 // ===== BUILD CONFIG =====
 function buildConfig(provider, base, model, apiKey) {
  var bc = {
- gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
- commands:{native:'auto',nativeSkills:'auto',restart:true,ownerDisplay:'raw'},
+  gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
+  commands:{native:'auto',nativeSkills:'auto',restart:true,ownerDisplay:'raw'},
 
  };
- if (provider==='zai') {
- return Object.assign({}, bc, {env:{ZAI_API_KEY:apiKey}, agents:{defaults:{model:{primary:'zai/'+model}}}});
- }
  var pn = provider || 'myProvider';
+ var ref = pn + '/' + model;
+ var agents = {
+  defaults: { model: { primary: ref } },
+  // DIRECTION-A / 2.0 schema: the active model ref must ALSO be written to the
+  // scoped `agents.entries.main.model`, or a gateway on the 2.0 config keeps
+  // running whatever `agents.entries` already says while we flip the legacy
+  // `defaults.model.primary` underneath it (schema drift, 雷14-adjacent).
+  entries: { main: { model: ref } }
+ };
+ if (provider === 'zai') {
+  return Object.assign({}, bc, { env: { ZAI_API_KEY: apiKey }, agents: agents });
+ }
  var apiType = provider === 'lmstudio' ? 'openai-responses' : 'openai-completions';
  var provs = {}; provs[pn] = {
- baseUrl:base, apiKey:apiKey, api:apiType,
- models:[{id:model,name:model,reasoning:false,input:['text'],
- cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:196608,maxTokens:8192}]
+  baseUrl:base, apiKey:apiKey, api:apiType,
+  models:[{id:model,name:model,reasoning:false,input:['text'],
+  cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:196608,maxTokens:8192}]
  };
- return Object.assign({}, bc, {models:{mode:'merge',providers:provs}, agents:{defaults:{model:{primary:pn+'/'+model}}}});
+ return Object.assign({}, bc, {models:{mode:'merge',providers:provs}, agents: agents});
 }
 
 // ===== SAVE CONFIG =====
@@ -2948,11 +3091,14 @@ function applyLocalRuntime(runtimeId, port) {
  contextWindow: 32768, maxTokens: 8192
  }]
  };
+ var ref = providerKey + '/' + modelName;
  var cfg = {
- gateway: { mode: 'local', auth: { mode: 'token', token: 'openclaw' } },
- commands: { native: 'auto', nativeSkills: 'auto', restart: true, ownerDisplay: 'raw' },
- models: { mode: 'merge', providers: providers },
- agents: { defaults: { model: { primary: providerKey + '/' + modelName } } }
+  gateway: { mode: 'local', auth: { mode: 'token', token: 'openclaw' } },
+  commands: { native: 'auto', nativeSkills: 'auto', restart: true, ownerDisplay: 'raw' },
+  models: { mode: 'merge', providers: providers },
+  // Write BOTH legacy + 2.0 scoped model refs (buildConfig does the same) so
+  // a 2.0 gateway doesn't keep its old agents.entries.main.model (schema drift).
+  agents: { defaults: { model: { primary: ref } }, entries: { main: { model: ref } } }
  };
  configData = cfg;
  apiFetch('/api/config', {
@@ -3049,6 +3195,11 @@ function showLocalModelHints() {
  var hasExisting = false;
  if (data && data.env && data.env.ZAI_API_KEY) hasExisting = true;
  if (data && data.models && data.models.providers && Object.keys(data.models.providers).length > 0) hasExisting = true;
+ // OpenClaw 2.0 scoped schema keeps the model under agents.entries.<n>.model
+ // and the key in auth.profiles — neither is caught by the checks above, so a
+ // fully configured 2.0 config used to look "empty" and drop the user back to
+ // step 1 (where re-saving would rewrite the config in the legacy shape).
+ if (!hasExisting && getPrimaryModelRef(data)) hasExisting = true;
  if (hasExisting) {
  configData = data;
  goStep(2);
