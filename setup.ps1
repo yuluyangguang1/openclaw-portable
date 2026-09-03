@@ -236,7 +236,12 @@ $packageJson = @"
     "@openclaw/longcat-provider": "$openclawVersion",
     "@openclaw/qwen-provider": "$openclawVersion",
     "@openclaw/stepfun-provider": "$openclawVersion",
-    "@openclaw/zai-provider": "$openclawVersion"
+    "@openclaw/zai-provider": "$openclawVersion",
+    "@openclaw/byteplus-provider": "$openclawVersion",
+    "@openclaw/mistral-provider": "$openclawVersion",
+    "@openclaw/novita-provider": "$openclawVersion",
+    "@openclaw/tencent-provider": "$openclawVersion",
+    "@openclaw/xiaomi-provider": "$openclawVersion"
   }
 }
 "@
@@ -277,6 +282,21 @@ if ($needInstall) {
         Write-Step "ERR" "OpenClaw installation failed." "Red"
         exit 1
     }
+}
+
+# Promote official provider plugins to bundled (idempotent). Must run
+# AFTER npm install: promoted files are merged into openclaw's postinstall
+# inventory (dist/postinstall-inventory.json) so lifecycle re-runs never
+# prune them; origin=bundled also skips capability consent entirely.
+# 发布包里 lib/ 在 system\lib\，开发树在 .\lib\，两处都找
+$promoteScript = Join-Path $PSScriptRoot "system\lib\promote-official-providers.mjs"
+if (-not (Test-Path -Path $promoteScript -PathType Leaf)) {
+    $promoteScript = Join-Path $PSScriptRoot "lib\promote-official-providers.mjs"
+}
+if ((Test-Path -Path $promoteScript -PathType Leaf) -and
+    (Test-Path -Path (Join-Path $coreDir "node_modules\openclaw\dist\extensions") -PathType Container)) {
+    Write-Step "->" "Promoting official provider plugins to bundled..." "Cyan"
+    & (Join-Path $windowsNodeTarget "node.exe") $promoteScript $coreDir
 }
 
 if (Test-Path -Path (Join-Path $coreDir "node_modules\@sliverp\qqbot") -PathType Container) {

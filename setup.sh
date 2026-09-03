@@ -196,7 +196,12 @@ cat > "$CORE_DIR/package.json" << PKGJSON
     "@openclaw/longcat-provider": "$OPENCLAW_VERSION",
     "@openclaw/qwen-provider": "$OPENCLAW_VERSION",
     "@openclaw/stepfun-provider": "$OPENCLAW_VERSION",
-    "@openclaw/zai-provider": "$OPENCLAW_VERSION"
+    "@openclaw/zai-provider": "$OPENCLAW_VERSION",
+    "@openclaw/byteplus-provider": "$OPENCLAW_VERSION",
+    "@openclaw/mistral-provider": "$OPENCLAW_VERSION",
+    "@openclaw/novita-provider": "$OPENCLAW_VERSION",
+    "@openclaw/tencent-provider": "$OPENCLAW_VERSION",
+    "@openclaw/xiaomi-provider": "$OPENCLAW_VERSION"
   }
 }
 PKGJSON
@@ -229,13 +234,32 @@ fi
 
 # ---- 2b. Verify official provider plugins are present ----
 MISSING_PROVIDERS=""
-for _p in deepseek kimi qwen zai stepfun; do
+for _p in arcee cerebras cohere deepinfra deepseek fireworks gmi groq kilocode kimi \
+          longcat qwen stepfun zai byteplus mistral novita tencent xiaomi; do
     [ -d "$CORE_DIR/node_modules/@openclaw/$_p-provider" ] || MISSING_PROVIDERS="$MISSING_PROVIDERS $_p"
 done
 if [ -n "$MISSING_PROVIDERS" ]; then
     echo -e "  ${RED}[!]${NC} 官方 provider 插件缺失:$MISSING_PROVIDERS (运行时会触发在线安装，exFAT 上会卡死)"
 else
-    echo -e "  ${GREEN}[ok]${NC} 14 个官方 provider 插件已预装"
+    echo -e "  ${GREEN}[ok]${NC} 19 个官方 provider 插件已预装"
+fi
+
+# ---- 2c. Promote official provider plugins to bundled (免 capability consent) ----
+# npm 装进 node_modules/@openclaw/ 的插件不会被 openclaw 视为 bundled，
+# 用户选用这些 provider 时网关会要求 capability consent 并拒绝 ready。
+# 把它们放进 <openclaw>/dist/extensions/ 后 origin 即变为 bundled，永久免 consent。
+# 发布包里 lib/ 会被移到 system/lib/（build.yml），开发树仍在 ./lib/，两处都找
+_PROMOTE_MJS="$SCRIPT_DIR/system/lib/promote-official-providers.mjs"
+[ -f "$_PROMOTE_MJS" ] || _PROMOTE_MJS="$SCRIPT_DIR/lib/promote-official-providers.mjs"
+if [ -f "$_PROMOTE_MJS" ]; then
+    _PROMOTE_NODE="$NODE_TARGET/bin/node"
+    if [ -x "$_PROMOTE_NODE" ] && "$_PROMOTE_NODE" "$_PROMOTE_MJS" "$CORE_DIR"; then
+        echo -e "  ${GREEN}[ok]${NC} 官方 provider 插件已提升为 bundled（免 capability consent）"
+    else
+        echo -e "  ${YELLOW}[!]${NC} 插件 bundled 提升未完成，选用官方 provider 时可能触发 consent 卡启动"
+    fi
+else
+    echo -e "  ${YELLOW}[!]${NC} 未找到 lib/promote-official-providers.mjs，跳过 bundled 提升"
 fi
 
 # ---- 3. Verify core deps ----
