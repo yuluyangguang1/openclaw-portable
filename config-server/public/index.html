@@ -1491,6 +1491,16 @@ function isOfficialManaged(p) {
   return OFFICIAL_MANAGED_IDS.indexOf(p.id) !== -1;
 }
 
+// Human label for a model id. Providers whose model list is owned by a bundled
+// extension carry `modelMeta` (built server-side from that extension's official
+// `modelCatalog`), so we can show the vendor's real name — "DeepSeek V4 Flash"
+// instead of the raw id "deepseek-v4-flash". Providers with no official catalog
+// (custom / local runtimes) have no meta → fall back to the raw id.
+function modelLabel(p, m) {
+  if (p && p.modelMeta && p.modelMeta[m] && p.modelMeta[m].name) return p.modelMeta[m].name;
+  return m;
+}
+
 const PROVIDERS = [
  // ── 国内热门 ──
  {id:'minimax',name:'MiniMax',tags:['hot','cn'],desc:'M3 / M2.7 编码与 Agent',base:'https://api.minimax.chat/v1',models:['MiniMax-M3','MiniMax-M2.7','MiniMax-M2.7-highspeed','MiniMax-M2.5','MiniMax-M2.5-highspeed','MiniMax-M2'],link:'https://platform.minimaxi.com/'},
@@ -1702,7 +1712,7 @@ function renderProviders() {
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
  '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button></div>';
  } else {
- const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(m) + '</option>').join('');
+ const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
  formHtml = '<div class="provider-expand">' +
  '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
  '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
@@ -2366,7 +2376,10 @@ function populateQuickSwitch(cfg) {
  var currentModel = parts.model;
  sel.innerHTML = p.models.map(function(m){
  var em = m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
- return '<option value="'+em+'"'+(m===currentModel?' selected':'')+'>'+em+'</option>';
+ // Show the vendor's real name when the official catalog supplies one; the
+ // option VALUE stays the raw id so config writes are unaffected.
+ var lbl = String(modelLabel(p, m)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ return '<option value="'+em+'"'+(m===currentModel?' selected':'')+'>'+lbl+'</option>';
  }).join('');
 }
 
@@ -2427,7 +2440,13 @@ function highlightCurrentProvider(cfg) {
 function buildConfig(provider, base, model, apiKey) {
  var bc = {
   gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
-  commands:{native:'auto',nativeSkills:'auto',restart:true,ownerDisplay:'raw'},
+  // NOTE: never put `commands.ownerDisplay` here. In 2026.8.2 it is a
+  // deprecated doctor-only legacy key (see CommandsConfig in openclaw's own
+  // types) that the RUNTIME schema rejects: the gateway logs
+  // `[reload] config reload skipped (invalid config): commands: Unrecognized
+  // key: "ownerDisplay"`, the save silently does not apply, and the follow-up
+  // /api/restart then hangs for 30s until it times out.
+  commands:{native:'auto',nativeSkills:'auto',restart:true},
 
  };
  var pn = provider || 'myProvider';
@@ -2444,11 +2463,28 @@ function buildConfig(provider, base, model, apiKey) {
   return Object.assign({}, bc, { env: { ZAI_API_KEY: apiKey }, agents: agents });
  }
  var apiType = provider === 'lmstudio' ? 'openai-responses' : 'openai-completions';
- var provs = {}; provs[pn] = {
-  baseUrl:base, apiKey:apiKey, api:apiType,
-  models:[{id:model,name:model,reasoning:false,input:['text'],
-  cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:196608,maxTokens:8192}]
- };
+ // MODEL-LIST OWNERSHIP: if a bundled extension ships a `modelCatalog` for
+ // this provider, the OFFICIAL rows are the source of truth. Injecting our own
+ // `models[]` here collides by id under `models.mode:'merge'` — same id,
+ // conflicting metadata, silent degradation. Real case (2026-09-03,
+ // v2.0.0-beta.2): we injected `deepseek-v4-flash` as name=raw id /
+ // reasoning=false / contextWindow=196608 / maxTokens=8192 / cost=0, while the
+ // bundled deepseek extension declares the SAME id as name="DeepSeek V4 Flash"
+ // / reasoning=true / contextWindow=1000000 / maxTokens=384000 / real cost.
+ // Result: duplicated rows + wrong labels + context cut ~5x + output cut ~47x
+ // + zeroed cost. So for those ids write the CONNECTION details only and let
+ // the extension supply the models. Custom + local runtimes have no official
+ // catalog, so they keep the synthesized row.
+ var pObj = null;
+ for (var _pi = 0; _pi < PROVIDERS.length; _pi++) {
+  if (PROVIDERS[_pi] && PROVIDERS[_pi].id === pn) { pObj = PROVIDERS[_pi]; break; }
+ }
+ var provEntry = { baseUrl: base, apiKey: apiKey, api: apiType };
+ if (!(pObj && pObj.hasOfficialCatalog)) {
+  provEntry.models = [{id:model,name:model,reasoning:false,input:['text'],
+   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:196608,maxTokens:8192}];
+ }
+ var provs = {}; provs[pn] = provEntry;
  return Object.assign({}, bc, {models:{mode:'merge',providers:provs}, agents: agents});
 }
 
@@ -3094,7 +3130,9 @@ function applyLocalRuntime(runtimeId, port) {
  var ref = providerKey + '/' + modelName;
  var cfg = {
   gateway: { mode: 'local', auth: { mode: 'token', token: 'openclaw' } },
-  commands: { native: 'auto', nativeSkills: 'auto', restart: true, ownerDisplay: 'raw' },
+  // Same rule as buildConfig(): `ownerDisplay` is a deprecated doctor-only
+  // legacy key in 2026.8.2 and makes the whole config invalid at runtime.
+  commands: { native: 'auto', nativeSkills: 'auto', restart: true },
   models: { mode: 'merge', providers: providers },
   // Write BOTH legacy + 2.0 scoped model refs (buildConfig does the same) so
   // a 2.0 gateway doesn't keep its old agents.entries.main.model (schema drift).

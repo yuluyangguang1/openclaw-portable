@@ -392,6 +392,61 @@ function isOfficialManagedProviderId(id) {
   return discoverBuiltinProviderIds().has(id);
 }
 
+// ── Providers whose MODEL LIST is owned by a bundled extension ─────────────
+//
+// Deliberately a DIFFERENT set from the official-managed (`builtIn`) one above.
+// A3 lets the config center keep write access to promoted providers (they
+// carry `.portable-promoted`, so `discoverBuiltinProviderIds` skips them), but
+// those extensions still ship a `modelCatalog` — the official rows remain the
+// source of truth for models.
+//
+// Writing a synthetic `models[]` for such an id collides with the official rows
+// under `models.mode = "merge"`: same id, conflicting metadata, and whichever
+// side wins silently degrades the model. Real case (2026-09-03, v2.0.0-beta.2):
+// config center injected `deepseek-v4-flash` as
+//   name "deepseek-v4-flash" (raw id) / reasoning false /
+//   contextWindow 196608 / maxTokens 8192 / cost all zero
+// while the bundled deepseek extension declares the SAME id as
+//   name "DeepSeek V4 Flash" / reasoning true /
+//   contextWindow 1000000 / maxTokens 384000 / real cost
+// → the official model page shows duplicated/incorrect rows, context is
+//   truncated ~5x and max output ~47x, and cost accounting reads zero.
+//
+// For these ids the config center must write the CONNECTION details only
+// (baseUrl / apiKey / api) and let the extension own the model rows.
+// Returns Map<providerId, officialModelRow[]> read from each bundled
+// extension's `modelCatalog.providers.<id>.models`.
+let _officialCatalogCache = null;
+function getOfficialModelCatalog() {
+  if (_officialCatalogCache) return _officialCatalogCache;
+  const byId = new Map();
+  try {
+    for (const entry of fs.readdirSync(BUILTIN_EXTENSIONS_DIR, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      let j;
+      try {
+        j = JSON.parse(fs.readFileSync(path.join(BUILTIN_EXTENSIONS_DIR, entry.name, 'openclaw.plugin.json'), 'utf8'));
+      } catch (_) {
+        continue; // unreadable / not an extension dir
+      }
+      if (!j || typeof j !== 'object') continue;
+      if (!Array.isArray(j.providers) || !j.modelCatalog) continue;
+      const catalog = j.modelCatalog.providers;
+      if (!catalog || typeof catalog !== 'object') continue;
+      for (const p of j.providers) {
+        if (typeof p !== 'string' || !p || LOCAL_RUNTIME_PROVIDER_IDS.has(p)) continue;
+        const entryModels = catalog[p] && Array.isArray(catalog[p].models) ? catalog[p].models : [];
+        const rows = entryModels.filter((m) => m && typeof m.id === 'string' && m.id);
+        byId.set(p, (byId.get(p) || []).concat(rows));
+      }
+    }
+  } catch (_) {
+    // core not downloaded yet (portable shell without runtime) — empty map.
+  }
+  _officialCatalogCache = byId;
+  return byId;
+}
+
 function isMaskedKey(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{3,12}\.\.\.[A-Za-z0-9_-]{3,8}$/.test(value);
 }
@@ -2699,10 +2754,37 @@ if (req.url === '/api/models/catalog' && req.method === 'GET') {
   // file. Local runtimes (ollama/lmstudio) are excluded → stay editable.
   const managed = new Set();
   const builtinIds = discoverBuiltinProviderIds();
+  const officialModels = getOfficialModelCatalog();
   const providers = (cat.providers || []).map((p) => {
-    const isManaged = p && typeof p === 'object' && builtinIds.has(p.id);
-    if (isManaged) managed.add(p.id);
-    return isManaged ? Object.assign({}, p, { builtIn: true }) : p;
+    const pid = p && typeof p === 'object' ? p.id : null;
+    const isManaged = pid && builtinIds.has(pid);
+    if (isManaged) managed.add(pid);
+    let out = p;
+    if (isManaged) out = Object.assign({}, out, { builtIn: true });
+    // Model rows owned by a bundled extension (includes A3-promoted ones,
+    // which stay writable but are NOT model-owning). Replace the shipped
+    // catalog's hardcoded id list — stale and divergent from the extension
+    // (e.g. it offers deepseek-r1 / deepseek-v3.2 / deepseek-chat while the
+    // bundled deepseek plugin only declares v4-pro / v4-flash /
+    // v4-flash-vision-exp) — with the OFFICIAL rows, so the picker can only
+    // offer models that really exist and can show their real names.
+    const rows = pid ? officialModels.get(pid) : null;
+    if (rows && rows.length) {
+      const ids = [];
+      const meta = {};
+      for (const m of rows) {
+        if (ids.indexOf(m.id) !== -1) continue; // first row wins on dupes
+        ids.push(m.id);
+        meta[m.id] = {
+          name: m.name || m.id,
+          reasoning: !!m.reasoning,
+          contextWindow: m.contextWindow || 0,
+          maxTokens: m.maxTokens || 0,
+        };
+      }
+      out = Object.assign({}, out, { hasOfficialCatalog: true, models: ids, modelMeta: meta });
+    }
+    return out;
   });
   res.end(JSON.stringify({
     ok: true,
