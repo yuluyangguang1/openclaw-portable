@@ -365,6 +365,16 @@ function discoverBuiltinProviderIds() {
       // be wrong.
       if (!j || typeof j !== 'object') continue;
       if (!Array.isArray(j.providers) || !j.modelCatalog) continue;
+      // The portable setup "promotes" @openclaw/<id>-provider npm packages into
+      // this directory (lib/promote-official-providers.mjs) so the gateway
+      // treats them as bundled and skips capability consent. Those plugins do
+      // NOT override user config the way stock extensions do — the apiKey in
+      // models.providers.<id> is an official config path for them, and most
+      // even honor a custom baseUrl (allowExplicitBaseUrl). Directories that
+      // carry the promote marker are therefore user-configurable: exclude them
+      // from the official-managed set so the config center keeps write access.
+      // (Name must stay in sync with PROMOTE_MARKER in the promote script.)
+      if (fs.existsSync(path.join(BUILTIN_EXTENSIONS_DIR, entry.name, '.portable-promoted'))) continue;
       for (const p of j.providers) {
         if (typeof p === 'string' && p && !LOCAL_RUNTIME_PROVIDER_IDS.has(p)) ids.add(p);
       }
