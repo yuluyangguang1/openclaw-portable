@@ -577,6 +577,12 @@ if exist "!_OUT!" ( set /p NEW_VER=<"!_OUT!" )
 del "!_JS!" 2>nul & del "!_OUT!" 2>nul
 echo.
 echo   Updated! !CUR_VER! - !NEW_VER!
+echo   Re-promoting official provider plugins to bundled...
+REM openclaw upgrade = fresh dist/extensions + fresh postinstall inventory,
+REM so the promoted plugins would be wiped; re-run promote (idempotent).
+if exist "!_SCRIPT_DIR!\lib\promote-official-providers.mjs" (
+    "!NODE_BIN!" "!_SCRIPT_DIR!\lib\promote-official-providers.mjs" "!CORE_DIR!"
+)
 pause
 goto :menu
 

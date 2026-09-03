@@ -345,6 +345,15 @@ do_update() {
     local NEW_VER=$("$NODE_BIN" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}" "$CORE_DIR/node_modules/openclaw/package.json" 2>/dev/null)
     echo ""
     echo -e "  ${GREEN}升级完成！${NC} $CUR_VER → $NEW_VER"
+
+    # openclaw 升级 = 新的原厂发货清单 + 干净的 dist/extensions，
+    # 提升的官方 provider 插件会被抹掉，必须重跑 promote（幂等）。
+    # 用脚本自身位置定位（发布包在 system/lib/，开发树在 lib/，两处都对）
+    local _PROMOTE_MJS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/promote-official-providers.mjs"
+    if [ -f "$_PROMOTE_MJS" ]; then
+        echo -e "  ${CYAN}重新提升官方 provider 插件为 bundled...${NC}"
+        "$NODE_BIN" "$_PROMOTE_MJS" "$CORE_DIR" 2>&1
+    fi
 }
 
 # ── [14] Disk cleanup (P1) ───────────────────────────────────
