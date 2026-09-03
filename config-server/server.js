@@ -311,6 +311,77 @@ const OFFICIAL_PROVIDER_IDS = new Set([
   'vercel-ai-gateway', 'volcengine', 'voyage', 'vydra', 'xiaomi',
 ]);
 
+// ── Built-in provider extensions → "官方托管" (方向-A boundary) ────────────
+//
+// OpenClaw ships model providers INSIDE openclaw itself
+// (app/core/node_modules/openclaw/dist/extensions/<id>/), marked
+// `enabledByDefault` + `modelCatalog`. These are owned by OpenClaw's own
+// Control UI + setup wizard: the moment a user ALSO writes
+// `models.providers.<id>`, the built-in extension activates and replaces the
+// entry with its OWN canonical contract (baseUrl / api / model catalog), then
+// pins the agent model to one of ITS catalog rows. The API key goes into an
+// auth profile + SecretRef, never plaintext.
+//
+// Real-world case (2026-09-02, v2.0.0-beta.1 on Windows): the user picked
+// minimax/MiniMax-M2.5 with baseUrl https://api.minimaxi.chat/v1
+// (openai-completions). The built-in `minimax` extension rewrote the config to
+// https://api.minimaxi.com/anthropic (anthropic-messages) and switched the
+// model to MiniMax-M3. The key still worked (HTTP 200), so the only symptom
+// was "配置中心显示 M2.5，OpenClaw 实际用 M3" — a silent hijack (雷14).
+//
+// DIRECTION-A (2026-09-02): we do NOT fight these ids by renaming. The config
+// center must simply NOT offer to write them — the catalog API flags them
+// "builtIn:true / 官方托管" and the UI shows "请在 OpenClaw 官方界面配置，保存后
+// 重启" instead of an editable form. 46 remaining custom providers keep
+// working exactly as before (plaintext apiKey → SecretRef via our store).
+const BUILTIN_EXTENSIONS_DIR = path.join(__dirname, '../app/core/node_modules/openclaw/dist/extensions');
+
+// Local runtimes (ollama / lmstudio) stay editable in the config center: the
+// bundled extension only does native model discovery and its canonical
+// endpoint already points at 127.0.0.1, so there is nothing to hijack. They
+// are excluded from the "官方托管" flag and keep the existing local-detect UI.
+const LOCAL_RUNTIME_PROVIDER_IDS = new Set(['ollama', 'lmstudio']);
+
+// Discovered at runtime (not hardcoded) so the flag survives openclaw
+// upgrades that add/remove bundled providers. Result is cached: the directory
+// only changes when the portable core is updated.
+let _builtinProviderIdsCache = null;
+function discoverBuiltinProviderIds() {
+  if (_builtinProviderIdsCache) return _builtinProviderIdsCache;
+  const ids = new Set();
+  try {
+    for (const entry of fs.readdirSync(BUILTIN_EXTENSIONS_DIR, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const manifest = path.join(BUILTIN_EXTENSIONS_DIR, entry.name, 'openclaw.plugin.json');
+      let j;
+      try {
+        j = JSON.parse(fs.readFileSync(manifest, 'utf8'));
+      } catch (_) {
+        continue; // unreadable / not an extension dir
+      }
+      // A *model* provider extension is one that declares providers AND ships
+      // a modelCatalog. Channel/media extensions can also list "providers"
+      // (for their own subsystem) — flagging those as model providers would
+      // be wrong.
+      if (!j || typeof j !== 'object') continue;
+      if (!Array.isArray(j.providers) || !j.modelCatalog) continue;
+      for (const p of j.providers) {
+        if (typeof p === 'string' && p && !LOCAL_RUNTIME_PROVIDER_IDS.has(p)) ids.add(p);
+      }
+    }
+  } catch (_) {
+    // core not downloaded yet (portable shell without runtime) — empty set.
+  }
+  _builtinProviderIdsCache = ids;
+  return ids;
+}
+
+// Do these ids look like model providers OpenClaw owns itself? Local runtime
+// ids are deliberately NOT "official-managed" so the local-detect UI survives.
+function isOfficialManagedProviderId(id) {
+  return discoverBuiltinProviderIds().has(id);
+}
+
 function isMaskedKey(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{3,12}\.\.\.[A-Za-z0-9_-]{3,8}$/.test(value);
 }
@@ -395,15 +466,29 @@ async function moveIncomingSecretsToStore(incoming) {
 }
 
 // Rename providers whose id collides with an official (non-preinstalled)
-// plugin id so OpenClaw never triggers a runtime plugin install. Also
-// rewrites `agents.defaults.model` references ("oldId/model" form).
+// *external* plugin id — so OpenClaw never triggers a runtime plugin install.
+//
+// DIRECTION-A NOTE (2026-09-02): built-in provider extensions (minimax,
+// openai, anthropic, xai, openrouter, together, nvidia, huggingface, …) are
+// deliberately NOT renamed any more. Renaming was the old 方向-B fix for the
+// built-in hijack (雷14). Under 方向-A those ids are owned by OpenClaw's own
+// Control UI: the config center must not write `models.providers.<id>` for
+// them at all (it marks them "官方托管" and defers to the official UI), so
+// there is nothing to rename. Only *external* official plugin ids (which
+// would trigger a runtime `@openclaw/<id>-provider` install) still get the
+// `<id>-api` treatment, because those are plain custom providers we genuinely
+// want the user's own baseUrl/models to win.
+//
+// Rewrites model references in BOTH config schemas:
+//   legacy  agents.defaults.model.primary / .fallbacks
+//   OpenClaw 2.0  agents.entries.<name>.model (+ optional "@<authProfile>")
 function sanitizeOfficialProviderCollisions(config) {
   const renamed = [];
   const provs = config && config.models && config.models.providers;
   if (provs && typeof provs === 'object') {
     for (const id of Object.keys(provs)) {
-      if (!OFFICIAL_PROVIDER_IDS.has(id)) continue;    // not an official plugin id
-      if (PREINSTALLED_PROVIDER_IDS.has(id)) continue; // plugin already bundled by setup
+      if (!OFFICIAL_PROVIDER_IDS.has(id)) continue;                 // not external-official
+      if (PREINSTALLED_PROVIDER_IDS.has(id)) continue;              // plugin already bundled by setup
       let nid = id + '-api', n = 2;
       while (provs[nid]) nid = `${id}-api-${n++}`;
       provs[nid] = provs[id];
@@ -411,20 +496,181 @@ function sanitizeOfficialProviderCollisions(config) {
       renamed.push({ from: id, to: nid });
     }
   }
-  if (renamed.length) {
-    const refs = config && config.agents && config.agents.defaults && config.agents.defaults.model;
-    for (const r of renamed) {
-      const re = new RegExp('^' + r.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/');
-      if (refs) {
-        if (typeof refs.primary === 'string' && re.test(refs.primary)) refs.primary = r.to + refs.primary.slice(r.from.length);
-        if (Array.isArray(refs.fallbacks)) refs.fallbacks = refs.fallbacks.map(m => (typeof m === 'string' && re.test(m)) ? r.to + m.slice(r.from.length) : m);
+  if (!renamed.length) return renamed;
+
+  const rewriteRef = (value, r, re) => {
+    // Preserve the "@<authProfile>" suffix used by the 2.0 scoped schema.
+    if (typeof value !== 'string' || !re.test(value)) return value;
+    const at = value.indexOf('@');
+    const head = at === -1 ? value : value.slice(0, at);
+    const tail = at === -1 ? '' : value.slice(at);
+    return r.to + head.slice(r.from.length) + tail;
+  };
+
+  const agents = config && config.agents;
+  for (const r of renamed) {
+    const re = new RegExp('^' + r.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '/');
+
+    // Legacy schema
+    const refs = agents && agents.defaults && agents.defaults.model;
+    if (refs) {
+      if (typeof refs.primary === 'string') refs.primary = rewriteRef(refs.primary, r, re);
+      if (Array.isArray(refs.fallbacks)) refs.fallbacks = refs.fallbacks.map(m => rewriteRef(m, r, re));
+    }
+
+    // OpenClaw 2.0 scoped schema (agents.entries.<name>.model)
+    if (agents && agents.entries && typeof agents.entries === 'object') {
+      for (const name of Object.keys(agents.entries)) {
+        const e = agents.entries[name];
+        if (e && typeof e === 'object' && typeof e.model === 'string') {
+          e.model = rewriteRef(e.model, r, re);
+        }
+        // Named model maps, e.g. agents.entries.main.models["minimax/MiniMax-M3"]
+        if (e && e.models && typeof e.models === 'object') {
+          for (const modelRef of Object.keys(e.models)) {
+            if (!re.test(modelRef)) continue;
+            const at = modelRef.indexOf('@');
+            const head = at === -1 ? modelRef : modelRef.slice(0, at);
+            const tail = at === -1 ? '' : modelRef.slice(at);
+            e.models[r.to + head.slice(r.from.length) + tail] = e.models[modelRef];
+            delete e.models[modelRef];
+          }
+        }
       }
     }
-    console.warn('[config] renamed official-plugin-colliding providers:', renamed.map(r => r.from + '->' + r.to).join(', '));
+
+    // Drop the now-dangling `plugins.entries.<oldId>` flag. Left in place it
+    // would keep force-enabling the built-in extension we just renamed away
+    // from (saveChannelsAndOpen merges the existing config, so it can survive).
+    if (config.plugins && config.plugins.entries && config.plugins.entries[r.from]) {
+      delete config.plugins.entries[r.from];
+    }
   }
+  console.warn('[config] renamed provider-colliding ids:', renamed.map(r => r.from + '->' + r.to).join(', '));
   return renamed;
 }
 
+function cloneJson(v) {
+  return v === undefined ? undefined : JSON.parse(JSON.stringify(v));
+}
+
+// Strip from an incoming config any `models.providers.<id>` whose id is owned
+// by an OpenClaw built-in extension (minimax/openai/anthropic/…). Local
+// runtimes (ollama/lmstudio) are exempt (still editable). Returns the stripped
+// ids. Call BEFORE moveIncomingSecretsToStore so no orphan SecretRef is stored
+// for a provider we are not going to write.
+function stripOfficialManagedWrites(incoming) {
+  const provs = incoming && incoming.models && incoming.models.providers;
+  const stripped = [];
+  if (provs && typeof provs === 'object') {
+    for (const id of Object.keys(provs)) {
+      if (isOfficialManagedProviderId(id)) {
+        delete provs[id];
+        stripped.push(id);
+      }
+    }
+    // Drop an emptied providers map so downstream logic sees "no providers".
+    if (Object.keys(provs).length === 0) {
+      if (incoming.models && typeof incoming.models === 'object') delete incoming.models.providers;
+    }
+  }
+  return stripped;
+}
+
+// Of the stripped managed ids, which are NOT already configured on disk?
+// Those need the user to go to the official UI — the config center has no
+// stored key/baseUrl to fall back on.
+function officialManagedIdsOnDisk(incoming, strippedManaged) {
+  if (!strippedManaged.length) return [];
+  const missing = [];
+  try {
+    const { config } = safeReadConfig();
+    const onDisk = (config && config.models && config.models.providers) || {};
+    for (const id of strippedManaged) if (!onDisk[id]) missing.push(id);
+  } catch (_) { /* existing unreadable */ }
+  return missing;
+}
+
+// DIRECTION-A merge save (2026-09-02): the OLD behaviour was "whatever the
+// client POSTs becomes the whole openclaw.json". That clobbered anything
+// OpenClaw's own Control UI wrote (other providers, auth.profiles, SecretRefs,
+// plugins.entries, meta.migrations). Direction A must co-exist with the
+// official writer, so saving a provider from the config center may only
+// ADD/REPLACE that provider + move the active model ref — never delete the
+// other providers or the official auth/secret scaffolding.
+//
+// mergeSave(existing, incoming):
+//   - providers: incoming's ids are replaced/added whole; existing ids the
+//     incoming did NOT mention are preserved.
+//   - active model: incoming's legacy `agents.defaults.model.primary` (and any
+//     `agents.entries.<n>.model`) wins if present; otherwise existing kept.
+//   - everything else: incoming's top-level keys win when present, existing
+//     keys the incoming omitted are preserved.
+function mergeSave(existing, incoming) {
+  const base = existing && typeof existing === 'object' ? cloneJson(existing) : {};
+  if (!incoming || typeof incoming !== 'object') return base;
+
+  // 1) models.providers — per-id replace/add, keep untouched existing ids.
+  const incProv = incoming.models && incoming.models.providers;
+  if (incProv && typeof incProv === 'object') {
+    base.models = base.models || {};
+    base.models.providers = base.models.providers || {};
+    for (const [id, p] of Object.entries(incProv)) {
+      // A provider object whose apiKey is an empty string / absent means "don't
+      // touch the stored key" (a client may POST the whole catalog). Preserve
+      // the existing SecretRef/plaintext when the incoming has no real key.
+      if (p && typeof p === 'object') {
+        const hasNoRealKey = !Object.prototype.hasOwnProperty.call(p, 'apiKey') ||
+          p.apiKey === '' || p.apiKey === null;
+        const merged = Object.assign({}, base.models.providers[id] || {}, p);
+        if (hasNoRealKey && base.models.providers[id]) {
+          merged.apiKey = base.models.providers[id].apiKey; // keep stored secret
+        }
+        base.models.providers[id] = merged;
+      } else {
+        base.models.providers[id] = cloneJson(p);
+      }
+    }
+  }
+
+  // 2) active model — apply incoming if it expresses one, in BOTH schemas.
+  const incAgents = incoming.agents;
+  if (incAgents && typeof incAgents === 'object') {
+    base.agents = base.agents || {};
+    const incDefault = incAgents.defaults;
+    if (incDefault && incDefault.model) {
+      base.agents.defaults = base.agents.defaults || {};
+      base.agents.defaults.model = Object.assign({}, base.agents.defaults.model, cloneJson(incDefault.model));
+    }
+    // 2.0 scoped entries: update model on any entry the incoming names.
+    if (incAgents.entries && typeof incAgents.entries === 'object') {
+      base.agents.entries = base.agents.entries || {};
+      for (const name of Object.keys(incAgents.entries)) {
+        const incE = incAgents.entries[name];
+        if (!incE || typeof incE !== 'object') continue;
+        const curE = base.agents.entries[name] || {};
+        base.agents.entries[name] = Object.assign({}, curE, cloneJson(incE));
+      }
+    }
+  }
+
+  // 3) Other top-level keys — incoming wins where present, omit → keep base.
+  for (const key of Object.keys(incoming)) {
+    if (key === 'models' || key === 'agents') {
+      // handled above, but still merge incidental model keys (mode, etc.)
+      if (key === 'models' && incoming.models && typeof incoming.models === 'object') {
+        base.models = base.models || {};
+        for (const mk of Object.keys(incoming.models)) {
+          if (mk === 'providers') continue; // done in step 1
+          base.models[mk] = cloneJson(incoming.models[mk]);
+        }
+      }
+      continue;
+    }
+    base[key] = cloneJson(incoming[key]);
+  }
+  return base;
+}
 
 // ── WeChat Login State ──────────────────────────────────────────────────────
 const DEFAULT_WECHAT_BASE_URL = 'https://ilinkai.weixin.qq.com';
@@ -1195,6 +1441,26 @@ const server = http.createServer((req, res) => {
     readBoundedJsonBody(req, res, 1_000_000).then(async (config) => {
       if (config === null) return;  // already responded with 413/400
       try {
+        // DIRECTION-A guard (2026-09-02): providers OpenClaw's built-in
+        // extension owns (minimax/openai/anthropic/…) must be configured in
+        // the official Control UI, not written via `models.providers.<id>`
+        // here. Doing that is exactly what triggers the silent hijack (雷14).
+        //
+        // The client may legitimately POST the WHOLE existing config back
+        // (quick-switch / channel-save merge flows), which also carries a
+        // built-in provider it did NOT mean to re-author. So instead of
+        // rejecting outright (which would break quick-switching a model on an
+        // officially-configured provider), we STRIP the built-in provider's
+        // `models.providers` write from this payload — mergeSave then keeps
+        // the disk copy untouched and only the active-model ref can change.
+        // Any id we strip and that does NOT already exist on disk is reported
+        // back so the UI can tell the user it went to the official UI.
+        const strippedManaged = stripOfficialManagedWrites(config);
+        if (strippedManaged.length) {
+          console.warn('[config] ignoring official-managed provider write(s):', strippedManaged.join(', '));
+        }
+        const managedOnDisk = officialManagedIdsOnDisk(config, strippedManaged);
+
         // Route plaintext model keys through the local secret store and
         // refuse masked strings (OpenClaw 2026.8.1+ behavior, see the
         // guards block above). Legacy SecretRef objects pass through.
@@ -1210,9 +1476,24 @@ const server = http.createServer((req, res) => {
           throw err;
         }
         renamed = sanitizeOfficialProviderCollisions(config);
-        atomicWriteConfig(config);
+
+        // DIRECTION-A merge save: read what OpenClaw's own UI wrote, overlay
+        // ONLY this change, and write back — never clobber official config.
+        let merged;
+        try {
+          const { config: existing } = safeReadConfig();
+          merged = mergeSave(existing, config);
+        } catch (_) {
+          merged = config; // existing unreadable → best-effort plain write
+        }
+        atomicWriteConfig(merged);
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ ok: true, renamedProviders: renamed }));
+        res.end(JSON.stringify({
+          ok: true,
+          renamedProviders: renamed,
+          ignoredManaged: strippedManaged,       // ids stripped from providers
+          managedNotConfigured: managedOnDisk,   // …and absent on disk → go official UI
+        }));
       } catch (err) {
         if (!res.headersSent) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -2399,16 +2680,28 @@ if (req.url === '/api/models/catalog' && req.method === 'GET') {
   const fetchedAt = userCat ? Date.parse(userCat.fetchedAt || '') || 0 : 0;
   res.writeHead(200, { 'Content-Type': 'application/json' });
   if (!cat) {
-    res.end(JSON.stringify({ ok: true, source: 'embedded', providers: [] }));
+    res.end(JSON.stringify({ ok: true, source: 'embedded', providers: [], managedProviders: [] }));
     return;
   }
+  // DIRECTION-A: annotate each provider with whether OpenClaw's own built-in
+  // extension owns it (→ must be configured in the official UI). Computed at
+  // read time from the installed openclaw core; never written to the catalog
+  // file. Local runtimes (ollama/lmstudio) are excluded → stay editable.
+  const managed = new Set();
+  const builtinIds = discoverBuiltinProviderIds();
+  const providers = (cat.providers || []).map((p) => {
+    const isManaged = p && typeof p === 'object' && builtinIds.has(p.id);
+    if (isManaged) managed.add(p.id);
+    return isManaged ? Object.assign({}, p, { builtIn: true }) : p;
+  });
   res.end(JSON.stringify({
     ok: true,
     source: userCat ? 'cache' : 'built-in',
     version: cat.version || '',
     updatedAt: cat.updatedAt || '',
     stale: userCat ? (Date.now() - fetchedAt > MODEL_CATALOG_STALE_MS) : true,
-    providers: cat.providers,
+    providers,
+    managedProviders: Array.from(managed),
   }));
   return;
 }
