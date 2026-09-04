@@ -291,7 +291,12 @@
  margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);
  }
  .card-actions .spacer { flex: 1 1 0; min-width: 0; }
- .card-actions a.btn-sm { text-decoration: none; display: inline-flex; align-items: center; }
+ /* Anchors and buttons render with different default line-height/box
+    model — pin both to the same flex box so 获取 Key / 测试 Key match. */
+ .card-actions .btn-sm {
+ display: inline-flex; align-items: center; justify-content: center;
+ line-height: 1; box-sizing: border-box; text-decoration: none;
+ }
  .provider-card .btn-sm {
  padding: 7px 14px; font-size: 0.82em;
  background: var(--secondary); color: var(--fg);
