@@ -2,637 +2,3110 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenClaw 配置中心</title>
-<meta name="description" content="OpenClaw Portable 配置中心 — 网关状态 / 模型配置 / 生命周期">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%230b0d0c'/%3E%3Cg fill='none' stroke='%233ddc97' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+  <meta property="og:title" content="OpenClaw Portable — 配置中心">
+  <meta property="og:description" content="选择模型、配置 API Key、管理渠道、查看状态">
+  <meta property="og:url" content="https://yuai-r.cn/openclaw/">
+  <meta property="og:image" content="https://yuai-r.cn/egret-ink.jpg">
+  <meta property="og:locale" content="zh_CN">
+    <meta name="description" content="OpenClaw Portable 配置中心 — 选择模型、配置 API Key、管理渠道、查看状态">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClaw Portable — 配置中心</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23170d02'/%3E%3Cg fill='none' stroke='%23f5f0e8' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="theme-color" content="#170d02" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)">
 <style>
-/* ═══════════════ mono-color design tokens ═══════════════ */
-:root{
-  --bg:#0b0d0c; --bg-soft:#101312; --panel:#131715; --panel-2:#171b19;
-  --border:#242a27; --border-soft:#1c211f;
-  --fg:#e8ece9; --fg-muted:#8a938e; --fg-faint:#5a635e;
-  --accent:#3ddc97; --accent-dim:rgba(61,220,151,.12); --accent-line:rgba(61,220,151,.35);
-  --amber:#e8b84b; --amber-dim:rgba(232,184,75,.10);
-  --red:#e86a5f; --red-dim:rgba(232,106,95,.10);
-  --font:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
-  --mono:ui-monospace,"Cascadia Code",Consolas,Menlo,monospace;
-  --r:12px; --r-sm:8px;
-  --shadow:0 8px 32px rgba(0,0,0,.35);
+ :root {
+ /* Existing OpenClaw variables (preserved for class compatibility) */
+ --bg: #170d02;
+ --card: rgba(23,13,2,0.6);
+ --secondary: rgba(23,13,2,0.8);
+ --muted: rgba(23,13,2,0.4);
+ --fg: #f5f0e8;
+ --fg-muted: #9a968e;
+ --border: rgba(245,240,232,0.12);
+ --accent: #edff45;
+ --emerald: #edff45;
+ --emerald-dim: rgba(237,255,69,0.8);
+ --warning: #ffbd38;
+ --success: #4ade80;
+ --destructive: #ff8a6b;
+ /* yu.ai-aligned aliases */
+ --mid: var(--fg);
+ --dim: var(--fg-muted);
+ /* Font stack matched to yu.ai (system fallbacks for cross-platform) */
+ --font-sans: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+ --font-serif: 'LXGW WenKai', Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif;
+ --font-mono: 'Courier New', 'Menlo', monospace;
+ }
+ /* Light theme — invert dark colors, keep accent recognizable */
+ [data-theme="light"] {
+ --bg: #f5f5f5;
+ --card: rgba(245,245,245,0.8);
+ --secondary: rgba(245,245,245,0.6);
+ --muted: rgba(245,245,245,0.4);
+ --fg: #170d02;
+ --fg-muted: #8a7e6a;
+ --border: rgba(23,13,2,0.14);
+ --accent: #0000c8;
+ --emerald: #0000c8;
+ --emerald-dim: rgba(0,0,200,0.8);
+ }
+ @media (prefers-color-scheme: light) {
+ :root:not([data-theme="dark"]) {
+ --bg: #f5f5f5;
+ --card: rgba(245,245,245,0.8);
+ --secondary: rgba(245,245,245,0.6);
+ --muted: rgba(245,245,245,0.4);
+ --fg: #170d02;
+ --fg-muted: #8a7e6a;
+ --border: rgba(23,13,2,0.14);
+ --accent: #0000c8;
+ --emerald: #0000c8;
+ --emerald-dim: rgba(0,0,200,0.8);
+ }
+ }
+
+ * { margin: 0; padding: 0; box-sizing: border-box; }
+
+ body {
+ font-family: var(--font-sans);
+ background: var(--bg);
+ color: var(--fg);
+ line-height: 1.6;
+ min-height: 100vh;
+ -webkit-font-smoothing: antialiased;
+ scrollbar-color: #ffe6cb33 transparent;
+ position: relative;
+ }
+
+ /* warm glow overlay */
+ body::before {
+ content: '';
+ position: fixed; inset: 0;
+ pointer-events: none; z-index: 99;
+ mix-blend-mode: lighten;
+ opacity: 0.22;
+ background: radial-gradient(ellipse at 0% 0%, rgba(255,189,56,0) 60%, rgba(255,189,56,0.35) 100%);
+ }
+
+ /* yu.ai ink-wash background layer (loaded async, hidden if 404) */
+ .bg-i {
+ position: fixed; inset: 0; z-index: 0;
+ pointer-events: none;
+ }
+ .bg-i img {
+ width: 100vw; height: 100vh;
+ object-fit: cover;
+ opacity: 0.06;
+ filter: grayscale(1) brightness(0.7);
+ object-position: center bottom;
+ }
+ [data-theme="light"] .bg-i img,
+ body[data-theme="light"] .bg-i img {
+ opacity: 0.04; filter: grayscale(1) brightness(1.5);
+ }
+ @media (prefers-color-scheme: light) {
+ :root:not([data-theme="dark"]) .bg-i img {
+ opacity: 0.04; filter: grayscale(1) brightness(1.5);
+ }
+ }
+ /* In light mode, weaken the existing grain + warm glow */
+ [data-theme="light"] body::before,
+ body[data-theme="light"]::before {
+ opacity: 0.06 !important;
+ }
+ [data-theme="light"] body::after,
+ body[data-theme="light"]::after {
+ opacity: 0.015 !important;
+ }
+ @media (prefers-color-scheme: light) {
+ :root:not([data-theme="dark"]) body::before { opacity: 0.06 !important; }
+ :root:not([data-theme="dark"]) body::after { opacity: 0.015 !important; }
+ }
+
+ /* grain overlay */
+ body::after {
+ content: '';
+ position: fixed; inset: 0;
+ pointer-events: none; z-index: 100;
+ mix-blend-mode: color-dodge;
+ opacity: 0.1;
+ background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' fill='%23eaeaea' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
+ background-size: 512px 512px;
+ }
+
+ a { color: var(--emerald); text-decoration: none; }
+ a:hover { text-decoration: underline; }
+
+ /* Hero */
+ .hero {
+ text-align: center;
+ padding: 56px 20px 44px;
+ border-bottom: 1px solid var(--border);
+ position: relative; z-index: 1;
+ }
+ .hero .logo { width: 72px; height: 72px; margin-bottom: 14px; opacity: 0.95; }
+ .hero h1 {
+ font-size: 32px; font-weight: 600; letter-spacing: 4px;
+ margin-bottom: 8px; color: var(--fg);
+ mix-blend-mode: plus-lighter;
+ }
+ .hero .tagline { font-size: 13px; color: var(--fg-muted); letter-spacing: 2px; font-family: var(--font-mono); }
+ .hero .version {
+ display: inline-block; margin-top: 16px; padding: 4px 14px;
+ border: 1px solid var(--border); border-radius: 20px;
+ font-size: 11px; color: var(--emerald); letter-spacing: 1.5px;
+ font-family: var(--font-mono);
+ }
+
+ .container { max-width: 860px; margin: 0 auto; padding: 0 24px 60px; position: relative; z-index: 1; }
+
+ /* Status bar */
+ .status-bar {
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: 10px;
+ padding: 12px 18px;
+ margin: 20px 0 0;
+ display: flex; align-items: center; gap: 10px;
+ }
+ .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+ .dot.on { background: var(--emerald); box-shadow: 0 0 8px var(--emerald); }
+ .dot.off { background: var(--destructive); }
+ .status-text { flex: 1; font-size: 0.85em; color: var(--fg-muted); font-family: var(--font-mono); }
+ .status-text a { color: var(--emerald); }
+
+ /* Step indicators */
+ .steps { display: flex; gap: 8px; margin: 16px 0; }
+ .step-ind {
+ flex: 1;
+ background: var(--card);
+ border: 1px solid var(--border);
+ border-radius: 10px;
+ padding: 12px 16px;
+ font-size: 0.88em;
+ color: var(--fg-muted);
+ transition: all 0.2s;
+ display: flex; align-items: center; gap: 10px;
+ cursor: pointer;
+ font-family: var(--font-mono);
+ }
+ .step-ind
+ .step-ind.done { color: var(--fg); border-color: var(--border); }
+ .step-ind 
+ .step-ind.active 
+ .step-ind.done 
+
+ /* Sections */
+ 
+ .step-section
+ .step-section.collapsed { max-height: 0; opacity: 0; margin-bottom: 0; border-color: transparent; }
+ .step-section h2 {
+ color: var(--fg); font-size: 1.05em; font-weight: 600;
+ margin-bottom: 6px; letter-spacing: 1px;
+ mix-blend-mode: plus-lighter;
+ }
+ .step-section .desc { color: var(--fg-muted); font-size: 0.85em; margin-bottom: 18px; font-family: var(--font-mono); }
+
+ /* Provider cards */
+ .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+ .provider-card {
+ background: var(--secondary);
+ border: 1px solid var(--border);
+ border-radius: 10px;
+ padding: 14px 16px;
+ cursor: pointer;
+ transition: all 0.15s;
+ position: relative;
+ }
+ .provider-card:hover { border-color: var(--fg-muted); }
+ .provider-card.selected {
+ border-color: var(--emerald-dim);
+ background: oklch(0.18 0.02 170);
+ }
+ .provider-card .provider-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+ .provider-card .provider-name { color: var(--fg); font-size: 0.92em; font-weight: 500; }
+ .provider-card .provider-desc { color: var(--fg-muted); font-size: 0.78em; font-family: var(--font-mono); }
+ .provider-card .check {
+ position: absolute; top: 10px; right: 12px;
+ color: var(--emerald); font-size: 1em; display: none;
+ }
+ .provider-card.selected .check { display: block; }
+ /* DIRECTION-A: official-managed provider cards are informational (non-editable) */
+ .provider-card.managed-card { cursor: default; border-style: dashed; }
+ .provider-card.managed-card:hover { border-color: var(--emerald-dim); }
+ .provider-card.managed-card.selected { background: var(--secondary); border-color: var(--emerald-dim); }
+ .managed-card .provider-expand.managed-expand.open { padding: 12px 0 6px; }
+ .tag.managed-tag { border-color: var(--emerald); color: var(--emerald); }
+
+ /* Filter chips for provider search */
+ .filter-chip {
+ padding: 5px 11px;
+ background: transparent;
+ border: 1px solid var(--border);
+ border-radius: 14px;
+ color: var(--fg-muted);
+ font-family: var(--font-mono);
+ font-size: 0.74em;
+ cursor: pointer;
+ transition: all 0.15s;
+ letter-spacing: 0.04em;
+ }
+ .filter-chip:hover { color: var(--fg); border-color: var(--fg-muted); }
+ .filter-chip
+
+ /* Provider expand */
+ .provider-expand {
+ max-height: 0; overflow: hidden;
+ transition: max-height 0.3s ease, padding 0.3s ease;
+ padding: 0;
+ }
+ .provider-expand.open {
+ max-height: 800px;
+ overflow-y: auto;
+ padding: 14px 0 4px;
+ border-top: 1px solid var(--border);
+ margin-top: 12px;
+ }
+ .provider-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
+ .provider-card 
+ .provider-card .input:focus { border-color: var(--fg); }
+ .provider-card select
+ .provider-card select.input option { background: var(--bg); color: var(--fg); }
+ .provider-card .input-group input { flex: 1; padding-right: 44px; margin-bottom: 0; }
+ .provider-card .btn-icon {
+ position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+ background: none; border: none; color: var(--fg-muted); cursor: pointer;
+ font-size: 0.78em; padding: 4px 8px; font-family: var(--font-mono);
+ }
+ .provider-card .btn-icon:hover { color: var(--fg); }
+ .provider-card .btn-sm {
+ padding: 7px 14px; font-size: 0.82em;
+ background: var(--secondary); color: var(--fg);
+ border: 1px solid var(--border); border-radius: 6px;
+ cursor: pointer; font-family: var(--font-mono); transition: all 0.15s;
+ }
+ .provider-card .btn-sm:hover { border-color: var(--fg); }
+ .buy-link { display: inline-flex; align-items: center; gap: 4px; color: var(--emerald); font-size: 0.82em; margin-top: 8px; font-family: var(--font-mono); }
+
+ /* Tags */
+ .tag {
+ font-size: 0.65em; padding: 2px 7px; border-radius: 10px;
+ border: 1px solid; font-family: var(--font-mono); letter-spacing: 0.5px;
+ }
+ .tag.hot { border-color: var(--emerald-dim); color: var(--emerald); }
+ .tag.free { border-color: var(--success); color: var(--success); }
+ .tag.cn { border-color: var(--border); color: var(--fg-muted); }
+ .tag.fast { border-color: var(--purple); color: var(--purple); }
+ .tag.cheap { border-color: var(--warning); color: var(--warning); }
+
+ /* Buttons */
+ .btn {
+ display: inline-block; padding: 10px 24px;
+ border: 1px solid var(--border);
+ border-radius: 8px;
+ font-size: 0.88em;
+ cursor: pointer;
+ transition: all 0.15s;
+ background: var(--secondary);
+ color: var(--fg);
+ font-family: var(--font-mono);
+ letter-spacing: 1px;
+ }
+ .btn:hover { border-color: var(--fg); }
+ .btn-primary {
+ background: oklch(0.18 0.02 170);
+ color: var(--emerald);
+ border-color: var(--emerald-dim);
+ }
+ .btn-primary:hover { background: oklch(0.22 0.04 170); }
+ .btn-primary:disabled {
+ background: var(--muted); color: var(--fg-muted);
+ cursor: not-allowed; border-color: var(--border);
+ }
+ .btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
+
+ .btn-launch {
+ display: block; width: 100%; padding: 18px 32px;
+ border: 1px solid var(--emerald-dim);
+ border-radius: 12px;
+ font-size: 1.05em; cursor: pointer;
+ font-weight: 500; font-family: var(--font-mono); text-align: center;
+ background: oklch(0.18 0.02 170); color: var(--emerald);
+ transition: all 0.2s; letter-spacing: 2px;
+ }
+ .btn-launch:hover {
+ background: oklch(0.22 0.04 170);
+ transform: translateY(-1px);
+ }
+
+ /* Command grid — horizontal segmented action bar (4 across).
+   The grid definition used to live here but was lost in an earlier
+   edit, which made the cards fall back to a vertical block stack. */
+ .cmd-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+ .cmd-card { will-change: transform; }
+  .cmd-card:hover { border-color: var(--fg); transform: translateY(-1px); }
+ .cmd-card .cmd-icon { font-size: 1.3em; margin-bottom: 6px; color: var(--emerald); font-family: var(--font-mono); }
+ .cmd-card .cmd-name { color: var(--fg); font-size: 0.85em; font-weight: 500; letter-spacing: 1px; }
+ .cmd-card .cmd-desc { color: var(--fg-muted); font-size: 0.72em; margin-top: 4px; font-family: var(--font-mono); }
+
+ /* Channel cards */
+ .channel-card {
+ background: var(--secondary);
+ border: 1px solid var(--border);
+ border-radius: 10px;
+ padding: 14px 16px;
+ cursor: pointer;
+ transition: all 0.15s;
+ }
+ .channel-card:hover { border-color: var(--fg-muted); }
+ .channel-card.selected { border-color: var(--emerald-dim); background: oklch(0.18 0.02 170); }
+ .channel-card .channel-name { color: var(--fg); font-size: 0.9em; font-weight: 500; }
+ .channel-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
+ .channel-card 
+ .channel-card .input:focus { border-color: var(--fg); }
+ .channel-card .input-group input { flex: 1; padding-right: 44px; margin-bottom: 0; }
+ .channel-card .btn-icon {
+ position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+ background: none; border: none; color: var(--fg-muted); cursor: pointer;
+ font-size: 0.78em; padding: 4px 8px; font-family: var(--font-mono);
+ }
+ .channel-card .btn-sm {
+ padding: 6px 12px; font-size: 0.8em;
+ background: var(--secondary); color: var(--fg);
+ border: 1px solid var(--border); border-radius: 6px;
+ cursor: pointer; font-family: var(--font-mono); margin-top: 4px;
+ }
+ .channel-card .btn-sm:hover { border-color: var(--fg); }
+
+ /* IO bar */
+ .io-bar { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+ .io-btn {
+ padding: 6px 14px;
+ border: 1px solid var(--border);
+ border-radius: 8px;
+ background: transparent;
+ color: var(--fg-muted);
+ cursor: pointer;
+ font-size: 0.78em;
+ transition: all 0.2s;
+ font-family: var(--font-mono);
+ letter-spacing: 0.5px;
+ }
+ .io-btn:hover { border-color: var(--fg); color: var(--fg); }
+
+ /* Hint */
+ .hint { color: var(--fg-muted); font-size: 0.78em; margin-top: 6px; line-height: 1.5; font-family: var(--font-mono); }
+ .hint a { color: var(--emerald); }
+
+ /* Toast */
+ .toast-container {
+ position: fixed; top: 20px; right: 20px; z-index: 999;
+ display: flex; flex-direction: column; gap: 8px;
+ pointer-events: none; max-width: 340px;
+ }
+ .toast-item {
+ background: var(--card); color: var(--fg);
+ padding: 12px 16px; border-radius: 10px; font-size: 0.85em;
+ opacity: 0; transform: translateX(20px); transition: all 0.3s;
+ box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+ pointer-events: auto; border: 1px solid var(--border);
+ font-family: var(--font-mono);
+ }
+ .toast-item.show { opacity: 1; transform: translateX(0); }
+ .toast-item.success { border-color: var(--emerald-dim); color: var(--emerald); }
+ .toast-item.error { border-color: var(--destructive); color: var(--destructive); }
+ .toast-item.info { border-color: var(--border); color: var(--fg); }
+ .toast-item.warning { border-color: var(--warning); color: var(--warning); }
+
+ /* Modal */
+ .modal-overlay {
+ position: fixed; inset: 0;
+ background: rgba(4,28,28,0.85); z-index: 1000;
+ display: flex; align-items: center; justify-content: center;
+ opacity: 0; pointer-events: none;
+ transition: opacity 0.2s; backdrop-filter: blur(4px);
+ }
+ .modal-overlay.show { opacity: 1; pointer-events: auto; }
+ .modal-box {
+ background: var(--card); border-radius: 14px;
+ padding: 28px 32px; max-width: 420px; width: 90%;
+ border: 1px solid var(--border);
+ }
+ .modal-box h3 {
+ margin: 0 0 10px; font-size: 1em; font-weight: 500;
+ color: var(--fg); letter-spacing: 1px;
+ }
+ .modal-box p {
+ color: var(--fg-muted); font-size: 0.85em;
+ line-height: 1.6; margin: 0 0 20px; font-family: var(--font-mono);
+ }
+ .modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+ .modal-btns button {
+ padding: 8px 20px; border-radius: 8px;
+ border: 1px solid var(--border); cursor: pointer;
+ font-size: 0.85em; font-family: var(--font-mono); letter-spacing: 1px;
+ }
+ .modal-btn-cancel { background: var(--secondary); color: var(--fg); }
+ .modal-btn-ok { background: oklch(0.18 0.02 170); color: var(--emerald); border-color: var(--emerald-dim); }
+
+ /* Tooltip */
+ .field-help {
+ display: inline-flex; align-items: center; justify-content: center;
+ width: 16px; height: 16px; border-radius: 50%;
+ background: var(--secondary); color: var(--fg-muted);
+ font-size: 0.65em; cursor: help; margin-left: 4px; position: relative;
+ vertical-align: middle; font-family: var(--font-mono); font-style: normal;
+ }
+ .field-help:hover::after {
+ content: attr(data-tip); position: absolute; bottom: calc(100% + 8px);
+ left: 50%; transform: translateX(-50%);
+ background: var(--card); color: var(--fg); padding: 10px 14px;
+ border-radius: 8px; font-size: 11px; font-family: var(--font-mono);
+ white-space: normal; width: 240px; z-index: 200; line-height: 1.5;
+ border: 1px solid var(--border); pointer-events: none;
+ }
+
+ /* Form */
+ .form-group { display: block; margin-bottom: 16px; }
+ .form-group label { display: block; color: var(--fg-muted); margin-bottom: 6px; font-size: 0.85em; font-family: var(--font-mono); }
+
+ /* Test result */
+ .test-result { font-size: 0.78em; margin-top: 6px; min-height: 16px; font-family: var(--font-mono); }
+
+ /* Footer */
+ footer {
+ text-align: center; padding: 40px 20px;
+ font-size: 11px; color: var(--fg-muted);
+ letter-spacing: 2px; font-family: var(--font-mono);
+ }
+
+ /* Scrollbar */
+ ::-webkit-scrollbar { width: 6px; }
+ ::-webkit-scrollbar-track { background: transparent; }
+ ::-webkit-scrollbar-thumb { background: #ffe6cb33; border-radius: 3px; }
+
+ /* Responsive */
+ @media (max-width: 700px) {
+ .model-grid { grid-template-columns: 1fr; }
+ .container { padding: 0 16px 40px; }
+ .hero h1 { font-size: 24px; }
+ .steps { flex-direction: column; }
+ 
+ }
+ @media (max-width: 400px) {  }
+
+
+ /* ─────── yu.ai aligned shell ─────── */
+ .y-page { position: relative; z-index: 200; max-width: 1100px; margin: 0 auto; padding: 0; overflow-x: hidden; }
+ .y-row { display: grid; grid-template-columns: 1fr; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+ .y-cell { padding: 16px; border-right: 1px solid var(--border); min-width: 0; display: flex; align-items: center; }
+ .y-cell.s1 { grid-column: span 1; }
+ .y-cell.s2 { grid-column: span 2; }
+ .y-cell.s4 { grid-column: span 4; }
+ .y-cell.s6 { grid-column: 1 / -1; }
+ @media (min-width: 1024px) { .y-row.nav-row { grid-template-columns: 1fr 2fr 1fr 1fr 1fr; } }
+
+ .y-label { font-size: 0.9375rem; letter-spacing: 0.1875rem; text-transform: uppercase; }
+ .y-label-sm { font-size: 0.75rem; letter-spacing: 0.1875rem; text-transform: uppercase; }
+ .y-label-xs { font-size: 0.625rem; letter-spacing: 0.125rem; text-transform: uppercase; }
+ .y-title { font-family: var(--font-serif); font-size: 2.625rem; font-weight: 700; line-height: 1; letter-spacing: 0.0525rem; }
+ .y-display { font-family: var(--font-serif); font-size: 3.5rem; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; mix-blend-mode: plus-lighter; }
+ .y-sub { font-size: 1.125rem; line-height: 1.6; opacity: 0.6; }
+ .y-op-5 { opacity: 0.5; } .y-op-7 { opacity: 0.7; }
+
+ @keyframes yblink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+ .y-blink { display: inline-block; width: 1ch; height: 1.1em; background: currentColor; vertical-align: text-bottom; animation: yblink 1.2s step-end infinite; }
+ @media (prefers-reduced-motion: reduce) { .y-blink { animation: none; opacity: 1; } }
+
+ .y-nav-link { position: relative; display: flex; align-items: center; width: 100%; height: 100%; color: inherit; text-decoration: none; padding: 16px; cursor: pointer; }
+ .y-nav-link .y-blink { display: none; }
+ .y-nav-link:hover .y-blink, .y-nav-link:focus-visible .y-blink { display: inline-block; }
+ .y-nav-link:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+ .y-nav-link::before { content: ""; position: absolute; inset: -12px; background: var(--fg); pointer-events: none; opacity: 0; transition: opacity 0.25s; z-index: -1; }
+ .y-nav-link:hover::before { opacity: 0.05; }
+
+/* Hero: text left, terminal right (was: centered column stack).
+   nowrap + shrinkable columns guarantees side-by-side at any width
+   above the 640px mobile breakpoint — the first attempt used
+   flex-wrap: wrap with a 560px terminal basis, and text(~300) +
+   gap(48) + term(560) = 908px overflowed the 860px cap, wrapping the
+   terminal back under the text. */
+ .y-hero { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; gap: 48px; padding: 60px 20px 44px; width: 100%; max-width: 860px; margin: 0 auto; }
+ .y-hero-text { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 20px; flex: 1 1 auto; min-width: 0; }
+ .y-hero .y-term { flex: 0 1 480px; width: auto; min-width: 260px; }
+ .y-term { width: 100%; max-width: 560px; border: 4px double var(--border); }
+ .y-term-h { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+ .y-td { width: 10px; height: 10px; border-radius: 50%; }
+ .y-td:nth-child(1) { background: var(--fg); }
+ .y-td:nth-child(2) { background: var(--fg); opacity: 0.6; }
+ .y-td:nth-child(3) { background: var(--fg); opacity: 0.3; }
+ .y-term-label { margin-left: auto; font-family: var(--font-mono); font-size: 0.625rem; letter-spacing: 0.1875rem; opacity: 0.5; }
+ .y-term-b { font-family: var(--font-mono); font-size: 0.78rem; line-height: 1.85; padding: 18px 16px; white-space: pre-wrap; min-height: 100px; word-break: break-word; text-align: left; }
+ .y-term-b .p { color: var(--accent); }
+ .y-term-b .t { opacity: 0.6; }
+ .y-term-b .w { color: var(--warning); }
+ .y-term-b .e { color: var(--destructive); }
+ /* Terminal line clickable when gateway is up — turn cursor on */
+ .y-term-b a { color: var(--accent); text-decoration: underline; }
+
+ .y-footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; opacity: .5; }
+ .y-footer .c { display: flex; align-items: center; }
+ 
+
+ .y-theme-toggle { background: none; border: none; cursor: pointer; color: var(--fg); opacity: 0.5; padding: 8px; line-height: 0; transition: opacity 0.2s; display: flex; align-items: center; border-radius: 4px; }
+ .y-theme-toggle:hover, .y-theme-toggle:focus-visible { opacity: 1; outline: 1px solid var(--border); }
+ .y-theme-toggle svg { display: block; }
+
+ @media (max-width: 1023px) {
+ .y-row, .y-row.nav-row { grid-template-columns: 1fr; border-left: none; }
+ .y-cell { border-right: none; }
+ .y-footer { grid-template-columns: 1fr; border-left: none; }
+ .y-footer .c { border-right: none; }
+ }
+ @media (max-width: 640px) {
+ .y-display { font-size: 2.2rem; }
+ .y-sub { font-size: 0.95rem; }
+ /* Narrow screens: hero returns to the original centered stack. */
+ .y-hero { padding: 40px 16px 28px; flex-direction: column; align-items: center; }
+ .y-hero-text { align-items: center; text-align: center; }
+ .y-term-b { font-size: 0.72rem; padding: 14px 12px; }
+ }
+
+
+ /* ─────── yu.ai-aligned re-skin of functional widgets ─────── */
+
+ /* Status bar — rectangular, no rounded corner, subtle border like .y-cell */
+ .container > .status-bar {
+ background: transparent;
+ border: 1px solid var(--border);
+ border-radius: 0;
+ padding: 14px 18px;
+ margin: 24px 0 0;
+ font-family: var(--font-mono);
+ }
+ .status-text { font-family: var(--font-mono); letter-spacing: 0.04em; opacity: 0.85; }
+
+ /* Step indicators — flat label-style, not pill */
+ .steps { gap: 0; margin: 28px 0 18px; border: 1px solid var(--border); }
+ .step-ind {
+ background: transparent;
+ border: none;
+ border-radius: 0;
+ border-right: 1px solid var(--border);
+ padding: 16px 18px;
+ font-family: var(--font-sans);
+ font-size: 0.85rem;
+ letter-spacing: 0.18em;
+ text-transform: uppercase;
+ color: var(--fg-muted);
+ transition: color 0.2s;
+ }
+ .steps > .step-ind:last-child { border-right: none; }
+ .step-ind 
+ .step-ind:hover { color: var(--fg); }
+ .step-ind
+ .step-ind.active 
+ .step-ind.done { color: var(--fg-muted); }
+ .step-ind.done .num { background: transparent; border-color: var(--accent); color: var(--accent); }
+
+ /* Step section frame — borderless, content area */
+ 
+ .step-section > div[style*="padding"] { padding: 24px 0 !important; }
+ .step-section h2 {
+ font-family: var(--font-serif);
+ font-weight: 700;
+ font-size: 1.6rem;
+ letter-spacing: -0.005em;
+ color: var(--fg);
+ mix-blend-mode: plus-lighter;
+ margin-bottom: 8px;
+ }
+ .step-section h3 {
+ font-family: var(--font-serif);
+ font-weight: 600;
+ font-size: 1.05rem;
+ color: var(--fg);
+ opacity: 0.85;
+ }
+ .step-section .desc {
+ font-family: var(--font-mono);
+ font-size: 0.78rem;
+ letter-spacing: 0.05em;
+ opacity: 0.55;
+ margin-bottom: 22px;
+ }
+
+ /* Provider / channel cards — flatter, hover gets accent border */
+ .provider-card, .channel-card { contain: layout;
+ background: transparent;
+ border: 1px solid var(--border);
+ border-radius: 0;
+ transition: border-color 0.2s, background 0.2s;
+ }
+ .provider-card:hover, .channel-card:hover {
+ border-color: var(--accent);
+ background: rgba(255,230,203,0.02);
+ }
+ .provider-card.selected, .channel-card.selected {
+ border-color: var(--accent);
+ background: rgba(0,255,200,0.04);
+ }
+ .provider-card .provider-name, .channel-card .channel-name {
+ font-family: var(--font-serif);
+ font-weight: 600;
+ font-size: 1rem;
+ color: var(--fg);
+ opacity: 1;
+ }
+ .provider-card .provider-desc {
+ font-family: var(--font-mono);
+ font-size: 0.72rem;
+ letter-spacing: 0.04em;
+ opacity: 0.55;
+ }
+
+ /* Filter chips — flatter, accent on active */
+ .filter-chip {
+ border-radius: 0;
+ padding: 6px 14px;
+ font-family: var(--font-mono);
+ font-size: 0.7rem;
+ letter-spacing: 0.12em;
+ text-transform: uppercase;
+ }
+ .filter-chip
+
+ /* Tag chips inside cards */
+ .tag {
+ border-radius: 0;
+ font-family: var(--font-mono);
+ letter-spacing: 0.08em;
+ text-transform: uppercase;
+ font-size: 0.62rem;
+ }
+
+ /* Buttons — primary CTA mirrors the y-hero CTA pattern */
+ .btn, .btn-primary, .io-btn, .btn-launch {
+ border-radius: 0 !important;
+ font-family: var(--font-mono);
+ letter-spacing: 0.1em;
+ text-transform: uppercase;
+ font-weight: normal;
+ }
+ .btn-launch {
+ border: 1px solid var(--accent);
+ color: var(--accent);
+ background: transparent;
+ transition: all 0.2s;
+ padding: 14px 28px;
+ font-size: 0.78rem;
+ }
+ .btn-launch:hover {
+ background: var(--accent);
+ color: var(--bg);
+ }
+ .btn-primary {
+ border: 1px solid var(--accent);
+ color: var(--accent);
+ background: transparent;
+ }
+ .btn-primary:hover { background: var(--accent); color: var(--bg); }
+ .btn-primary:disabled {
+ border-color: var(--border);
+ color: var(--fg-muted);
+ background: transparent;
+ cursor: not-allowed;
+ opacity: 0.5;
+ }
+ .io-btn {
+ border: 1px solid var(--border);
+ background: transparent;
+ color: var(--fg);
+ font-size: 0.7rem;
+ }
+ .io-btn:hover { border-color: var(--accent); color: var(--accent); }
+ .btn-icon { border-radius: 0; }
+ .btn-sm { border-radius: 0; }
+
+ /* Inputs / selects — flatter with mono font */
+ .input, .step-section input.input, .step-section select.input {
+ border-radius: 0 !important;
+ font-family: var(--font-mono);
+ background: transparent !important;
+ border-color: var(--border);
+ }
+ .input:focus { border-color: var(--accent); outline: none; }
+
+ /* Command grid — borderless cards, label/icon style */
+ .cmd-grid { gap: 0 !important; border: 1px solid var(--border); margin: 24px 0; }
+ .cmd-card {
+ border-radius: 0 !important;
+ border: none !important;
+ border-right: 1px solid var(--border) !important;
+ background: transparent !important;
+ padding: 18px 14px;
+ text-align: center;
+ }
+ .cmd-grid > .cmd-card:last-child { border-right: none !important; }
+ .cmd-card { will-change: transform; }
+  .cmd-card:hover { background: rgba(255,230,203,0.04) !important; }
+ .cmd-card .cmd-icon {
+ font-family: var(--font-mono);
+ color: var(--accent);
+ font-size: 1.2rem;
+ margin-bottom: 8px;
+ }
+ .cmd-card .cmd-name {
+ font-family: var(--font-serif);
+ font-size: 0.95rem;
+ font-weight: 600;
+ }
+ .cmd-card .cmd-desc {
+ font-family: var(--font-mono);
+ font-size: 0.65rem;
+ letter-spacing: 0.05em;
+ opacity: 0.5;
+ }
+ /* Phones: 4-across is too cramped (~85px/card) — 2×2 with a row
+    separator. Must sit AFTER the !important override layer above to win. */
+ @media (max-width: 640px) {
+ .cmd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+ .cmd-grid > .cmd-card:nth-child(even) { border-right: none !important; }
+ .cmd-grid > .cmd-card:nth-child(-n+2) { border-bottom: 1px solid var(--border) !important; }
+ }
+
+ /* Container = no extra max-width inside y-page (y-page already has 1100) */
+ .container { max-width: none; padding: 0 24px 28px; }
+
+ /* Wrap the entire functional content in a 1px border row that
+ visually anchors it to the yu.ai grid lines from the nav above. */
+ .container > .status-bar { border-top: none; }
+
+ /* Tabs styling for parity if present */
+ .tab {
+ border-radius: 0;
+ font-family: var(--font-mono);
+ letter-spacing: 0.12em;
+ text-transform: uppercase;
+ }
+ .tab
+
+ /* Toast container fits below nav */
+ .toast-container { z-index: 1000; }
+
+
+
+ /* ─────── flatten remaining dark fills (yu.ai aesthetic) ─────── */
+ /* Inline-style hunts: anywhere we wrote background:var(--secondary)
+ etc. directly in markup, render transparent so the page reads as
+ a single field of var(--bg) plus the global background layers. */
+ [style*="background:var(--secondary)"],
+ [style*="background: var(--secondary)"],
+ [style*="background:var(--card)"],
+ [style*="background: var(--card)"],
+ [style*="background:var(--muted)"],
+ [style*="background: var(--muted)"] {
+ background: transparent !important;
+ }
+
+ /* Restart banner — translucent */
+ #restartBanner {
+ background: transparent !important;
+ border-top: 1px solid var(--accent) !important;
+ backdrop-filter: blur(8px);
+ }
+ /* Disconnect overlay — theme-aware flat card (was: hardcoded teal
+    inline styles + a !important override layer fighting each other,
+    which also broke in light theme) */
+ #disconnectOverlay {
+ position: fixed; inset: 0; z-index: 600; display: none;
+ align-items: center; justify-content: center;
+ background: color-mix(in srgb, var(--bg) 82%, transparent);
+ backdrop-filter: blur(6px);
+ }
+ #disconnectOverlay.show { display: flex; }
+ #disconnectOverlay .dc-card {
+ background: var(--secondary); border: 1px solid var(--border);
+ border-top: 2px solid var(--warning);
+ padding: 26px 30px; max-width: 400px; width: calc(100% - 48px);
+ font-family: var(--font-mono);
+ }
+ #disconnectOverlay .dc-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+ #disconnectOverlay .dc-dot {
+ width: 9px; height: 9px; border-radius: 50%; background: var(--warning);
+ animation: dcPulse 1.2s ease-in-out infinite; flex-shrink: 0;
+ }
+ @keyframes dcPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+ #disconnectOverlay .dc-title { color: var(--fg); font-weight: 600; font-size: 0.95em; letter-spacing: 0.04em; }
+ #disconnectOverlay .dc-desc { color: var(--fg-muted); font-size: 0.82em; line-height: 1.7; margin: 0 0 12px; }
+ #disconnectOverlay .dc-status { color: var(--warning); font-size: 0.75em; margin-bottom: 16px; min-height: 1em; }
+ #disconnectOverlay .dc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+ /* Modal stays filled (it floats above a dim backdrop) but flattened */
+ .modal-box { border-radius: 0 !important; border: 1px solid var(--border); }
+
+ /* All inputs / selects / textareas in the page transparent + mono */
+ .container input,
+ .container select,
+ .container textarea {
+ background: transparent !important;
+ border-color: var(--border) !important;
+ border-radius: 0 !important;
+ font-family: var(--font-mono) !important;
+ }
+ .container input:focus,
+ .container select:focus,
+ .container textarea:focus {
+ border-color: var(--accent) !important;
+ outline: none;
+ }
+
+ /* Toast items — flat */
+ .toast-item {
+ border-radius: 0 !important;
+ font-family: var(--font-mono);
+ letter-spacing: 0.05em;
+ background: var(--bg) !important;
+ border: 1px solid var(--accent) !important;
+ }
+ .toast-item.error { border-color: var(--destructive) !important; }
+ .toast-item.warning { border-color: var(--warning) !important; }
+
+
+
+ /* Step section panel — was a filled card; flatten to match yu.ai */
+ 
+ /* Both step1 and step2 also have inline `padding:24px / 28px 24px`
+ on their inner wrapper div — keep the padding but make sure no
+ residual fills come from the inner wrapper either. */
+ #step1 > div, #step2 > div { background: transparent !important; }
+
+ /* ── Insight strip: five-in-one panel switcher (step 2) ──
+    1px-gap + border-colored background draws separators correctly at
+    ANY column count — no per-cell border math needed. */
+
+ /* ── Complete the flatten pass: square off the remaining rounded UI ──
+    (provider/channel cards, chips, tags, .btn family, launch button,
+    io-btns, dc-card, and every inline border-radius style). Round
+    things that are round FOR A REASON are untouched: .dot / .y-td
+    indicators, .mobile-slider switch, scrollbar thumb. */
+ .provider-card, .channel-card, .filter-chip, .tag, .btn, .btn-primary,
+ .btn-sm, .btn-icon, .io-btn, .btn-launch, .dc-card,
+ [style*="border-radius:6px"], [style*="border-radius: 6px"],
+ [style*="border-radius:8px"], [style*="border-radius: 8px"],
+ [style*="border-radius:10px"], [style*="border-radius: 10px"],
+ [style*="border-radius:12px"], [style*="border-radius: 12px"],
+ [style*="border-radius:14px"], [style*="border-radius: 14px"] {
+ border-radius: 0 !important;
+ }
+
+ /* Mobile connect toggle switch */
+ .mobile-switch { position:relative; display:inline-block; width:44px; height:24px; }
+ .mobile-switch input { opacity:0; width:0; height:0; }
+ .mobile-slider { position:absolute; cursor:pointer; inset:0; background:var(--muted); border:1px solid var(--border); border-radius:24px; transition:.3s cubic-bezier(0.4, 0, 0.2, 1); }
+ .mobile-slider::before { content:''; position:absolute; height:18px; width:18px; left:2px; bottom:2px; background:var(--fg-muted); border-radius:50%; transition:.3s cubic-bezier(0.4, 0, 0.2, 1); }
+ .mobile-switch input:checked + .mobile-slider { background:var(--emerald-dim); border-color:var(--emerald); }
+ .mobile-switch input:checked + .mobile-slider::before { transform:translateX(20px); background:var(--fg); }
+
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
 }
-@media (prefers-color-scheme:light){
-  :root{
-    --bg:#f6f7f6; --bg-soft:#eef0ef; --panel:#ffffff; --panel-2:#f4f6f5;
-    --border:#dfe4e1; --border-soft:#e8ecea;
-    --fg:#191d1b; --fg-muted:#6b746f; --fg-faint:#9aa39e;
-    --accent:#0d9e6b; --accent-dim:rgba(13,158,107,.10); --accent-line:rgba(13,158,107,.35);
-    --shadow:0 8px 28px rgba(20,30,25,.08);
+
+/* Card hover effects */
+.provider-card, .channel-card { contain: layout;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s;
+  cursor: pointer;
+}
+.provider-card:hover, .channel-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+  border-color: var(--emerald-dim);
+}
+.provider-card:active, .channel-card:active {
+  transform: translateY(0);
+}
+
+/* Focus styles */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.filter-chip:focus-visible {
+  outline: 2px solid var(--emerald);
+  outline-offset: 2px;
+}
+
+/* Button hover effects */
+.btn, .btn-primary, .btn-launch, .io-btn {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s;
+}
+.btn:hover, .btn-primary:hover, .btn-launch:hover, .io-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.btn:active, .btn-primary:active, .btn-launch:active, .io-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Input focus effects */
+.input, input[type="text"], input[type="password"], input[type="url"], select {
+  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s;
+}
+.input:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="url"]:focus, select:focus {
+  border-color: var(--emerald);
+  box-shadow: 0 0 0 3px rgba(0,255,200,0.1);
+}
+
+/* Filter chip animations */
+.filter-chip {
+  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s, transform 0.2s;
+}
+.filter-chip:hover {
+  transform: translateY(-1px);
+}
+.filter-chip:active {
+  transform: translateY(0);
+}
+.filter-chip
+
+/* Toast animations */
+.toast-item {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.toast-item.show {
+  animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modal animations */
+.modal-overlay {
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-overlay.show {
+  animation: fadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-box {
+  animation: scaleIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Step transitions */
+.step-section {
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), max-height 0.3s;
+}
+.step-section.collapsed {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+.step-section.active {
+  opacity: 1;
+  max-height: 4200px;
+}
+
+/* Provider card expand animation */
+.provider-expand, .channel-form {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s;
+  padding: 0 16px;
+}
+.provider-expand.open, .channel-form.open {
+  max-height: 500px;
+  padding: 16px;
+}
+
+/* Status dot animation */
+.dot {
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.dot.on {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,200,0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(0,255,200,0); }
+}
+
+/* yu.ai grid borders */
+.y-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--border);
+}
+.y-cell {
+  padding: 16px;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  border: 1px solid var(--border);
+}
+.cards > * {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.25s;
+}
+.cards > *:last-child {
+  border-bottom: none;
+}
+@media (min-width: 640px) {
+  .cards {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cards > * {
+    border-right: 1px solid var(--border);
+  }
+  .cards > *:nth-child(2n) {
+    border-right: none;
+  }
+  .cards > *:last-child {
+    border-right: none;
+    border-bottom: none;
   }
 }
-*{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth}
-body{
-  background:var(--bg); color:var(--fg); font-family:var(--font);
-  font-size:15px; line-height:1.55; min-height:100vh;
-  -webkit-font-smoothing:antialiased;
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
 }
-.wrap{max-width:880px;margin:0 auto;padding:0 20px 80px}
-::selection{background:var(--accent-line)}
-a{color:var(--accent);text-decoration:none}
-a:hover{text-decoration:underline}
-button{font-family:var(--font);cursor:pointer}
-input,select{font-family:var(--mono)}
-svg.ic{width:1em;height:1em;vertical-align:-.12em;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
-
-/* ═══════════════ header ═══════════════ */
-header.top{display:flex;align-items:center;gap:12px;padding:26px 0 20px}
-.logo{width:38px;height:38px;border-radius:11px;background:var(--accent-dim);
-  border:1px solid var(--accent-line);display:grid;place-items:center;color:var(--accent);font-size:19px}
-header.top h1{font-size:1.05rem;font-weight:650;letter-spacing:.01em}
-header.top .sub{font-size:.75rem;color:var(--fg-muted);font-family:var(--mono)}
-header.top .spacer{flex:1}
-.chip{font-family:var(--mono);font-size:.72rem;color:var(--fg-muted);
-  border:1px solid var(--border);border-radius:99px;padding:4px 11px;background:var(--panel);white-space:nowrap}
-.chip b{color:var(--fg);font-weight:600}
-
-/* ═══════════════ gate card ═══════════════ */
-.gate{border:1px solid var(--border);border-radius:var(--r);background:var(--panel);
-  padding:16px 18px;margin-bottom:18px;transition:border-color .4s,background .4s}
-.gate.online{border-color:var(--accent-line);background:linear-gradient(180deg,var(--accent-dim),transparent 70%),var(--panel)}
-.gate.waiting{border-color:rgba(232,184,75,.4);background:linear-gradient(180deg,var(--amber-dim),transparent 70%),var(--panel)}
-.gate-row{display:flex;align-items:center;gap:11px}
-.gate-dot{width:9px;height:9px;border-radius:99px;flex:none}
-.gate.online .gate-dot{background:var(--accent);box-shadow:0 0 0 4px var(--accent-dim)}
-.gate.waiting .gate-dot{background:var(--amber);animation:pulse 1.6s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,184,75,.35)}50%{box-shadow:0 0 0 6px rgba(232,184,75,.08)}}
-.gate-title{font-weight:600;font-size:.92rem}
-.gate-desc{font-size:.8rem;color:var(--fg-muted);margin-top:2px}
-/* kinetic shimmer progress (metalforge / kinetics style) */
-.kbar{height:3px;border-radius:99px;background:var(--border-soft);overflow:hidden;margin-top:13px;position:relative}
-.kbar::after{content:'';position:absolute;inset:0;width:42%;
-  background:linear-gradient(90deg,transparent,var(--accent) 55%,transparent);
-  animation:sweep 1.5s cubic-bezier(.4,0,.2,1) infinite}
-.gate.waiting .kbar::after{background:linear-gradient(90deg,transparent,var(--amber) 55%,transparent)}
-@keyframes sweep{0%{transform:translateX(-110%)}100%{transform:translateX(340%)}}
-.ksteps{display:flex;gap:14px;margin-top:9px;font-family:var(--mono);font-size:.7rem;color:var(--fg-faint)}
-.ksteps span{opacity:.35;transition:opacity .5s}
-.ksteps span.on{opacity:1;color:var(--fg-muted)}
-
-/* ═══════════════ alerts ═══════════════ */
-.alert{border-radius:var(--r);padding:13px 16px;margin-bottom:16px;font-size:.84rem;
-  display:flex;gap:11px;align-items:flex-start;animation:fadeUp .35s ease}
-.alert .ic{font-size:1.05rem;margin-top:2px}
-.alert.info{background:var(--accent-dim);border:1px solid var(--accent-line);color:var(--fg)}
-.alert.danger{background:var(--red-dim);border:1px solid rgba(232,106,95,.45)}
-.alert b{font-weight:650}
-.alert .alert-body{flex:1}
-.alert .alert-act{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-
-/* ═══════════════ buttons ═══════════════ */
-.btn{display:inline-flex;align-items:center;gap:7px;border-radius:var(--r-sm);
-  border:1px solid var(--border);background:var(--panel-2);color:var(--fg);
-  padding:8px 15px;font-size:.82rem;font-weight:550;transition:border-color .2s,transform .15s,background .2s;text-decoration:none}
-.btn:hover{border-color:var(--fg-faint);text-decoration:none}
-.btn:active{transform:scale(.97)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#08130d;font-weight:650}
-.btn.primary:hover{filter:brightness(1.06)}
-.btn.ghost{background:transparent}
-.btn.sm{padding:5px 11px;font-size:.76rem}
-.btn[disabled]{opacity:.45;pointer-events:none}
-
-/* ═══════════════ segmented tabs ═══════════════ */
-.seg{display:inline-flex;gap:3px;background:var(--panel-2);border:1px solid var(--border);
-  border-radius:99px;padding:3px;margin-bottom:18px}
-.seg button{border:none;background:transparent;color:var(--fg-muted);font-size:.82rem;font-weight:550;
-  padding:7px 18px;border-radius:99px;transition:all .25s}
-.seg button.on{background:var(--panel);color:var(--fg);box-shadow:0 1px 6px rgba(0,0,0,.18)}
-.section-title{display:flex;align-items:center;gap:9px;font-size:.95rem;font-weight:650;margin:26px 0 4px}
-.section-title .ic{color:var(--accent)}
-.section-sub{font-size:.78rem;color:var(--fg-muted);margin-bottom:14px}
-
-/* ═══════════════ provider grid ═══════════════ */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:11px}
-.card{border:1px solid var(--border);border-radius:var(--r);background:var(--panel);
-  padding:14px 15px;transition:border-color .25s,transform .25s,box-shadow .25s;position:relative}
-.card:hover{border-color:var(--fg-faint);transform:translateY(-2px);box-shadow:var(--shadow)}
-.card h3{font-size:.88rem;font-weight:620;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.card .desc{font-size:.75rem;color:var(--fg-muted);margin:5px 0 11px;min-height:2.1em}
-.badge{font-family:var(--mono);font-size:.66rem;border-radius:99px;padding:2px 9px;border:1px solid var(--border);color:var(--fg-muted);white-space:nowrap}
-.badge.ok{color:var(--accent);border-color:var(--accent-line);background:var(--accent-dim)}
-.badge.no{color:var(--amber)}
-.card-acts{display:flex;gap:7px;flex-wrap:wrap}
-
-/* ═══════════════ forms ═══════════════ */
-.form{border:1px solid var(--border);border-radius:var(--r);background:var(--panel);padding:18px}
-.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:620px){.frow{grid-template-columns:1fr}}
-.flabel{display:block;font-size:.74rem;color:var(--fg-muted);font-family:var(--mono);margin:13px 0 5px}
-.flabel:first-child{margin-top:0}
-input.field,select.field{width:100%;background:var(--bg-soft);border:1px solid var(--border);color:var(--fg);
-  border-radius:var(--r-sm);padding:9px 12px;font-size:.84rem;outline:none;transition:border-color .2s}
-input.field:focus,select.field:focus{border-color:var(--accent)}
-.check{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--fg-muted);margin:14px 0;cursor:pointer}
-.check input{accent-color:var(--accent);width:15px;height:15px}
-
-/* OTP-style segmented key input (input-otp aesthetics) */
-.otp-wrap{position:relative}
-.otp{display:flex;gap:6px;flex-wrap:wrap;padding:9px 42px 9px 12px;background:var(--bg-soft);
-  border:1px solid var(--border);border-radius:var(--r-sm);min-height:42px;align-items:center;cursor:text;transition:border-color .2s}
-.otp:focus-within{border-color:var(--accent)}
-.otp .seg-c{font-family:var(--mono);font-size:.8rem;min-width:4ch;text-align:center;
-  border:1px solid transparent;border-radius:6px;padding:3px 2px;color:var(--fg);letter-spacing:.08em}
-.otp .seg-c.active{border-color:var(--accent-line);background:var(--accent-dim)}
-.otp .seg-gap{width:2px}
-.otp .ph{font-family:var(--mono);font-size:.8rem;color:var(--fg-faint)}
-.otp input{position:absolute;inset:0;opacity:0;cursor:text}
-.otp-eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:transparent;
-  color:var(--fg-faint);font-size:1rem;padding:5px;border-radius:6px}
-.otp-eye:hover{color:var(--fg);background:var(--panel-2)}
-
-/* ═══════════════ lifecycle row ═══════════════ */
-.life{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px}
-.life .card{cursor:pointer}
-.life .card .ic-big{font-size:1.25rem;color:var(--accent);margin-bottom:8px;display:block}
-.ic-big{transition:transform .25s}
-.life .card:hover .ic-big{transform:scale(1.08)}
-
-/* ═══════════════ toast / modal ═══════════════ */
-#toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
-  background:var(--panel);border:1px solid var(--accent-line);color:var(--fg);border-radius:var(--r);
-  padding:11px 20px;font-size:.83rem;box-shadow:var(--shadow);opacity:0;pointer-events:none;
-  transition:all .35s cubic-bezier(.2,.8,.2,1);z-index:60;display:flex;gap:8px;align-items:center;max-width:88vw}
-#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#toast.err{border-color:rgba(232,106,95,.5)}
-.modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px);
-  display:none;place-items:center;z-index:50;padding:20px}
-.modal-mask.show{display:grid}
-.modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);
-  width:min(760px,94vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--shadow);animation:fadeUp .3s ease}
-.modal .mhead{padding:16px 20px;display:flex;align-items:center;gap:10px}
-.modal pre{flex:1;overflow:auto;margin:0 20px 20px;background:var(--bg-soft);border:1px solid var(--border-soft);
-  border-radius:var(--r-sm);padding:14px;font-family:var(--mono);font-size:.72rem;line-height:1.7;color:var(--fg-muted);white-space:pre-wrap}
-
-footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border-soft);
-  font-family:var(--mono);font-size:.7rem;color:var(--fg-faint);display:flex;gap:16px;flex-wrap:wrap}
-.hidden{display:none!important}
-.spin{animation:rot 1s linear infinite}
-@keyframes rot{to{transform:rotate(360deg)}}
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 </head>
 <body>
-<div class="wrap">
 
-<header class="top">
-  <div class="logo"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 2.4-1.2 4.5-3 5.7V17a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-2.3C6.2 13.5 5 11.4 5 9a7 7 0 0 1 7-7Z"/><path d="M9 21h6"/><path d="M10 12l2-3 2 3"/></svg></div>
-  <div>
-    <h1>OpenClaw 配置中心</h1>
-    <div class="sub">Portable · 本地运行 · 配置不出机器</div>
-  </div>
-  <div class="spacer"></div>
-  <span class="chip">Portable <b id="vPortable">–</b></span>
-  <span class="chip">OpenClaw <b id="vOpenclaw">–</b></span>
+<div class="bg-i" aria-hidden="true"><img alt="" src="https://yuai-r.cn/egret-ink.jpg" width="1920" height="1080" loading="lazy" decoding="async" onerror="this.parentNode.style.display='none'"></div>
+<div class="bg-n" aria-hidden="true"></div>
+<div class="bg-g" aria-hidden="true"></div>
+
+<a href="#step1" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent);color:var(--bg);padding:8px 16px;z-index:1000;transition:top 0.2s;">跳到主要内容</a>
+<div class="y-page">
+<main role="main">
+
+<header>
+<nav class="y-row nav-row" aria-label="Primary">
+ <div class="y-cell s1" style="justify-content:center;"><a href="https://yuai-r.cn/" class="y-title" style="text-decoration:none;color:inherit" aria-label="yu.ai 首页"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10.99773 21.210212 41.919409 21.544615" role="img" aria-label="yu.ai" style="display:block;height:30px;width:auto;"><path d="M 45.733398 42.738164 L 41.73629 42.74254 L 41.737375285 40.707591021 A 8.837729855 8.837729855 0 0 1 35.033243 42.6925 A 9.740960697 9.740960697 0 0 1 28.51017967 39.031266945 A 9.54129909 9.54129909 0 0 0 30.574483343 34.572309406 A 5.656539538 5.656539538 0 0 0 40.949690312 35.859788125 A 5.731507417 5.731507417 0 1 0 30.36305225 31.811447406 A 20.573482539 20.573482539 0 0 0 29.939626863 34.753760946 A 10.585050681 10.585050681 0 0 1 25.033905315 41.358815686 A 9.119239881 9.119239881 0 0 1 16.170606141 41.798000109 A 10.358690137 10.358690137 0 0 1 10.99773 35.965116 L 15.334254529 35.967567318 A 5.681724582 5.681724582 0 0 0 22.398260797 38.369841547 A 5.794782642 5.794782642 0 0 0 26.224521625 33.410801625 A 11.676690311 11.676690311 0 0 1 30.222128469 25.429408656 A 8.710111368 8.710111368 0 0 1 39.623506 24.123591875 A 11.711448395 11.711448395 0 0 1 45.746694422 34.434553 L 45.733398 42.738164 Z M 30.094526056 21.213756042 A 16.078573443 16.078573443 0 0 1 29.91016646 24.94437708 A 10.408995195 10.408995195 0 0 0 26.508015877 29.654686048 A 9.313114857 9.313114857 0 0 1 19.702203 31.849336 A 9.502361152 9.502361152 0 0 1 11.081539 21.210212 L 15.117581783 21.218789633 A 8.087155192 8.087155192 0 0 0 15.266308403 24.200214629 A 5.433496857 5.433496857 0 0 0 23.713621493 26.905294666 A 5.999413958 5.999413958 0 0 0 26.125265219 21.222406323 L 30.094526056 21.213756042 Z M 45.724922 21.217266 L 45.721641413 29.955435791 A 10.838411147 10.838411147 0 0 0 41.754415729 24.702180989 L 41.733828 21.226262 L 45.724922 21.217266 Z M 52.91713917 40.191867166 A 2.466790171 2.466790171 0 0 1 47.983558828 40.191867166 A 2.466790171 2.466790171 0 0 1 52.91713917 40.191867166 Z" fill="currentColor" fill-rule="nonzero"/></svg></a></div>
+ <div class="y-cell s2" style="padding:0">
+ <a class="y-nav-link" href="https://yuai-r.cn/"><span class="y-label">openclaw config <span class="y-blink"></span></span></a>
+ </div>
+ <div class="y-cell s1" style="padding:0">
+ <a class="y-nav-link" href="https://yuai-r.cn/#products"><span class="y-label">products <span class="y-blink"></span></span></a>
+ </div>
+ 
+ <div class="y-cell" style="justify-content:space-between">
+ <span class="y-label y-op-5">theme</span>
+ <button id="y-theme-btn" aria-label="切换主题" class="y-theme-toggle" type="button"><svg class="y-theme-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="y-theme-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
+ </div>
+</nav>
 </header>
 
-<!-- ═══════════ 启动状态门控 ═══════════ -->
-<div class="gate waiting" id="gate">
-  <div class="gate-row">
-    <div class="gate-dot"></div>
-    <div style="flex:1">
-      <div class="gate-title" id="gateTitle">正在检测网关状态…</div>
-      <div class="gate-desc" id="gateDesc">连接 127.0.0.1</div>
-    </div>
-    <span class="chip" id="gatePort">–</span>
-  </div>
-  <div class="kbar" id="gateBar"></div>
-  <div class="ksteps" id="gateSteps">
-    <span>加载插件</span><span>启动通道</span><span>连接渠道</span><span>ready</span>
-  </div>
+<div class="y-row">
+ <div class="y-cell s6" style="border-right:none;padding:0">
+ <div class="y-hero">
+ <div class="y-hero-text">
+ <h1 class="y-display">openclaw</h1>
+ <p class="y-sub">便携 AI 助手 · 配置模型 · 一键启动</p>
+ </div>
+ <div class="y-term" aria-hidden="true">
+ <div class="y-term-h">
+ <span class="y-td"></span><span class="y-td"></span><span class="y-td"></span>
+ <span class="y-term-label">openclaw</span>
+ </div>
+ <div class="y-term-b" id="liveTerm"><span class="p">$ ./openclaw start</span>
+<span class="t" id="liveStatusLine"> · checking gateway…</span><span class="y-blink"></span></div>
+ </div>
+ </div>
+ </div>
 </div>
 
-<!-- 热重载失败 / 重启未恢复（醒目，红色） -->
-<div class="alert danger hidden" id="hotFail">
-  <svg class="ic" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
-  <div class="alert-body">
-    <b>网关未能自动恢复</b><br>
-    配置已写入磁盘，但网关进程没有重新上线。请按以下顺序操作：<br>
-    <span style="font-family:var(--mono);font-size:.78rem;color:var(--fg-muted)">
-      ① 关闭所有 OpenClaw 终端 / 浏览器窗口 → ② 打开 OpenClawPortable 文件夹 → ③ 重新双击 <b>OpenClaw.vbs</b></span>
-    <div class="alert-act">
-      <button class="btn sm" onclick="forceCheck()"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>重新检测</button>
-    </div>
-  </div>
+<div class="container">
+
+<div class="status-bar" style="display:none" role="status" aria-live="polite">
+ <div class="dot" id="statusDot"></div>
+ <div class="status-text" id="statusText">检测中...</div>
 </div>
 
-<!-- 官方 Key 填写指引（醒目常驻） -->
-<div class="alert info" id="officialHint">
-  <svg class="ic" viewBox="0 0 24 24"><path d="m21 2-2 2m-7.6 7.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-  <div class="alert-body">
-    <b>官方支持的模型平台，API Key 请到官方控制台填写</b><br>
-    <span style="color:var(--fg-muted)">配置中心不再代填官方平台的 Key —— 下方卡片展示各平台的已配置状态；点击「去官方控制台填 Key」，在官方界面的 <b>Settings → Models</b> 位置粘贴 Key 即可，立即热生效。</span>
-    <div class="alert-act">
-      <button class="btn sm primary" id="openOfficial"><svg class="ic" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>打开官方控制台</button>
-    </div>
-  </div>
+<div class="steps">
+ <div class="step-ind active" id="stepInd1" onclick="goStep(1)"><span class="num">1</span>配置模型</div>
+ <div class="step-ind" id="stepInd2" onclick="goStep(2)"><span class="num">2</span>启动</div>
 </div>
 
-<!-- ═══════════ 模型配置：两类分组 ═══════════ -->
-<div class="seg" role="tablist">
-  <button class="on" data-tab="sys" role="tab">系统配置</button>
-  <button data-tab="own" role="tab">独有配置</button>
-</div>
 
-<!-- ── 系统配置 ── -->
-<section id="tab-sys">
-  <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap">
-    <div style="position:relative;flex:1;max-width:360px;min-width:220px">
-      <svg class="ic" viewBox="0 0 24 24" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--fg-faint)"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input class="field" id="sysSearch" placeholder="搜索平台…deepseek / kimi / qwen" style="padding-left:34px" oninput="renderSys()">
-    </div>
-    <button class="btn sm ghost" onclick="loadCatalog(true)"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>刷新目录</button>
-    <span class="chip" id="sysCount"></span>
-  </div>
-  <div class="grid" id="sysGrid"></div>
+<!-- Step 1 -->
+<section class="step-section active" id="step1" aria-label="配置模型"><div style="padding:24px;">
+ <h2>选择模型平台</h2>
+ <p class="desc">搜索查看全部 <span id="providerTotal">32</span> 个平台。<b style="color:var(--emerald)">系统配置</b>＝官方内置平台（Key 去官方控制台填）；<b style="color:var(--warning)">独有配置</b>＝自定义 / 本地平台（在本页填写）。</p>
+
+ <!-- 搜索 + 标签筛选 -->
+ <!-- 首次配置门控：网关未就绪时醒目提示 -->
+ <div id="gateNotice" style="display:none;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--warning);border-left:3px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 12%,transparent);">
+ <span style="font-size:1.2rem;">⏳</span>
+ <div>
+ <div style="font-weight:600;color:var(--fg);font-size:0.9em;">请先等 OpenClaw 终端窗口出现 <span style="font-family:var(--font-mono);color:var(--warning);">ready</span> 后再填写 API Key</div>
+ <div style="color:var(--fg-muted);font-size:0.76em;margin-top:2px;">终端未就绪时保存的 Key 可能不生效。首次启动需 2–5 分钟安装插件，请耐心等待。</div>
+ </div>
+ </div>
+
+ <!-- 官方平台 Key 填写位置醒目标注 -->
+ <div style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--emerald);border-left:3px solid var(--emerald);border-radius:8px;background:color-mix(in srgb,var(--emerald) 10%,transparent);">
+ <span style="font-size:1.2rem;">🔑</span>
+ <div style="color:var(--fg);font-size:0.9em;"><b>系统配置</b>（官方内置平台）的 API Key 请到 <b>OpenClaw 官方控制台</b> 填写；下方「独有配置」（自定义 / 本地）才在本页填写。</div>
+ </div>
+
+ <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+ <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
+ oninput="searchProviders(this.value)"
+ style="flex:1;min-width:200px;padding:8px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;">
+ <span id="providerCount" style="color:var(--fg-muted);font-size:0.75rem;font-family:var(--font-mono);"></span>
+ </div>
+ 
+ <!-- 模型目录热更新：从维护者仓库拉取最新平台/模型列表，无需升级整个便携版 -->
+ <div id="catalogBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;">
+ <span id="catalogInfo" style="color:var(--fg-muted);font-size:0.72rem;font-family:var(--font-mono);">模型目录：内置版本</span>
+ <span style="flex:1;"></span>
+ <button class="io-btn" onclick="refreshCatalog(false)" style="font-size:0.72rem;" tabindex="0" title="从 GitHub 拉取最新模型列表">⟳ 更新目录</button>
+ <button class="io-btn" onclick="document.getElementById('catalogFile').click()" style="font-size:0.72rem;" tabindex="0" title="导入本地 JSON 目录文件（离线可用）">导入</button>
+ <button class="io-btn" onclick="exportCatalog()" style="font-size:0.72rem;" tabindex="0" title="导出当前目录为 JSON">导出</button>
+ <button class="io-btn" onclick="resetCatalog()" style="font-size:0.72rem;" tabindex="0" title="放弃已拉取的目录，恢复安装包内置版本">恢复内置</button>
+ <input type="file" id="catalogFile" accept=".json,application/json" style="display:none;" onchange="onCatalogFile(this)">
+ </div>
+
+ <!-- 一键预设 (推荐配置快速入口) -->
+ <div id="presetArea" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+ <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.75rem;" tabindex="0">一键 DeepSeek</button>
+ <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" style="font-size:0.75rem;" tabindex="0">一键 OpenRouter</button>
+ <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" style="font-size:0.75rem;" tabindex="0">一键 Gemini (免费)</button>
+ </div>
+
+ <!-- 本地模型自动检测 (auto-discovery) -->
+ <div id="localPanel" style="display:none;margin-bottom:18px;padding:14px 16px;background:var(--secondary);border:1px solid var(--emerald-dim);border-radius:8px;">
+ <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+ <span id="localPanelTitle" style="color:var(--emerald);font-family:var(--font-mono);font-size:0.85em;font-weight:600;">本地模型</span>
+ <button class="io-btn" onclick="scanLocalModels({showHintsIfEmpty:true})" style="font-size:0.72em;padding:4px 10px;">重新扫描</button>
+ </div>
+ <div id="localRuntimes"></div>
+ </div>
+
+ <!-- Z 引导: 去 yu.ai 官网领取共享 Key -->
+ <a href="https://yuai-r.cn/keys/?from=openclaw" target="_blank" rel="noopener"
+    style="display:flex;align-items:center;gap:8px;margin:4px 0 18px;padding:12px 16px;border:1px solid var(--emerald);border-left:3px solid var(--emerald);border-radius:8px;background:color-mix(in srgb,var(--emerald) 10%,transparent);color:var(--fg);text-decoration:none;font-family:var(--font-mono);font-size:0.9rem">
+   <span style="font-size:1.1rem">🎁</span>
+   <span>没有 API Key？<b>去 yu.ai 官网免费领取</b> → 复制后粘到下方对应平台即可</span>
+ </a>
+
+ <div class="model-grid" id="providerGrid" role="listbox" aria-label="模型平台列表"></div>
+ <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
+ 没有匹配的平台，换个关键词试试。
+ </div>
+ <div class="btn-row">
+ <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled tabindex="0">保存并继续 →</button>
+ </div>
 </section>
 
-<!-- ── 独有配置 ── -->
-<section id="tab-own" class="hidden">
-  <div class="section-title" style="margin-top:0"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg>添加自定义 / 中转平台</div>
-  <p class="section-sub">官方目录之外的平台（中转站、私有部署、OpenAI 兼容端点）在这里接入。保存后可在官方控制台把它设为默认模型。</p>
+<!-- Step 2 -->
+<section class="step-section collapsed" id="step2" aria-label="启动"><div style="padding:24px;">
+ <div style="text-align:left;margin-bottom:28px;">
+ <h2 style="font-size:1.2em;margin-bottom:6px;">配置完成</h2>
+ <p class="desc" style="margin-bottom:0;">密钥仅保存在本地，不会上传到任何服务器</p>
+ <div id="configSummary" style="margin-top:14px;padding:8px 14px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.75rem;color:var(--fg-muted);display:none;text-align:left;"></div>
+ </div>
 
-  <div class="form">
-    <div class="frow">
-      <div><label class="flabel">平台 ID（英文，如 my-relay）</label>
-        <input class="field" id="ownId" placeholder="my-relay" spellcheck="false"></div>
-      <div><label class="flabel">显示名称</label>
-        <input class="field" id="ownName" placeholder="我的中转站"></div>
-    </div>
-    <label class="flabel">API Base URL（OpenAI 兼容）</label>
-    <input class="field" id="ownBase" placeholder="https://api.example.com/v1" spellcheck="false">
-    <div class="frow">
-      <div><label class="flabel">默认模型 ID</label>
-        <input class="field" id="ownModel" placeholder="claude-sonnet-4" spellcheck="false"></div>
-      <div><label class="flabel">API Key（选填，本地中转可留空）</label>
-        <div class="otp-wrap">
-          <div class="otp" id="otpBox" onclick="document.getElementById('ownKey').focus()"></div>
-          <input id="ownKey" autocomplete="off" spellcheck="false" oninput="renderOtp()" placeholder="">
-          <button class="otp-eye" id="otpEye" onclick="toggleOtp()" title="显示/隐藏"><svg class="ic" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></button>
-        </div>
-      </div>
-    </div>
-    <label class="check"><input type="checkbox" id="ownDefault" checked>保存后设为默认模型（写入 agents 默认模型引用）</label>
-    <div style="display:flex;gap:9px;flex-wrap:wrap">
-      <button class="btn" onclick="testKey()"><svg class="ic" viewBox="0 0 24 24"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="m9 11 3 3L22 4"/></svg>测试连接</button>
-      <button class="btn primary" id="ownSave" onclick="saveOwn()"><svg class="ic" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>保存并接入</button>
-    </div>
-    <div id="ownMsg" style="margin-top:11px;font-size:.78rem;font-family:var(--mono);color:var(--fg-muted)"></div>
-  </div>
+ <div id="quickSwitch" style="margin-bottom:16px;display:none;">
+ <label style="display:block;font-size:0.78em;color:var(--fg-muted);margin-bottom:6px;font-family:var(--font-mono);">快速切换模型</label>
+ <div style="display:flex;gap:8px;">
+ <select id="quickModel" style="flex:1;padding:9px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;"></select>
+ <button onclick="quickSwitchModel()" style="padding:9px 16px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-family:var(--font-mono);font-size:0.85em;cursor:pointer;">切换</button>
+ </div>
+ </div>
 
-  <div class="section-title"><svg class="ic" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg>本地模型运行时</div>
-  <p class="section-sub">自动探测本机 LM Studio / Ollama / vLLM 等运行中服务，发现模型后一键预填接入。</p>
-  <button class="btn" onclick="scanLocal()"><svg class="ic" id="scanIcon" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>扫描本机运行时</button>
-  <div id="localPanel" style="margin-top:12px"></div>
-</section>
+ <button class="btn-launch" onclick="openGateway()" tabindex="0">打开聊天界面 →</button>
 
-<!-- ═══════════ 生命周期 ═══════════ -->
-<div class="section-title"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="12" cy="12" r="4"/></svg>生命周期</div>
-<p class="section-sub">网关重启与版本更新。日常配置在官方控制台完成后无需动这里。</p>
-<div class="life">
-  <div class="card" onclick="restartGateway()">
-    <svg class="ic ic-big" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6"/></svg>
-    <h3>重启网关</h3><div class="desc">配置变更未热生效时使用；重启期间页面自动监控恢复状态</div>
-  </div>
-  <div class="card" onclick="checkUpdate()">
-    <svg class="ic ic-big" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5M12 15V3"/></svg>
-    <h3>检查更新</h3><div class="desc" id="updDesc">对比 GitHub Release 最新版本</div>
-  </div>
-  <div class="card" onclick="openLogs()">
-    <svg class="ic ic-big" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
-    <h3>运行日志</h3><div class="desc">查看网关日志尾部，排障第一现场</div>
-  </div>
+ <div class="cmd-grid">
+ <div class="cmd-card" onclick="runCmd('update')">
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+  <div class="cmd-name">更新</div><div class="cmd-desc">升级到最新版</div>
+</div>
+<div class="cmd-card" onclick="runCmd('doctor')">
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+  <div class="cmd-name">诊断</div><div class="cmd-desc">检查运行环境</div>
+</div>
+<div class="cmd-card" onclick="runCmd('onboard')">
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+  <div class="cmd-name">引导</div><div class="cmd-desc">初始化设置</div>
+</div>
+<div class="cmd-card" onclick="runCmd('restart')">
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+  <div class="cmd-name">重启</div><div class="cmd-desc">使配置生效</div>
+</div>
+ </div>
+
+  
+ <!-- 手机连接 -->
+ <div style="margin-top:28px;">
+ <button id="mobileToggleBtn" onclick="toggleMobilePanel()"
+ style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:var(--font-mono);font-size:0.88em;cursor:pointer;text-align:left;">
+ <span> 手机连接 (Android / iOS)</span>
+ <span id="mobileToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">v</span>
+ </button>
+ <div id="mobilePanel" style="display:none;margin-top:12px;padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+ <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:12px;">开启后 Gateway 将监听局域网，同一 WiFi 下的手机可直接连接。关闭后恢复仅本机访问。</p>
+
+ <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+ <span style="font-family:var(--font-mono);font-size:0.88em;">局域网模式</span>
+ <label class="mobile-switch">
+ <input type="checkbox" id="mobileLanToggle" onchange="toggleMobileLan(this.checked)">
+ <span class="mobile-slider"></span>
+ </label>
+ </div>
+
+ <div id="mobileInfo" style="display:none;">
+ <div style="padding:12px;background:var(--bg);border:1px solid var(--emerald-dim);border-radius:6px;margin-bottom:12px;">
+ <div style="font-family:var(--font-mono);font-size:0.78em;color:var(--emerald);margin-bottom:8px;font-weight:600;">连接地址</div>
+ <div id="mobileUrls" style="font-family:var(--font-mono);font-size:0.82em;line-height:1.8;"></div>
+ </div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+ <div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
+ <div style="font-size:0.72em;color:var(--fg-muted);margin-bottom:4px;">方式一</div>
+ <div style="font-size:0.82em;font-weight:500;">手机浏览器</div>
+ <div style="font-size:0.72em;color:var(--fg-muted);margin-top:2px;">零安装，打开链接即用</div>
+ </div>
+ <div style="padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;">
+ <div style="font-size:0.72em;color:var(--fg-muted);margin-bottom:4px;">方式二</div>
+ <div style="font-size:0.82em;font-weight:500;">官方/第三方 App</div>
+ <div style="font-size:0.72em;color:var(--fg-muted);margin-top:2px;">获得摄像头、语音能力</div>
+ </div>
+ </div>
+ <div style="font-size:0.75em;color:var(--warning);display:flex;align-items:center;gap:6px;">
+ <span>[!]</span> 请确保手机和电脑在同一 WiFi 网络。重启 Gateway 后生效。
+ </div>
+ </div>
+ </div>
+ </div>
+
+ <div class="io-bar" style="margin-top:24px;">
+ <button class="io-btn" onclick="exportConfig()">导出配置</button>
+ <button class="io-btn" onclick="startImport()">导入配置</button>
+ <button class="io-btn" onclick="viewConfig()">查看 JSON</button>
+ <button class="io-btn" onclick="resetConfig()">重新配置</button>
+ <button class="io-btn" onclick="toggleLogs()">查看日志</button>
+ </div>
+ <input type="file" id="importFileInput" accept=".json" onchange="doImport(event)" style="display:none;">
+
+ <!-- 日志面板 -->
+ <div id="logPanel" style="display:none;margin-top:20px;">
+ <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+ <h3 style="color:#ffe6cb;font-size:0.9em;font-weight:600;">Gateway 日志</h3>
+ <div style="display:flex;gap:6px;">
+ <button class="io-btn" onclick="refreshLogs()">刷新</button>
+ <button class="io-btn" onclick="document.getElementById('logPanel').style.display='none'">关闭</button>
+ </div>
+ </div>
+ <pre id="logContent" style="background:#041c1c;color:#ffe6cb;padding:14px;border-radius:8px;font-family:'SF Mono','Menlo',monospace;font-size:11px;line-height:1.6;max-height:300px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(0,255,200,0.08);">点击「刷新」加载最近日志</pre>
+ </div>
+</div></div>
+
+</main>
 </div>
 
-<footer>
-  <span id="ftVer">OpenClaw Portable</span>
-  <span id="ftGate"></span>
-  <span style="margin-left:auto">配置仅保存在本机 · API Key 走本地密钥存储</span>
+<footer class="y-footer">
+ <div class="c"><span class="y-label y-op-7">yu.ai</span></div>
+ <div class="c"><a class="y-label" href="https://yuai-r.cn/" style="opacity:.7;color:inherit;text-decoration:none">home ↗</a></div>
+ 
+ <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v1.0.0</span></div>
+ <div class="c"><span class="y-label y-op-5" style="color:var(--accent)">openclaw config</span></div>
 </footer>
+
 </div>
 
-<!-- toast / logs modal -->
-<div id="toast"></div>
-<div class="modal-mask" id="logMask" onclick="if(event.target===this)this.classList.remove('show')">
-  <div class="modal">
-    <div class="mhead"><svg class="ic" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
-      <b style="font-size:.9rem">网关日志（尾部 120 行）</b><span class="spacer" style="flex:1"></span>
-      <button class="btn sm ghost" onclick="document.getElementById('logMask').classList.remove('show')">关闭</button>
-    </div>
-    <pre id="logBody">加载中…</pre>
-  </div>
+<div id="hotFailBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#2b0e0e;border-top:2px solid var(--destructive);padding:14px 24px;z-index:600;text-align:center;">
+ <span style="color:var(--destructive);font-size:0.9em;font-weight:600;">⚠ 网关未能自动恢复</span>
+ <span style="color:var(--fg-muted);font-size:0.82em;margin-left:10px;">请关闭所有 OpenClaw 终端窗口，回到文件夹重新双击 <b style="color:var(--fg);">OpenClaw.vbs</b> 启动</span>
+ <button onclick="this.parentNode.style.display='none'" style="margin-left:12px;padding:6px 14px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78em;">知道了</button>
 </div>
+<div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+ <div class="modal-box" onclick="event.stopPropagation();"><h3 id="modalTitle"></h3><p id="modalBody"></p><div class="modal-btns" id="modalBtns"></div></div>
+</div>
+<div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#062424;border-top:1px solid rgba(0,255,200,0.15);padding:12px 24px;z-index:500;text-align:center;">
+ <span style="color:var(--fg-muted);font-size:0.85em;">配置已保存，重启后生效</span>
+ <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">重启 Gateway</button>
+</div>
+<div id="disconnectOverlay" role="alertdialog" aria-labelledby="dcTitle" aria-describedby="dcDesc">
+ <div class="dc-card">
+ <div class="dc-head">
+ <span class="dc-dot" aria-hidden="true"></span>
+ <span class="dc-title" id="dcTitle">已与配置服务断开</span>
+ </div>
+ <p class="dc-desc" id="dcDesc">保存配置等操作暂不可用。正在自动重连，恢复后此提示会自动消失。</p>
+ <div class="dc-status" id="dcStatus">自动重连中…</div>
+ <div class="dc-actions">
+ <button type="button" class="btn btn-primary" id="dcRetryBtn">立即重试</button>
+ <button type="button" class="btn" id="dcReloadBtn">重新加载页面</button>
+ </div>
+ </div>
+</div>
+<script>
+// ===== AUTH BOOTSTRAP =====
+// The config server requires X-OpenClaw-Token on all write endpoints
+// to prevent CSRF and local-process abuse. We fetch the token once at
+// page load from /api/bootstrap (which only responds to same-origin).
+var _serverToken = '';
+
+// Wrapper: automatically attaches the auth token to API calls and
+// applies a default 30s timeout via AbortController. A bare fetch
+// has no timeout — if the server hangs (slow USB, file lock, OS
+// pause), every UI action would hang forever.
+function apiFetch(url, opts) {
+ opts = opts || {};
+ if (!opts.headers) opts.headers = {};
+ if (_serverToken) opts.headers['X-OpenClaw-Token'] = _serverToken;
+ // Don't override an explicitly-passed signal.
+ if (!opts.signal) {
+ var ms = opts.timeout || 30000;
+ var ctrl = new AbortController();
+ var timer = setTimeout(function(){ ctrl.abort(); }, ms);
+ opts.signal = ctrl.signal;
+ return fetch(url, opts).finally(function(){ clearTimeout(timer); });
+ }
+ return fetch(url, opts);
+}
+
+// Shared HTML-escape for values interpolated into markup. Used by the
+// memory/session panels whose names come from the filesystem (a hostile
+// filename like <img onerror=...>.md must never reach innerHTML raw).
+// Defined once here at top level so every script block can use it
+// (same pattern as apiFetch).
+function _escHtml(s) {
+ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+ });
+}
+// Snapshot of the last-rendered memory list. viewMemory receives an
+// INDEX into this list instead of a filename — filenames can contain
+// quotes that would break out of the inline onclick string.
+var _memList = null;
+
+// ===== PROVIDERS =====
+// "官方托管" provider ids (OpenClaw built-in provider extensions). These are
+// configured in OpenClaw's OWN Control UI + setup wizard (key → auth profile +
+// SecretRef, model catalog owned by the extension), NOT by writing
+// `models.providers.<id>` here — doing so triggers a silent hijack (雷14).
+//
+// The authoritative list is discovered at RUNTIME on the config-server
+// (dist/extensions/*/openclaw.plugin.json) and returned as `builtIn:true` on
+// each catalog provider + a `managedProviders[]` array. This embedded set is
+// only a conservative offline FALLBACK so the first paint is correct before
+// loadCatalog() replaces PROVIDERS with the server's precise copy. Local
+// runtimes (ollama/lmstudio) are intentionally NOT in it — they stay editable.
+var OFFICIAL_MANAGED_IDS = ['minimax','openai','anthropic','xai','openrouter','together','nvidia','huggingface'];
+// True when a provider entry is owned by OpenClaw's own extension (builtIn
+// flag from server, or id falls in the offline fallback set).
+function isOfficialManaged(p) {
+  if (!p) return false;
+  if (p.builtIn) return true;
+  if (p.isLocal || p.isCustom) return false;
+  return OFFICIAL_MANAGED_IDS.indexOf(p.id) !== -1;
+}
+
+// Human label for a model id. Providers whose model list is owned by a bundled
+// extension carry `modelMeta` (built server-side from that extension's official
+// `modelCatalog`), so we can show the vendor's real name — "DeepSeek V4 Flash"
+// instead of the raw id "deepseek-v4-flash". Providers with no official catalog
+// (custom / local runtimes) have no meta → fall back to the raw id.
+function modelLabel(p, m) {
+  if (p && p.modelMeta && p.modelMeta[m] && p.modelMeta[m].name) return p.modelMeta[m].name;
+  return m;
+}
+
+const PROVIDERS = [
+ // ── 国内热门 ──
+ {id:'minimax',name:'MiniMax',tags:['hot','cn'],desc:'M3 / M2.7 编码与 Agent',base:'https://api.minimax.chat/v1',models:['MiniMax-M3','MiniMax-M2.7','MiniMax-M2.7-highspeed','MiniMax-M2.5','MiniMax-M2.5-highspeed','MiniMax-M2'],link:'https://platform.minimaxi.com/'},
+ {id:'kimi',name:'Kimi',tags:['hot','cn'],desc:'K3 / K2.7 最新 · 原生多模态 Agent',base:'https://api.moonshot.cn/v1',models:['kimi-k3','kimi-k2.7-code','kimi-k2.6','kimi-k2.5','kimi-k2-thinking-turbo','kimi-k2-thinking','kimi-k2','moonshot-v1-128k','moonshot-v1-32k'],link:'https://platform.moonshot.cn/'},
+ {id:'deepseek',name:'DeepSeek',tags:['hot','cheap','cn'],desc:'V4 Pro / V4 Flash / V3.2 / R1 推理',base:'https://api.deepseek.com/v1',models:['deepseek-v4-pro','deepseek-v4-pro-0813','deepseek-v4-flash','deepseek-v4-flash-0731','deepseek-v3.2','deepseek-r1','deepseek-r1-0528','deepseek-chat'],link:'https://platform.deepseek.com/'},
+ {id:'zai',name:'\u667a\u8c31GLM',tags:['hot','cn'],desc:'GLM-5.2 / GLM-5.1 / GLM-4.7',base:'https://open.bigmodel.cn/api/paas/v4',models:['glm-5.2','glm-5.1','glm-5-turbo','glm-5','glm-4.7','glm-4.7-flash','glm-4.6','glm-4.5-air','glm-4.5-flash'],link:'https://open.bigmodel.cn/'},
+ {id:'qwen',name:'\u901a\u4e49\u5343\u95ee',tags:['hot','cn'],desc:'Qwen 3.7 / 3.6 / Coder / VL \u963f\u91cc\u4e91\u767e\u70bc',base:'https://dashscope.aliyuncs.com/compatible-mode/v1',models:['qwen3.7-max','qwen3.7-plus','qwen3.6-max','qwen3.6-plus','qwen3.6-35b-a3b','qwen3-max','qwen3-coder-plus','qwen3-coder','qwen3-vl-plus','qwen3-omni-flash','qwen-max-latest','qwen-plus-latest','qwen-turbo-latest','qwen-long'],link:'https://dashscope.console.aliyun.com/'},
+ {id:'doubao',name:'\u8c46\u5305',tags:['cn','fast'],desc:'Seed 1.6 \u5b57\u8282\u8df3\u52a8\u706b\u5c71\u5f15\u64ce',base:'https://ark.cn-beijing.volces.com/api/v3',models:['doubao-seed-1.6','doubao-seed-1.6-thinking','doubao-1.5-pro-256k','doubao-1.5-pro-32k','doubao-1.5-lite-32k'],link:'https://www.volcengine.com/product/doubao'},
+ {id:'baichuan',name:'\u767e\u5ddd',tags:['cn'],desc:'\u767e\u5dddAI',base:'https://api.baichuan-ai.com/v1',models:['Baichuan4-Turbo','Baichuan4-Air','Baichuan4','Baichuan3-Turbo','Baichuan2-Turbo'],link:'https://platform.baichuan-ai.com/'},
+ {id:'yi',name:'\u96f6\u4e00\u4e07\u7269',tags:['cn'],desc:'\u96f6\u4e00\u4e07\u7269',base:'https://api.lingyiwanwu.com/v1',models:['yi-lightning','yi-large','yi-large-turbo','yi-medium','yi-spark','yi-vision'],link:'https://platform.lingyiwanwu.com/'},
+ {id:'stepfun',name:'\u9636\u8dc3\u661f\u8fb0',tags:['cn'],desc:'Step 3.7 \u6700\u65b0',base:'https://api.stepfun.com/v1',models:['step-3.7-flash','step-3.5-flash','step-3.5','step-2-16k','step-1v-8k'],link:'https://platform.stepfun.com/'},
+ {id:'spark',name:'\u8baf\u98de\u661f\u706b',tags:['cn','free'],desc:'\u79d1\u5927\u8baf\u98de',base:'https://spark-api-open.xf-yun.com/v1',models:['4.0Ultra','generalv3.5','generalv3','lite'],link:'https://xinghuo.xfyun.cn/'},
+ {id:'hunyuan',name:'\u6df7\u5143',tags:['cn'],desc:'\u817e\u8baf\u6df7\u5143',base:'https://api.hunyuan.cloud.tencent.com/v1',models:['hy3-preview','hunyuan-turbo','hunyuan-large','hunyuan-pro','hunyuan-standard','hunyuan-lite'],link:'https://hunyuan.tencent.com/'},
+ {id:'ernie',name:'\u6587\u5fc3\u4e00\u8a00',tags:['cn'],desc:'\u767e\u5ea6\u6587\u5fc3\u4e00\u8a00',base:'https://aip.baidubce.com/rpc/2.0/ai_custom/v1/wenxinworkshop/chat',models:['ernie-4.5-turbo-128k','ernie-x1-turbo','ernie-4.0-turbo','ernie-4.0-8k','ernie-3.5-8k','ernie-speed-128k'],link:'https://cloud.baidu.com/product/wenxinworkshop'},
+ {id:'siliconflow',name:'SiliconFlow',tags:['cn','cheap'],desc:'\u56fd\u5185\u6a21\u578b\u805a\u5408',base:'https://api.siliconflow.cn/v1',models:['deepseek-ai/DeepSeek-V4-Pro','Qwen/Qwen3.7-Max','moonshotai/Kimi-K2.6','THUDM/GLM-5.1','deepseek-ai/DeepSeek-R1','Qwen/Qwen3-235B-A22B','meta-llama/Llama-4-Scout-17B-Instruct'],link:'https://siliconflow.cn/'},
+ {id:'xiaomi',name:'\u5c0f\u7c73 MiMo',tags:['cn'],desc:'MiMo v2.5 Pro',base:'https://api.xiaomi.com/v1',models:['mimo-v2.5-pro','mimo-v2.5'],link:'https://ai.xiaomi.com/'},
+ {id:'tencent',name:'\u817e\u8baf\u6df7\u5143',tags:['cn'],desc:'\u6df7\u5143\u5927\u6a21\u578b',base:'https://api.hunyuan.cloud.tencent.com/v1',models:['hy3-preview','hunyuan-turbo','hunyuan-large','hunyuan-pro','hunyuan-standard'],link:'https://hunyuan.tencent.com/'},
+
+ // ── 国际主流 ──
+ {id:'openai',name:'OpenAI',tags:['hot'],desc:'GPT-5.6 Sol/Terra/Luna / 5.5 Pro / Codex / o4-mini',base:'https://api.openai.com/v1',models:['gpt-5.6-sol','gpt-5.6-sol-pro','gpt-5.6-terra','gpt-5.6-terra-pro','gpt-5.6-luna','gpt-5.6-luna-pro','gpt-5.5-pro','gpt-5.5','gpt-5.5-mini','gpt-5.4','gpt-5.4-mini','gpt-5.4-nano','gpt-5.3-codex','gpt-5.2','gpt-5','gpt-5-mini','gpt-5-nano','o3','o3-mini','o4-mini','o4-mini-high','gpt-4.1','gpt-4.1-mini'],link:'https://platform.openai.com/'},
+ {id:'anthropic',name:'Anthropic',tags:['hot'],desc:'Fable 5 / Opus 5 / Sonnet 5 / Haiku 4.5',base:'https://api.anthropic.com/v1',models:['claude-fable-5','claude-opus-5','claude-opus-5-fast','claude-opus-4-8','claude-opus-4-8-fast','claude-opus-4-7','claude-opus-4-6','claude-sonnet-5','claude-sonnet-4-6','claude-haiku-4-5','claude-3-7-sonnet-latest','claude-3-5-haiku-latest'],link:'https://console.anthropic.com/'},
+ {id:'gemini',name:'Gemini',tags:['hot','free'],desc:'3.6-flash / 3.5-flash / 3.1-pro / 2.5-pro',base:'https://generativelanguage.googleapis.com/v1beta/openai',models:['gemini-3.6-flash','gemini-3.5-flash','gemini-3.1-pro-preview','gemini-3.1-flash-lite-preview','gemini-3-flash-preview','gemini-3-pro-image-preview','gemini-2.5-pro','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.5-flash-image-preview'],link:'https://aistudio.google.com/'},
+ {id:'mistral',name:'Mistral',tags:[],desc:'large-3 / medium / codestral',base:'https://api.mistral.ai/v1',models:['mistral-large-3','mistral-large-2411','mistral-medium-latest','mistral-small-latest','codestral-latest','pixtral-large-latest','ministral-3b-latest','ministral-8b-latest'],link:'https://console.mistral.ai/'},
+ {id:'xai',name:'xAI',tags:['fast'],desc:'Grok 4.6 / 4.5 / 4.3 / 4.20',base:'https://api.x.ai/v1',models:['grok-4.6','grok-4.5','grok-4.3','grok-4.20','grok-4.20-multi-agent'],link:'https://console.x.ai/'},
+ {id:'cohere',name:'Cohere',tags:[],desc:'Command A / R+',base:'https://api.cohere.com/v2',models:['command-a-03-2025','command-r-plus','command-r','command-light'],link:'https://dashboard.cohere.com/'},
+
+ // ── 聚合/推理平台 ──
+ {id:'openrouter',name:'OpenRouter',tags:['hot'],desc:'\u6a21\u578b\u805a\u5408\u5e73\u53f0 \u00b7 \u6700\u65b0 gpt-5.6 / claude-fable-5 / gemini-3',base:'https://openrouter.ai/api/v1',models:['anthropic/claude-fable-5','anthropic/claude-opus-5','anthropic/claude-opus-5-fast','anthropic/claude-opus-4.8','anthropic/claude-opus-4.8-fast','anthropic/claude-sonnet-5','anthropic/claude-haiku-4.5','openai/gpt-5.6-sol','openai/gpt-5.6-sol-pro','openai/gpt-5.6-terra','openai/gpt-5.6-terra-pro','openai/gpt-5.6-luna','openai/gpt-5.6-luna-pro','openai/gpt-5.5','openai/gpt-5.5-pro','openai/gpt-5.4-mini','openai/gpt-5.4-nano','openai/gpt-5.3-codex','google/gemini-3.6-flash','google/gemini-3.5-flash','google/gemini-3.1-pro-preview','google/gemini-3.1-flash-lite-preview','google/gemini-3-flash-preview','google/gemini-3-pro-image-preview','x-ai/grok-4.6','x-ai/grok-4.5','x-ai/grok-4.3','x-ai/grok-4.20','qwen/qwen3.8-max','qwen/qwen3.7-max','qwen/qwen3.7-plus','qwen/qwen3.6-plus','qwen/qwen3.6-35b-a3b','deepseek/deepseek-v4-pro','deepseek/deepseek-v4-flash','deepseek/deepseek-v4-flash-0731','z-ai/glm-5.2','z-ai/glm-5.1','minimax/minimax-m3','minimax/minimax-m2.7','stepfun/step-3.7-flash','stepfun/step-3.5-flash','xiaomi/mimo-v2.5-pro','tencent/hy3','tencent/hy3:free','nvidia/nemotron-3-super-120b-a12b','nvidia/nemotron-3-super-120b-a12b:free','nvidia/nemotron-3-ultra-550b-a55b:free','openrouter/pareto-code','openrouter/elephant-alpha','sakana/fugu-ultra','poolside/laguna-m.1:free','inclusionai/ring-2.6-1t:free','meta-llama/llama-4-maverick','moonshotai/kimi-k3'],link:'https://openrouter.ai/'},
+ {id:'together',name:'Together',tags:['cheap'],desc:'\u5f00\u6e90\u6a21\u578b\u6258\u7ba1',base:'https://api.together.xyz/v1',models:['meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8','deepseek-ai/DeepSeek-V4-Pro','Qwen/Qwen3-Coder-480B-A35B-Instruct','Qwen/Qwen3-235B-A22B','moonshotai/Kimi-K2.6','zai-org/GLM-5.1','MiniMaxAI/MiniMax-M3','mistralai/Mistral-Small-3.2-24B-Instruct'],link:'https://api.together.xyz/'},
+ {id:'fireworks',name:'Fireworks',tags:['fast'],desc:'\u9ad8\u901f\u63a8\u7406',base:'https://api.fireworks.ai/inference/v1',models:['accounts/fireworks/models/llama4-maverick-instruct-basic','accounts/fireworks/models/llama4-scout-instruct-basic','accounts/fireworks/models/deepseek-v4-pro','accounts/fireworks/models/qwen3-coder-480b-a35b-instruct','accounts/fireworks/models/qwen3-235b-a22b'],link:'https://fireworks.ai/'},
+ {id:'deepinfra',name:'DeepInfra',tags:['cheap'],desc:'\u6781\u4f4e\u4ef7\u5f00\u6e90\u6a21\u578b',base:'https://api.deepinfra.com/v1/openai',models:['deepseek-ai/DeepSeek-V4-Pro','meta-llama/Llama-4-Maverick-17B-128E-Instruct','Qwen/Qwen3-Coder-480B-A35B-Instruct','zai-org/GLM-5.1','moonshotai/Kimi-K2.6'],link:'https://deepinfra.com/'},
+ {id:'replicate',name:'Replicate',tags:[],desc:'\u5f00\u6e90\u751f\u6001\u805a\u5408',base:'https://api.replicate.com/v1',models:['meta/meta-llama-4-maverick-17b-128e-instruct','meta/meta-llama-3.3-70b-instruct','deepseek-ai/deepseek-v4-pro','mistralai/mistral-small-3.2-24b-instruct'],link:'https://replicate.com/'},
+ {id:'novita',name:'Novita',tags:['cn','cheap'],desc:'\u56fd\u5185\u8bbf\u95ee\u5feb',base:'https://api.novita.ai/v3/openai',models:['meta-llama/llama-4-maverick-17b-128e-instruct','meta-llama/llama-3.3-70b-instruct','deepseek/deepseek-v4-pro','qwen/qwen3-coder-480b','mistralai/mistral-small-3.2-24b-instruct'],link:'https://novita.ai/'},
+ {id:'hyperbolic',name:'Hyperbolic',tags:['cn','cheap'],desc:'DeepSeek / Qwen \u955c\u50cf',base:'https://api.hyperbolic.xyz/v1',models:['deepseek-ai/DeepSeek-V4-Pro','meta-llama/Llama-4-Maverick-17B-128E-Instruct','Qwen/Qwen3-Coder-480B-A35B-Instruct'],link:'https://app.hyperbolic.xyz/'},
+
+ // ── 高速/免费推理 ──
+ {id:'groq',name:'Groq',tags:['fast','free'],desc:'\u6781\u901f\u63a8\u7406 Llama 4 / R1',base:'https://api.groq.com/openai/v1',models:['llama-4-scout-17b-16e-instruct','llama-4-maverick','llama-3.3-70b-versatile','deepseek-r1-distill-llama-70b','qwen/qwen3-32b','moonshotai/kimi-k2-instruct','groq/compound','gemma2-9b-it'],link:'https://console.groq.com/'},
+ {id:'cerebras',name:'Cerebras',tags:['fast','free'],desc:'1500 tok/s \u6781\u901f\u63a8\u7406',base:'https://api.cerebras.ai/v1',models:['llama-4-scout-17b-16e-instruct','llama-4-maverick-17b-128e-instruct','llama3.3-70b','qwen-3-coder-480b','qwen-3-32b','deepseek-r1-distill-llama-70b'],link:'https://cloud.cerebras.ai/'},
+ {id:'nvidia',name:'NVIDIA NIM',tags:['fast','free'],desc:'NVIDIA \u63a8\u7406\u5e73\u53f0',base:'https://integrate.api.nvidia.com/v1',models:['nemotron-3-super-120b-a12b','nemotron-3-ultra-550b-a55b','llama-4-scout-17b-16e-instruct','llama-4-maverick-17b-128e-instruct'],link:'https://build.nvidia.com/'},
+ {id:'perplexity',name:'Perplexity',tags:[],desc:'\u8054\u7f51\u641c\u7d22',base:'https://api.perplexity.ai',models:['sonar-pro','sonar','sonar-reasoning-pro','sonar-reasoning','sonar-deep-research'],link:'https://www.perplexity.ai/settings/api'},
+
+ // ── 新增 Provider (★ 从 Hermes 同步) ──
+ {id:'huggingface',name:'HuggingFace',tags:['free'],desc:'\u5f00\u6e90\u6a21\u578b\u63a8\u7406',base:'https://api-inference.huggingface.co/v1',models:['Qwen/Qwen3.5-72B-Instruct','deepseek-ai/DeepSeek-V3.2','meta-llama/Llama-4-Scout-17B-16E-Instruct','mistralai/Mistral-Small-3.2-24B-Instruct'],link:'https://huggingface.co/'},
+ {id:'copilot',name:'GitHub Copilot',tags:['hot'],desc:'GitHub Copilot',base:'https://api.githubcopilot.com/v1',models:['gpt-4o','gpt-4o-mini','claude-sonnet-4','o3-mini'],link:'https://github.com/features/copilot'},
+ {id:'sambanova',name:'SambaNova',tags:['fast'],desc:'\u9ad8\u901f\u63a8\u7406',base:'https://api.sambanova.ai/v1',models:['Meta-Llama-3.3-70B-Instruct','DeepSeek-V3-0324','Qwen3-32B'],link:'https://cloud.sambanova.ai/'},
+ {id:'cloudflare',name:'Cloudflare AI',tags:['fast','free'],desc:'\u8fb9\u7f18\u63a8\u7406',base:'https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1',models:['@cf/meta/llama-3.3-70b-instruct-fp8','@cf/deepseek-ai/deepseek-v3','@cf/qwen/qwen3-32b'],link:'https://developers.cloudflare.com/workers-ai/'},
+ {id:'coze',name:'Coze / \u6263\u5b50',tags:['cn'],desc:'\u5b57\u8282\u8df3\u52a8 agent \u5e73\u53f0',base:'https://api.coze.cn/v1',models:['coze-gpt-4o','coze-claude-3.5-sonnet','coze-gemini-1.5-pro'],link:'https://www.coze.cn/'},
+ {id:'amazon',name:'Amazon Bedrock',tags:[],desc:'AWS \u539f\u751f\u6a21\u578b',base:'https://bedrock-runtime.us-east-1.amazonaws.com/v1',models:['nova-premier-v1','nova-pro-v1','nova-lite-v1','nova-micro-v1'],link:'https://aws.amazon.com/bedrock/'},
+
+ // ── 本地/自定义 ──
+ {id:'custom',name:'\u81ea\u5b9a\u4e49/\u4e2d\u8f6c\u7ad9',tags:[],desc:'\u81ea\u5b9a\u4e49API\u7aef\u70b9',base:'',models:[],link:'',isCustom:true},
+ {id:'lmstudio',name:'LM Studio',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:1234/v1',models:[],link:'https://lmstudio.ai/',isLocal:true},
+ {id:'ollama',name:'Ollama',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:11434/v1',models:[],link:'https://ollama.com/',isLocal:true}
+];
+
+// ===== STATE =====
+let selectedProvider = null;
+let selectedBase = '';
+let selectedModel = '';
+let currentStep = 1;
+let gatewayPort = null;
+// Gateway auth token. Read from openclaw.json on load (loadConfig
+// below). Defaults to 'openclaw' if user hasn't customized it.
+let _gatewayToken = 'openclaw';
+let configData = null;
+
+// ===== RENDER PROVIDERS =====
+// Global state for provider filtering. The default filter shows
+// only providers tagged 'hot' so first-time users see ~5 cards
+// instead of a wall of 28. Users can click chips or search to
+// reveal more.
+var providerFilter = 'hot';
+var providerSearchQuery = '';
+
+function _matchProvider(p) {
+ if (providerSearchQuery) {
+ var q = providerSearchQuery.toLowerCase();
+ var hay = (p.id + ' ' + p.name + ' ' + (p.desc || '') + ' ' + (p.models || []).join(' ') + ' ' + (p.tags || []).join(' ')).toLowerCase();
+ // Also match Chinese tag aliases
+ var aliasMap = {hot:'推荐',free:'免费',cn:'国产',fast:'快',cheap:'便宜',local:'本地'};
+ (p.tags || []).forEach(function(t){ if (aliasMap[t]) hay += ' ' + aliasMap[t]; });
+ if (p.isLocal) hay += ' local 本地';
+ if (p.isCustom) hay += ' custom 自定义 中转';
+ return hay.indexOf(q) !== -1;
+ }
+ return true;
+}
+
+function searchProviders(q) {
+ providerSearchQuery = q.trim();
+ renderProviders();
+}
+
+// Provider icon helper — maps provider ID to SVG icon file
+var _iconMap = {zai:'zhipu',ernie:'baichuan',hunyuan:'qwen',siliconflow:'deepseek',novita:'openai',hyperbolic:'meta',deepinfra:'meta',stepfun:'yi',custom:'openrouter'};
+function providerIcon(id) {
+ var name = _iconMap[id] || id;
+ return '<img src="/icons/' + name + '.svg" width="20" height="20" alt="" style="border-radius:4px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+}
+
+function renderProviders() {
+ var grid = document.getElementById('providerGrid');
+ if (!grid) return;
+ var visible = PROVIDERS.filter(_matchProvider);
+ var emptyEl = document.getElementById('providerEmpty');
+ var countEl = document.getElementById('providerCount');
+ var totalEl = document.getElementById('providerTotal');
+ if (totalEl) totalEl.textContent = String(PROVIDERS.length);
+ if (countEl) {
+ if (providerSearchQuery) {
+ countEl.textContent = '匹配 ' + visible.length + ' / ' + PROVIDERS.length;
+ } else {
+ countEl.textContent = '显示 ' + visible.length + ' / ' + PROVIDERS.length;
+ }
+ }
+ if (visible.length === 0) {
+ grid.style.display = 'none';
+ if (emptyEl) emptyEl.style.display = 'block';
+ return;
+ }
+ grid.style.display = '';
+ if (emptyEl) emptyEl.style.display = 'none';
+ var _st = { sysDone: false, ownDone: false };
+ var _head = function(label, sub) {
+ return '<div style="grid-column:1/-1;margin:16px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:0.8em;">'
+ + '<span style="color:var(--emerald);font-weight:600;">' + label + '</span>'
+ + '<span style="color:var(--fg-muted);"> ' + sub + '</span></div>';
+ };
+grid.innerHTML = visible.map(p => {
+ var headHtml = '';
+ if (isOfficialManaged(p)) { if (!_st.sysDone) { _st.sysDone = true; headHtml = _head('系统配置', '· 官方内置 · Key 请到官方控制台填写'); } }
+ else if (!_st.ownDone) { _st.ownDone = true; headHtml = _head('独有配置', '· 自定义 / 本地 · 在本页填写'); }
+ // Defense in depth: PROVIDERS is now dynamic (hot-updatable catalog
+ // pulled from the maintainer's repo or imported by the user), so every
+ // interpolation below must be escaped. _e is defined BEFORE first use
+ // — the catalog path made tags/base untrusted inputs.
+ // (B23-03, extended for hot-update)
+ const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
+ // configured in the official Control UI, NOT here. Show an informational
+ // card (no editable form) that points the user to the official UI.
+ if (isOfficialManaged(p)) {
+  return headHtml + '<div class="provider-card managed-card" data-id="' + _e(p.id) + '" data-managed="1">' +
+   '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' +
+   '<span class="tag managed-tag">官方托管</span></div>' +
+   '<div class="provider-desc">' + _e(p.desc) + '</div>' +
+   '<div class="provider-expand managed-expand">' +
+   '<p class="hint" style="margin:2px 0 4px;color:var(--emerald);font-size:0.85em;">此平台由 OpenClaw 官方扩展内置。</p>' +
+   '<p class="hint" style="margin:0 0 6px;font-size:0.8em;line-height:1.6;">请在 <strong>OpenClaw 官方界面</strong>（配置中心的 <code>打开 Dashboard</code> 或浏览器访问网关首页）中选择 ' + _e(p.name) + ' 并填写 API Key，保存后重启即生效。配置中心不直接写入该平台。</p>' +
+   '<button class="btn btn-sm" style="margin-top:4px;" onclick="event.stopPropagation(); openGateway();">前往官方界面配置 →</button>' +
+   '</div></div>';
+ }
+ let formHtml = '';
+ if (p.isCustom) {
+ formHtml = '<div class="provider-expand">' +
+ '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
+ '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
+ '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
+ '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div></div>';
+ } else if (p.isLocal) {
+ var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
+ formHtml = '<div class="provider-expand">' +
+ '<input type="text" class="input" placeholder="Port (default: ' + _e(_port) + ')" data-field="port" value="' + _e(_port) + '">' +
+ '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
+ '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button></div>';
+ } else {
+ const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
+ formHtml = '<div class="provider-expand">' +
+ '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
+ '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
+ '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div>' +
+ '<a href="' + _e(p.link) + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
+ '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+ _e(p.id) +'\')">' +
+ '测试 Key</button><span id="keytest-'+ _e(p.id) +'" style="margin-left:8px;font-size:0.78em;"></span></div>';
+ }
+ return headHtml + '<div class="provider-card" data-id="' + _e(p.id) + '" onclick="toggleProvider(this,\'' + _e(p.id) + '\')">' +
+ '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + '</div>' +
+ '<div class="provider-desc">' + _e(p.desc) + '</div>' + formHtml + '</div>';
+ }).join('');
+}
+
+// Initial render + delegated input listener (only attached once)
+renderProviders();
+(function attachProviderListeners(){
+ var grid = document.getElementById('providerGrid');
+ if (!grid) return;
+ grid.addEventListener('input', function(e) {
+ if (e.target.matches('[data-field]')) updateSaveBtn();
+ });
+ grid.addEventListener('change', function(e) {
+ if (e.target.matches('[data-field]')) updateSaveBtn();
+ });
+})();
+
+// ===== MODEL CATALOG HOT-UPDATE =====
+// The catalog above is the embedded offline default. On load we ask the
+// config-server for the hot-updatable copy (user-pulled cache in
+// data/.openclaw/models-catalog.json, falling back to the shipped
+// models-catalog.json). If the cache is stale (>7d) we refresh it from
+// the maintainer's repo in the background — the user never waits.
+var catalogInfo = { version: '', updatedAt: '', source: 'embedded' };
+
+function _catalogSourceLabel(src) {
+ return { 'cache': '已更新', 'built-in': '内置', 'embedded': '内置', 'manual': '手动导入', 'remote': '已更新' }[src] || src || '';
+}
+
+function updateCatalogBadge() {
+ var el = document.getElementById('catalogInfo');
+ if (!el) return;
+ var when = catalogInfo.updatedAt ? ' · ' + String(catalogInfo.updatedAt).slice(0, 10) : '';
+ el.textContent = '模型目录：' + (catalogInfo.version || '内置版本') + ' · ' + _catalogSourceLabel(catalogInfo.source) + when;
+}
+
+// Replace the catalog IN PLACE (splice, not reassign) so every closure
+// holding a reference to PROVIDERS (filters, presets, save flow) sees
+// the new data. Re-render picks up the change immediately.
+//
+// Lossless for the user: renderProviders() rebuilds the grid's innerHTML,
+// which would silently wipe half-typed API keys and collapse the open
+// card. We snapshot every non-empty [data-field] value + the open card
+// before re-rendering and restore them after. Automatic (background)
+// refreshes take the extra-safe path: if anything is dirty they skip
+// the swap entirely and let the next page load pick the catalog up.
+function applyCatalog(providers, info, auto) {
+ if (!Array.isArray(providers) || providers.length === 0) return false;
+ var grid = document.getElementById('providerGrid');
+ var dirty = [];
+ if (grid) {
+ grid.querySelectorAll('[data-field]').forEach(function(el){
+ var v = String(el.value || '');
+ if (v.trim() === '') return;
+ var card = el.closest('.provider-card');
+ if (!card) return;
+ dirty.push({ id: card.getAttribute('data-id'), field: el.getAttribute('data-field'), value: v });
+ });
+ }
+ if (auto && dirty.length > 0) return false;
+ var openCard = grid && grid.querySelector('.provider-card.selected');
+ var openId = openCard ? openCard.getAttribute('data-id') : null;
+ PROVIDERS.length = 0;
+ Array.prototype.push.apply(PROVIDERS, providers);
+ if (info) catalogInfo = info;
+ updateCatalogBadge();
+ renderProviders();
+ if (openId) {
+ var card = document.querySelector('.provider-card[data-id="' + openId + '"]');
+ if (card) {
+ card.classList.add('selected');
+ var ex = card.querySelector('.provider-expand');
+ if (ex) ex.classList.add('open');
+ }
+ }
+ dirty.forEach(function(d){
+ var card = document.querySelector('.provider-card[data-id="' + d.id + '"]');
+ if (!card) return;
+ var el = card.querySelector('[data-field="' + d.field + '"]');
+ if (el) el.value = d.value;
+ });
+ updateSaveBtn();
+ return true;
+}
+
+function loadCatalog(auto) {
+ apiFetch('/api/models/catalog', { timeout: 8000 }).then(function(r){ return r.json(); }).then(function(data) {
+ if (!data || !data.ok) return;
+ if (data.providers && data.providers.length) {
+ // auto=true: page-load apply — skip entirely if the user is already
+ // typing into a card (a background swap must never cost input).
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: data.source }, true);
+ }
+ // Background refresh when the cache is stale or only the embedded
+ // list is available. silent=true → no error toast if offline.
+ if (auto && data.stale) refreshCatalog(true);
+ }).catch(function() { /* offline / server not ready — keep embedded list */ });
+}
+
+function refreshCatalog(silent) {
+ if (!silent) showToast('正在拉取最新模型目录…', 'info');
+ apiFetch('/api/models/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+ .then(function(r){ return r.json(); })
+ .then(function(data) {
+ if (data && data.ok && data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: 'remote' });
+ showToast('模型目录已更新：v' + (data.version || '?') + '（' + data.providers.length + ' 个平台）', 'success');
+ } else if (!silent) {
+ showToast('目录更新失败：' + ((data && data.error) || '未知错误'), 'error');
+ }
+ })
+ .catch(function() { if (!silent) showToast('目录更新失败：网络错误', 'error'); });
+}
+
+function onCatalogFile(input) {
+ var f = input.files && input.files[0];
+ input.value = '';
+ if (!f) return;
+ var fr = new FileReader();
+ fr.onload = function() {
+ var parsed;
+ try { parsed = JSON.parse(fr.result); }
+ catch (e) { showToast('导入失败：文件不是有效 JSON', 'error'); return; }
+ apiFetch('/api/models/catalog', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ catalog: parsed }) })
+ .then(function(r){ return r.json(); })
+ .then(function(data) {
+ if (data && data.ok && data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: data.updatedAt, source: 'manual' });
+ showToast('已导入目录：v' + (data.version || '?') + '（' + data.providers.length + ' 个平台）', 'success');
+ } else {
+ showToast('导入失败：' + ((data && data.error) || '格式无效'), 'error');
+ }
+ })
+ .catch(function() { showToast('导入失败：网络错误', 'error'); });
+ };
+ fr.readAsText(f);
+}
+
+function exportCatalog() {
+ var payload = {
+ version: catalogInfo.version || 'export',
+ updatedAt: new Date().toISOString(),
+ providers: PROVIDERS
+ };
+ var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+ var a = document.createElement('a');
+ a.href = URL.createObjectURL(blob);
+ a.download = 'openclaw-models-catalog.json';
+ document.body.appendChild(a);
+ a.click();
+ setTimeout(function() { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function resetCatalog() {
+ apiFetch('/api/models/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+ .then(function(r){ return r.json(); })
+ .then(function(data) {
+ if (data && data.ok) {
+ if (data.providers && data.providers.length) {
+ applyCatalog(data.providers, { version: data.version, updatedAt: '', source: 'built-in' });
+ } else {
+ catalogInfo = { version: '', updatedAt: '', source: 'embedded' };
+ updateCatalogBadge();
+ renderProviders();
+ }
+ showToast('已恢复内置模型目录', 'success');
+ } else {
+ showToast('恢复失败：' + ((data && data.error) || '未知错误'), 'error');
+ }
+ })
+ .catch(function() { showToast('恢复失败：网络错误', 'error'); });
+}
+
+// ===== TOGGLE PROVIDER =====
+function toggleProvider(card, id) {
+ // Don't toggle if user clicked on an input, select, button, or link inside the expand
+ var evt = window.event || arguments[2];
+ if (evt && evt.target) {
+ var tag = evt.target.tagName.toLowerCase();
+ if (tag === 'input' || tag === 'select' || tag === 'button' || tag === 'a' || tag === 'option' || tag === 'textarea') return;
+ if (evt.target.closest && evt.target.closest('.provider-expand')) return;
+ }
+ const grid = document.getElementById('providerGrid');
+ const allCards = grid.querySelectorAll('.provider-card');
+ const expand = card.querySelector('.provider-expand');
+ const isOpen = expand && expand.classList.contains('open');
+
+ // Close all
+ allCards.forEach(c => {
+ c.classList.remove('selected');
+ const ex = c.querySelector('.provider-expand');
+ if (ex) ex.classList.remove('open');
+ });
+
+ if (!isOpen && expand) {
+ card.classList.add('selected');
+ expand.classList.add('open');
+ selectedProvider = id;
+ const p = PROVIDERS.find(x => x.id === id);
+ selectedBase = p ? p.base : '';
+ // Scroll into view
+ setTimeout(() => card.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+ } else {
+ selectedProvider = null;
+ selectedBase = '';
+ selectedModel = '';
+ }
+ updateSaveBtn();
+}
+
+// ===== UPDATE SAVE BUTTON =====
+function updateSaveBtn() {
+ const btn = document.getElementById('saveBtn');
+ if (!btn) return;
+ const p = PROVIDERS.find(x => x.id === selectedProvider);
+ if (!p) { btn.disabled = true; return; }
+
+ const card = document.querySelector('.provider-card[data-id="' + selectedProvider + '"]');
+ if (!card) { btn.disabled = true; return; }
+
+ if (p.isLocal) {
+ const port = card.querySelector('[data-field="port"]');
+ const model = card.querySelector('[data-field="model"]');
+ btn.disabled = !(port && port.value && model && model.value);
+ } else if (p.isCustom) {
+ const base = card.querySelector('[data-field="base"]');
+ const model = card.querySelector('[data-field="model"]');
+ const key = card.querySelector('[data-field="apikey"]');
+ btn.disabled = !(base && base.value && model && model.value && key && key.value);
+ } else {
+ const model = card.querySelector('[data-field="model"]');
+ const key = card.querySelector('[data-field="apikey"]');
+ btn.disabled = !(model && model.value && key && key.value);
+ }
+}
+
+// ===== TOGGLE PASSWORD =====
+function togglePw(id) {
+ const el = document.getElementById('key-' + id) || document.getElementById('ch-' + id);
+ if (el) {
+ el.type = el.type === 'password' ? 'text' : 'password';
+ }
+}
+
+// ===== TEST LOCAL =====
+function testLocal(providerId) {
+ const card = document.querySelector('.provider-card[data-id="' + providerId + '"]');
+ if (!card) return;
+ const portInput = card.querySelector('[data-field="port"]');
+ const port = portInput ? portInput.value : '11434';
+ // Validate port is a number to avoid URL injection
+ if (!/^\d{1,5}$/.test(String(port))) {
+ showToast('端口号无效', 'error');
+ return;
+ }
+ const base = 'http://127.0.0.1:' + port + '/v1';
+ // Timeout: local model server may be starting up or hanging.
+ // Without this the spinner could hang for minutes. Don't clear the
+ // timer until BOTH headers and body are read — clearing right after
+ // the fetch resolves leaves r.json() unprotected.
+ const ctrl = new AbortController();
+ const tt = setTimeout(function(){ ctrl.abort(); }, 5000);
+ fetch(base + '/models', { signal: ctrl.signal }).then(r => r.json()).then(data => {
+ clearTimeout(tt);
+ if (data && data.data) {
+ showToast('\u5df2\u8fde\u63a5\uff0c\u53d1\u73b0 ' + data.data.length + ' \u4e2a\u6a21\u578b', 'success');
+ // Auto-fill model select if empty
+ const modelInput = card.querySelector('[data-field="model"]');
+ if (modelInput && !modelInput.value && data.data.length > 0) {
+ modelInput.value = data.data[0].id;
+ updateSaveBtn();
+ }
+ } else {
+ showToast('\u5df2\u8fde\u63a5\u4f46\u672a\u52a0\u8f7d\u6a21\u578b', 'warning');
+ }
+ }).catch(err => {
+ clearTimeout(tt);
+ showToast('\u8fde\u63a5\u5931\u8d25: ' + (err.name === 'AbortError' ? '超时' : err.message), 'error');
+ });
+}
+
+// ===== TEST API KEY =====
+function testKey(providerId) {
+ var p = PROVIDERS.find(function(x){return x.id===providerId;});
+ if (!p) return;
+ var card = document.querySelector('.provider-card[data-id="'+providerId+'"]');
+ if (!card) return;
+ var keyEl = card.querySelector('[data-field="apikey"]');
+ var key = keyEl ? keyEl.value.trim() : '';
+ if (!key || key.length < 6) { showToast('请先填写 API Key', 'error'); return; }
+ var resultEl = document.getElementById('keytest-'+providerId);
+ if (resultEl) resultEl.innerHTML = '<span style="color:var(--warning);">测试中...</span>';
+ apiFetch('/api/key/test', {
+ method: 'POST',
+ headers: {'Content-Type':'application/json'},
+ body: JSON.stringify({provider: providerId, baseUrl: p.base, apiKey: key})
+ }).then(function(r){return r.json();}).then(function(data){
+ if (resultEl) {
+ // HTML-escape data.error in case the backend (or upstream API)
+ // ever returns characters that could be interpreted as markup.
+ var _esc = function(s) {
+ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+ });
+ };
+ if (data.ok) {
+ resultEl.innerHTML = '<span style="color:var(--emerald);">有效' + (data.models ? ' ('+parseInt(data.models,10)+' 模型)' : '') + '</span>';
+ } else {
+ resultEl.innerHTML = '<span style="color:var(--destructive);">' + _esc(data.error || '失败') + '</span>';
+ }
+ }
+ }).catch(function(){
+ if (resultEl) resultEl.innerHTML = '<span style="color:var(--destructive);">网络错误</span>';
+ });
+}
+
+// ===== PRESETS =====
+function applyPreset(providerId, modelName) {
+ // 展开对应卡片
+ var card = document.querySelector('.provider-card[data-id="'+providerId+'"]');
+ if (card) {
+ toggleProvider(card, providerId);
+ // 等 DOM 更新后填充
+ setTimeout(function(){
+ var c = document.querySelector('.provider-card[data-id="'+providerId+'"]');
+ if (!c) return;
+ // 选择模型
+ var sel = c.querySelector('[data-field="model"]');
+ if (sel) {
+ for (var i = 0; i < sel.options.length; i++) {
+ if (sel.options[i].value === modelName) { sel.selectedIndex = i; break; }
+ }
+ }
+ // 聚焦 API Key 输入框
+ var keyInput = c.querySelector('[data-field="apikey"]');
+ if (keyInput) {
+ keyInput.focus();
+ keyInput.placeholder = '粘贴你的 ' + providerId + ' API Key';
+ }
+ updateSaveBtn();
+ showToast('已选择 ' + providerId + '/' + modelName + '，请填写 API Key', 'info');
+ }, 200);
+ }
+}
+
+// ===== MODEL REF SCHEMA COMPAT (OpenClaw 2.0) =====
+// OpenClaw 2026.8.x migrates the legacy
+//     agents.defaults.model.primary = "provider/model"
+// into the scoped shape
+//     agents.entries.main.model  = "provider/model@<authProfile>"
+//     agents.entries.main.models = { "provider/model": {...} }
+//     auth.profiles              = { "<authProfile>": { provider, mode } }
+// and moves API keys into the local secret store (SecretRef objects).
+// The config center must understand BOTH shapes. Reading only the legacy one
+// made the summary show "当前: ?/?", hid the quick-switch, and — worst — the
+// next save rewrote the migrated config back into the legacy shape, so the UI
+// displayed the model the user picked while the gateway ran a different one.
+function splitModelRef(ref) {
+  var s = String(ref || '');
+  var at = s.indexOf('@');
+  var head = (at === -1) ? s : s.slice(0, at);
+  var profile = (at === -1) ? '' : s.slice(at + 1);
+  var slash = head.indexOf('/');
+  return {
+    provider: (slash === -1) ? head : head.slice(0, slash),
+    model: (slash === -1) ? '' : head.slice(slash + 1),
+    profile: profile
+  };
+}
+
+function getPrimaryModelRef(cfg) {
+  if (!cfg) return '';
+  var d = cfg.agents && cfg.agents.defaults;
+  if (d && d.model && typeof d.model.primary === 'string' && d.model.primary) return d.model.primary;
+  var entries = cfg.agents && cfg.agents.entries;
+  if (entries && typeof entries === 'object') {
+    var main = entries.main || entries.default;
+    if (!main && Object.keys(entries).length) main = entries[Object.keys(entries)[0]];
+    if (main && typeof main.model === 'string' && main.model) return main.model;
+  }
+  return '';
+}
+
+// Provider ids that collide with a built-in OpenClaw provider extension are
+// renamed to `<id>-api` on save (see config-server). Map them back to the
+// catalog id so the card highlight and quick-switch keep working.
+function catalogProviderId(provider) {
+  if (!provider) return '';
+  for (var i = 0; i < PROVIDERS.length; i++) if (PROVIDERS[i].id === provider) return provider;
+  var m = String(provider).match(/^(.*?)-api(?:-\d+)?$/);
+  if (m) {
+    for (var j = 0; j < PROVIDERS.length; j++) if (PROVIDERS[j].id === m[1]) return m[1];
+  }
+  return provider;
+}
+
+// Write "provider/model" into every schema shape present, preserving the
+// "@<authProfile>" suffix while the provider is unchanged (dropping it would
+// orphan the auth profile and make the model unauthenticated).
+function setPrimaryModelRef(cfg, ref) {
+  if (!cfg) return cfg;
+  cfg.agents = cfg.agents || {};
+  var next = splitModelRef(ref);
+  var entries = cfg.agents.entries;
+  if (entries && typeof entries === 'object') {
+    Object.keys(entries).forEach(function (name) {
+      var e = entries[name];
+      if (!e || typeof e !== 'object' || typeof e.model !== 'string' || !e.model) return;
+      var cur = splitModelRef(e.model);
+      var suffix = (cur.profile && cur.provider === next.provider) ? ('@' + cur.profile) : '';
+      e.model = ref + suffix;
+      if (e.models && typeof e.models === 'object' && cur.provider && cur.provider !== next.provider) {
+        var oldKey = cur.provider + '/' + cur.model + (cur.profile ? '@' + cur.profile : '');
+        if (e.models[oldKey]) { e.models[ref + suffix] = e.models[oldKey]; delete e.models[oldKey]; }
+      }
+    });
+  }
+  cfg.agents.defaults = cfg.agents.defaults || {};
+  cfg.agents.defaults.model = cfg.agents.defaults.model || {};
+  cfg.agents.defaults.model.primary = ref;
+  return cfg;
+}
+
+// ===== CONFIG SUMMARY =====
+function showConfigSummary(cfg) {
+  var el = document.getElementById('configSummary');
+  if (!el) return;
+  var ref = getPrimaryModelRef(cfg || {});
+  var parts = splitModelRef(ref);
+  var provider = parts.provider || '?';
+  var model = parts.model || '?';
+  var keyHint = '';
+  var prov = (cfg && cfg.models && cfg.models.providers) ? cfg.models.providers[provider] : null;
+  if (prov) {
+    if (typeof prov.apiKey === 'string' && prov.apiKey) {
+      keyHint = prov.apiKey.slice(0,4) + '...' + prov.apiKey.slice(-4);
+    } else if (prov.apiKey && typeof prov.apiKey === 'object') {
+      keyHint = 'Key 已存入本地密钥库';
+    } else if (cfg.auth && cfg.auth.profiles) {
+      // 2.0: the key lives in an auth profile, not on the provider entry.
+      var prefix = provider + ':';
+      var profiled = Object.keys(cfg.auth.profiles).some(function (k) {
+        return String(k).indexOf(prefix) === 0;
+      });
+      if (profiled || ref) keyHint = 'Key 已保存（本机）';
+    }
+  }
+  el.style.display = 'block';
+ // Build with DOM nodes (not innerHTML) — provider/model come from the
+ // user's openclaw.json which they may have imported from anywhere. A
+ // string like "<img onerror=...>" would otherwise execute.
+ el.textContent = '';
+ var label = document.createTextNode('\u5f53\u524d: ');
+ var pmSpan = document.createElement('span');
+ pmSpan.style.color = 'var(--fg)';
+ pmSpan.textContent = provider + '/' + model;
+ el.appendChild(label);
+ el.appendChild(pmSpan);
+ if (keyHint) el.appendChild(document.createTextNode(' \u00b7 Key: ' + keyHint));
+}
+
+function populateQuickSwitch(cfg) {
+ var el = document.getElementById('quickSwitch');
+ var sel = document.getElementById('quickModel');
+ if (!el || !sel) return;
+ // Legacy schema AND OpenClaw 2.0 scoped schema (agents.entries.<n>.model).
+ var parts = splitModelRef(getPrimaryModelRef(cfg));
+ // `minimax` may have been renamed to `minimax-api` on save (built-in
+ // extension collision) — map back to the catalog card so the dropdown
+ // still offers the right model list.
+ var p = PROVIDERS.find(function(x){return x.id === catalogProviderId(parts.provider);});
+ if (!p || !p.models || p.models.length <= 1) { el.style.display = 'none'; return; }
+ el.style.display = 'block';
+ var currentModel = parts.model;
+ sel.innerHTML = p.models.map(function(m){
+ var em = m.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ // Show the vendor's real name when the official catalog supplies one; the
+ // option VALUE stays the raw id so config writes are unaffected.
+ var lbl = String(modelLabel(p, m)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ return '<option value="'+em+'"'+(m===currentModel?' selected':'')+'>'+lbl+'</option>';
+ }).join('');
+}
+
+function quickSwitchModel() {
+ var sel = document.getElementById('quickModel');
+ if (!sel || !sel.value || !configData) return;
+ var provider = splitModelRef(getPrimaryModelRef(configData)).provider;
+ if (!provider) return;
+ // 更新 configData — 同时写入新旧两套 schema，保留 @authProfile 后缀
+ setPrimaryModelRef(configData, provider + '/' + sel.value);
+ // 同时更新 models 数组里的 id
+ if (configData.models && configData.models.providers && configData.models.providers[provider]) {
+ var prov = configData.models.providers[provider];
+ if (prov.models && prov.models[0]) {
+ prov.models[0].id = sel.value;
+ prov.models[0].name = sel.value;
+ }
+ }
+ // 保存并重启
+ apiFetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configData)})
+ .then(function(r){return r.json();})
+ .then(function(data){
+ if (data.ok) {
+ showToast('\u5df2\u5207\u6362\u5230 ' + sel.value + '\uff0c\u91cd\u542f\u4e2d...', 'success');
+ showConfigSummary(configData);
+ apiFetch('/api/restart', {method:'POST'}).then(function(){
+ setTimeout(checkGateway, 4000);
+ });
+ } else {
+ showToast('\u274c ' + (data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
+ }
+ });
+}
+
+function highlightCurrentProvider(cfg) {
+ if (!cfg.models || !cfg.models.providers) return;
+ var providerIds = Object.keys(cfg.models.providers);
+ if (providerIds.length === 0) return;
+ // 高亮"当前生效"的 provider，而不是 providers 里第一个。
+ // providerIds[0] 来自用户的 openclaw.json —— 直接拼进 querySelector 既可能
+ // 选错卡片（顺序不保证），也会把不可信字符串带进选择器。改成遍历比较
+ // data-id，同时把重命名过的 `<id>-api` 映射回目录 id。
+ var preferred = catalogProviderId(splitModelRef(getPrimaryModelRef(cfg)).provider) ||
+                 catalogProviderId(providerIds[0]);
+ // 等 DOM 渲染完再高亮
+ setTimeout(function(){
+  var cards = document.querySelectorAll('.provider-card');
+  for (var i = 0; i < cards.length; i++) {
+   if (cards[i].getAttribute('data-id') === preferred) {
+    cards[i].style.borderColor = 'var(--emerald-dim)';
+    break;
+   }
+  }
+ }, 500);
+}
+
+// ===== BUILD CONFIG =====
+function buildConfig(provider, base, model, apiKey) {
+ var bc = {
+  gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
+  // NOTE: never put `commands.ownerDisplay` here. In 2026.8.2 it is a
+  // deprecated doctor-only legacy key (see CommandsConfig in openclaw's own
+  // types) that the RUNTIME schema rejects: the gateway logs
+  // `[reload] config reload skipped (invalid config): commands: Unrecognized
+  // key: "ownerDisplay"`, the save silently does not apply, and the follow-up
+  // /api/restart then hangs for 30s until it times out.
+  commands:{native:'auto',nativeSkills:'auto',restart:true},
+
+ };
+ var pn = provider || 'myProvider';
+ var ref = pn + '/' + model;
+ var agents = {
+  defaults: { model: { primary: ref } },
+  // DIRECTION-A / 2.0 schema: the active model ref must ALSO be written to the
+  // scoped `agents.entries.main.model`, or a gateway on the 2.0 config keeps
+  // running whatever `agents.entries` already says while we flip the legacy
+  // `defaults.model.primary` underneath it (schema drift, 雷14-adjacent).
+  entries: { main: { model: ref } }
+ };
+ if (provider === 'zai') {
+  return Object.assign({}, bc, { env: { ZAI_API_KEY: apiKey }, agents: agents });
+ }
+ var apiType = provider === 'lmstudio' ? 'openai-responses' : 'openai-completions';
+ // MODEL-LIST OWNERSHIP: if a bundled extension ships a `modelCatalog` for
+ // this provider, the OFFICIAL rows are the source of truth. Injecting our own
+ // `models[]` here collides by id under `models.mode:'merge'` — same id,
+ // conflicting metadata, silent degradation. Real case (2026-09-03,
+ // v2.0.0-beta.2): we injected `deepseek-v4-flash` as name=raw id /
+ // reasoning=false / contextWindow=196608 / maxTokens=8192 / cost=0, while the
+ // bundled deepseek extension declares the SAME id as name="DeepSeek V4 Flash"
+ // / reasoning=true / contextWindow=1000000 / maxTokens=384000 / real cost.
+ // Result: duplicated rows + wrong labels + context cut ~5x + output cut ~47x
+ // + zeroed cost. So for those ids write the CONNECTION details only and let
+ // the extension supply the models. Custom + local runtimes have no official
+ // catalog, so they keep the synthesized row.
+ var pObj = null;
+ for (var _pi = 0; _pi < PROVIDERS.length; _pi++) {
+  if (PROVIDERS[_pi] && PROVIDERS[_pi].id === pn) { pObj = PROVIDERS[_pi]; break; }
+ }
+ var provEntry = { baseUrl: base, apiKey: apiKey, api: apiType };
+ if (!(pObj && pObj.hasOfficialCatalog)) {
+  provEntry.models = [{id:model,name:model,reasoning:false,input:['text'],
+   cost:{input:0,output:0,cacheRead:0,cacheWrite:0},contextWindow:196608,maxTokens:8192}];
+ }
+ var provs = {}; provs[pn] = provEntry;
+ return Object.assign({}, bc, {models:{mode:'merge',providers:provs}, agents: agents});
+}
+
+// ===== SAVE CONFIG =====
+// Re-entrancy guard: rapid double-clicks on the save button used to
+// fire two POST /api/config + two /api/restart in parallel. Server
+// handled the config writes atomically, but two restart spawns racing
+// each other could land on different ports or kill each other.
+var _saveConfigBusy = false;
+function saveConfig() {
+ if (_saveConfigBusy) return;
+ if (!selectedProvider) { showToast('\u8bf7\u5148\u9009\u62e9\u6a21\u578b\u63d0\u4f9b\u5546', 'error'); return; }
+ const p = PROVIDERS.find(x => x.id === selectedProvider);
+ const card = document.querySelector('.provider-card[data-id="' + selectedProvider + '"]');
+ if (!card) return;
+
+ let base, model, apiKey;
+ if (p.isLocal) {
+ const portInput = card.querySelector('[data-field="port"]');
+ // p.base comes from the hot-updatable catalog and may be absent for
+ // imported entries — guard like renderProviders does.
+ const port = portInput ? portInput.value : ((String(p.base || '').match(/:(\d+)/)) || [])[1];
+ base = 'http://127.0.0.1:' + port + '/v1';
+ model = (card.querySelector('[data-field="model"]') || {}).value || '';
+ apiKey = '';
+ } else if (p.isCustom) {
+ base = (card.querySelector('[data-field="base"]') || {}).value || '';
+ model = (card.querySelector('[data-field="model"]') || {}).value || '';
+ apiKey = (card.querySelector('[data-field="apikey"]') || {}).value || '';
+ } else {
+ base = p.base;
+ model = (card.querySelector('[data-field="model"]') || {}).value || '';
+ apiKey = (card.querySelector('[data-field="apikey"]') || {}).value || '';
+ }
+
+ if (!model) { showToast('\u8bf7\u9009\u62e9\u6216\u8f93\u5165\u6a21\u578b', 'error'); return; }
+
+ const cfg = buildConfig(selectedProvider, base, model, apiKey);
+ configData = cfg;
+
+ _saveConfigBusy = true;
+ apiFetch('/api/config', {
+ method: 'POST',
+ headers: {'Content-Type':'application/json'},
+ body: JSON.stringify(cfg)
+ }).then(function(r) { return r.json(); }).then(function(data) {
+ _saveConfigBusy = false;
+ if (data.ok) {
+ showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
+ try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
+ goStep(2);
+ // 显示配置摘要
+ showConfigSummary(cfg);
+ populateQuickSwitch(cfg);
+ // 自动重启 Gateway 使新配置生效
+ apiFetch('/api/restart', {method:'POST'}).then(function(){
+ showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
+ var waitCount = 0;
+ var waitReady = setInterval(function(){
+ waitCount++;
+ if (waitCount > 30) {
+ clearInterval(waitReady);
+ var _hf = document.getElementById('hotFailBanner');
+ if (_hf) _hf.style.display = 'block';
+ showToast('Gateway \u672a\u80fd\u81ea\u52a8\u6062\u590d\uff0c\u8bf7\u5173\u95ed\u6240\u6709\u7a97\u53e3\u540e\u91cd\u65b0\u542f\u52a8', 'error');
+ return;
+ }
+ findGatewayPort().then(function(port){
+ if (port) {
+ clearInterval(waitReady);
+ showToast('Gateway \u5df2\u5c31\u7eea', 'success');
+ var _hfo = document.getElementById('hotFailBanner'); if (_hfo) _hfo.style.display = 'none';
+ checkGateway();
+ }
+ });
+ }, 2000);
+ }).catch(function(){});
+ } else {
+ showToast((data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
+ }
+ }).catch(function(err) {
+ _saveConfigBusy = false;
+ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error');
+ });
+}
+
+// ===== RESET CONFIG =====
+function resetConfig() {
+ showModal('\u786e\u8ba4\u91cd\u7f6e', '<p>\u786e\u5b9a\u8981\u91cd\u7f6e\u6240\u6709\u914d\u7f6e\u5417\uff1f</p>', [
+ {text:'\u53d6\u6d88',cls:'btn',action:'closeModal()'},
+ {text:'\u786e\u5b9a\u91cd\u7f6e',cls:'btn btn-danger',action:'doReset()'}
+ ]);
+}
+
+function doReset() {
+ closeModal();
+ var defaultCfg = {gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}}};
+ apiFetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaultCfg)}).then(function(r){return r.json();}).then(function(data) {
+ if (data.ok) {
+ showToast('\u5df2\u91cd\u7f6e\uff0c\u91cd\u542f Gateway...', 'success');
+ apiFetch('/api/restart', {method:'POST'}).catch(function(){});
+ selectedProvider = null;
+ selectedBase = '';
+ selectedModel = '';
+ configData = null;
+ document.querySelectorAll('.provider-card').forEach(c => {
+ c.classList.remove('selected');
+ const ex = c.querySelector('.provider-expand');
+ if (ex) { ex.classList.remove('open'); ex.querySelectorAll('input,select').forEach(i => i.value = ''); }
+ });
+ goStep(1);
+ updateSaveBtn();
+ } else {
+ showToast('\u274c ' + (data.error || '\u91cd\u7f6e\u5931\u8d25'), 'error');
+ }
+ }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
+}
+
+// ===== GO STEP =====
+function goStep(n) {
+ currentStep = n;
+ for (var i = 1; i <= 2; i++) {
+ var sec = document.getElementById('step' + i);
+ var ind = document.getElementById('stepInd' + i);
+ if (i === n) { sec.classList.remove('collapsed'); sec.classList.add('active'); ind.classList.add('active'); ind.classList.remove('done'); }
+ else if (i < n) { sec.classList.remove('active'); sec.classList.add('collapsed'); ind.classList.remove('active'); ind.classList.add('done'); }
+ else { sec.classList.remove('active'); sec.classList.add('collapsed'); ind.classList.remove('active','done'); }
+ }
+}
+
+// ===== TOAST =====
+function showToast(msg, type) {
+ type = type || 'info';
+ var container = document.getElementById('toastContainer');
+ if (!container) return;
+ var el = document.createElement('div');
+ el.className = 'toast-item ' + type;
+ el.textContent = msg;
+ container.appendChild(el);
+ requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.classList.add('show'); }); });
+ el.onclick = function() { el.remove(); };
+ setTimeout(function(){ el.classList.remove('show'); setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 300); }, 4000);
+}
+
+// ===== MODAL =====
+// Action handler dispatch — replaces the previous `new Function(b.action)`
+// pattern which was an eval sink. viewConfig in particular built its
+// "copy" action by interpolating a JSON.stringify(data) into the
+// action string, where any embedded quote/backslash in user-imported
+// config could escape the literal and execute arbitrary JS. (B22-03)
+//
+// Buttons now declare {handler: function} OR a built-in action name
+// from MODAL_ACTIONS. String actions are still tolerated for the few
+// hard-coded callsites (closeModal, doUpdate) but only those exact
+// names are recognised — no eval.
+var MODAL_ACTIONS = {
+ closeModal: function() { closeModal(); },
+ doUpdate: function() { doUpdate(); },
+ doReset: function() { doReset(); }
+};
+
+function showModal(title, body, btns) {
+ var overlay = document.getElementById('modalOverlay');
+ if (!overlay) return;
+ document.getElementById('modalTitle').textContent = title;
+ document.getElementById('modalBody').innerHTML = body;
+ var btnDiv = document.getElementById('modalBtns');
+ btnDiv.innerHTML = '';
+ (btns || []).forEach(function(b) {
+ var btn = document.createElement('button');
+ btn.className = b.cls || 'modal-btn-cancel';
+ btn.textContent = b.text;
+ btn.onclick = function() {
+ try {
+ if (typeof b.handler === 'function') {
+ b.handler();
+ } else if (typeof b.action === 'string') {
+ // Tolerate trailing "()" for back-compat with old callsites.
+ var key = b.action.replace(/\(\)\s*$/, '').trim();
+ if (Object.prototype.hasOwnProperty.call(MODAL_ACTIONS, key)) {
+ MODAL_ACTIONS[key]();
+ } else {
+ // Unknown action: silently ignore. Never eval.
+ console.warn('modal: unknown action', b.action);
+ }
+ }
+ } catch (e) { console.error('modal action error', e); }
+ };
+ btnDiv.appendChild(btn);
+ });
+ overlay.classList.add('show');
+}
+
+function closeModal() {
+ var overlay = document.getElementById('modalOverlay');
+ if (overlay) overlay.classList.remove('show');
+}
+
+// ===== GATEWAY DETECTION =====
+// 优化: 优先尝试上次成功的端口（缓存），失败再扫描全部，并行减少等待
+async function findGatewayPort() {
+ // 优先复用上次成功的端口
+ if (gatewayPort) {
+ try {
+ var r = await fetchT('http://127.0.0.1:'+gatewayPort+'/', {mode:'no-cors', timeout: 2000});
+ return gatewayPort;
+ } catch(e) { gatewayPort = null; }
+ }
+ // 并行扫描所有端口，第一个成功的胜出
+ var promises = [];
+ for (var p = 18789; p <= 18799; p++) {
+ (function(port){
+ promises.push(
+ fetchT('http://127.0.0.1:'+port+'/', {mode:'no-cors', timeout: 2000})
+ .then(function(){ return port; })
+ .catch(function(){ return null; })
+ );
+ })(p);
+ }
+ var results = await Promise.all(promises);
+ var found = results.find(function(x){ return x !== null; });
+ gatewayPort = found || null;
+ return gatewayPort;
+}
+
+function gatewayUrl() {
+ var t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
+ return 'http://127.0.0.1:'+(gatewayPort||18789)+'/#token='+encodeURIComponent(t);
+}
+
+function openGateway() {
+ var t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
+ window.open('http://127.0.0.1:'+(gatewayPort||18789)+'/#token='+encodeURIComponent(t), '_blank');
+}
+
+var _gwOfflineCount = 0;
+var _gwEverOnline = false;
+var _gwCheckBusy = false;
+async function checkGateway() {
+ // Re-entrancy guard: setInterval fires every 15s but findGatewayPort
+ // can take longer on slow systems. Skipping overlapping calls keeps
+ // _gwOfflineCount monotonic so the UI doesn't flicker.
+ if (_gwCheckBusy) return;
+ // Skip when tab is hidden — saves CPU/network and prevents burst
+ // requests when the tab is restored from a long sleep.
+ if (typeof document !== 'undefined' && document.hidden) return;
+ _gwCheckBusy = true;
+ var dot = document.getElementById('statusDot');
+ var text = document.getElementById('statusText');
+ var port;
+ try { port = await findGatewayPort(); }
+ catch (e) { port = null; }
+ finally { _gwCheckBusy = false; }
+ // Helper: write a single status line into the hero terminal.
+ // Class controls color: 'p' = accent green, 't' = subtle dim,
+ // 'w' = warning amber, 'e' = error red.
+ function _setLiveStatus(cls, text) {
+ var line = document.getElementById('liveStatusLine');
+ if (!line) return;
+ line.className = cls;
+ line.textContent = text;
+ }
+
+ if (port) {
+ _gwOfflineCount = 0;
+ _gwEverOnline = true;
+ var _gn = document.getElementById('gateNotice'); if (_gn) _gn.style.display = 'none';
+ dot.className = 'dot on';
+ // 大按钮加在线指示
+ var launchBtn = document.querySelector('.btn-launch');
+ if (launchBtn) launchBtn.style.borderColor = 'var(--emerald)';
+ var _t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
+ text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token='+encodeURIComponent(_t)+'" target="_blank" rel="noopener">\u6253\u5f00\u804a\u5929</a>';
+ _setLiveStatus('p', ' [ok] gateway running on :' + port);
+ } else {
+ _gwOfflineCount++;
+ var _gn2 = document.getElementById('gateNotice'); if (_gn2) _gn2.style.display = 'flex';
+ if (_gwOfflineCount >= 2) {
+ if (!_gwEverOnline && _gwOfflineCount < 40) {
+ dot.className = 'dot off';
+ dot.style.background = 'var(--warning)';
+ text.innerHTML = 'Gateway \u542f\u52a8\u4e2d\u2026 \u9996\u6b21\u542f\u52a8\u9700\u8981 2-5 \u5206\u949f\u5b89\u88c5\u63d2\u4ef6';
+ _setLiveStatus('t', ' · gateway starting… (first run takes 2–5 min)');
+ } else {
+ dot.className = 'dot off';
+ dot.style.background = '';
+ text.innerHTML = 'Gateway \u672a\u542f\u52a8 \u00b7 \u8bf7\u8fd0\u884c\u542f\u52a8\u811a\u672c';
+ _setLiveStatus('t', ' · gateway not running — start the launcher');
+ }
+ }
+ }
+}
+
+// ===== RUN COMMAND =====
+function runCmd(cmd) {
+ if (cmd === 'update') {
+ showToast('\u6b63\u5728\u68c0\u67e5\u66f4\u65b0...', 'info');
+ apiFetch('/api/update/check').then(function(r){return r.json();}).then(function(data){
+ if (!data.ok) { showToast(data.error || '\u68c0\u67e5\u5931\u8d25', 'error'); return; }
+ if (!data.isNewer) { showToast('\u5df2\u662f\u6700\u65b0\u7248\u672c ('+data.current+')', 'success'); return; }
+ // Full HTML escape — release body comes from GitHub and could
+ // contain attribute injectors like `" onmouseover=alert(1) x="`
+ // if the upstream account is ever compromised. (B22-07)
+ var esc = function(s){
+ return String(s)
+ .replace(/&/g,'&amp;')
+ .replace(/</g,'&lt;')
+ .replace(/>/g,'&gt;')
+ .replace(/"/g,'&quot;')
+ .replace(/'/g,'&#39;');
+ };
+ var bodyHtml = data.body
+ ? '<p style="margin-top:12px;font-size:0.82em;color:var(--fg-muted);max-height:120px;overflow:auto;">'
+ + esc(data.body).replace(/\n/g,'<br>')
+ + '</p>'
+ : '';
+ showModal('\u53d1\u73b0\u65b0\u7248\u672c',
+ '<p>\u5f53\u524d: <strong>'+esc(data.current)+'</strong> \u2192 \u6700\u65b0: <strong>'+esc(data.latest)+'</strong></p>' + bodyHtml,
+ [
+ {text:'\u7a0d\u540e\u518d\u8bf4', cls:'btn', action:'closeModal'},
+ {text:'\u7acb\u5373\u66f4\u65b0', cls:'btn btn-primary', action:'doUpdate'}
+ ]
+ );
+ }).catch(function(e){ showToast('\u68c0\u67e5\u5931\u8d25: '+e.message, 'error'); });
+ } else if (cmd === 'restart') {
+ showToast('\u6b63\u5728\u91cd\u542f...', 'info');
+ apiFetch('/api/restart', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
+ showToast('\u91cd\u542f\u6307\u4ee4\u5df2\u53d1\u9001', 'success');
+ document.getElementById('restartBanner').style.display = 'none';
+ setTimeout(checkGateway, 4000);
+ }).catch(function(e){ showToast('\u5931\u8d25: '+e.message, 'error'); });
+ } else {
+ showModal('openclaw ' + cmd, '<p>\u8bf7\u5728\u7ec8\u7aef\u4e2d\u8fd0\u884c\uff1a</p><code style="display:block;margin-top:8px;padding:10px 14px;background:#041c1c;border:1px solid rgba(0,255,200,0.1);border-radius:8px;font-size:0.88em;color:#ffe6cb;">openclaw ' + cmd + '</code>', [
+ {text:'\u597d', cls:'btn btn-primary', action:'closeModal()'}
+ ]);
+ }
+}
+
+var _updateInProgress = false;
+function doUpdate() {
+ if (_updateInProgress) {
+ showToast('\u66f4\u65b0\u8fdb\u884c\u4e2d\uff0c\u8bf7\u52ff\u91cd\u590d\u70b9\u51fb', 'warning');
+ return;
+ }
+ _updateInProgress = true;
+ closeModal();
+ showToast('\u6b63\u5728\u4e0b\u8f7d\u66f4\u65b0\uff0c\u8bf7\u7a0d\u5019...', 'info');
+ apiFetch('/api/update/apply', {method:'POST'}).then(function(r){return r.json();}).then(function(data){
+ if (data.ok) {
+ showToast('\u66f4\u65b0\u5df2\u542f\u52a8\uff0c\u5b8c\u6210\u540e\u9875\u9762\u4f1a\u81ea\u52a8\u5237\u65b0', 'success');
+ // Poll for server restart
+ var attempts = 0;
+ var poll = setInterval(function(){
+ attempts++;
+ if (attempts > 60) {
+ clearInterval(poll);
+ _updateInProgress = false;
+ showModal('\u66f4\u65b0\u8d85\u65f6',
+ '<p>3 \u5206\u949f\u540e\u670d\u52a1\u5668\u672a\u91cd\u542f\u3002</p>' +
+ '<p>\u53ef\u80fd\u539f\u56e0\uff1a</p>' +
+ '<ul style="margin:8px 0 0 16px;font-size:0.85em;color:var(--fg-muted);">' +
+ '<li>\u66f4\u65b0\u8fc7\u7a0b\u5728\u540e\u53f0\u5d29\u6e83</li>' +
+ '<li>spawn \u5b50\u8fdb\u7a0b\u5931\u8d25</li>' +
+ '<li>\u9700\u8981\u624b\u52a8\u91cd\u542f\u542f\u52a8\u5668</li></ul>',
+ [{text:'\u624b\u52a8\u91cd\u542f\u542f\u52a8\u5668', cls:'btn btn-primary', action:'closeModal()'}]);
+ return;
+ }
+ apiFetch('/api/heartbeat').then(function(r){
+ if (r.ok) { clearInterval(poll); _updateInProgress = false; location.reload(); }
+ }).catch(function(){});
+ }, 3000);
+ } else {
+ // Server-side rejection — release the lock so the user can retry.
+ _updateInProgress = false;
+ showToast(data.error || '\u66f4\u65b0\u5931\u8d25', 'error');
+ }
+ }).catch(function(e){
+ // Network error / timeout / 401 — release the lock so the button
+ // recovers. Without this, the in-progress flag sticks and the
+ // user can never retry without reloading the page.
+ _updateInProgress = false;
+ showToast('\u66f4\u65b0\u5931\u8d25: '+e.message, 'error');
+ });
+}
+
+// ===== EXPORT / IMPORT CONFIG =====
+function exportConfig() {
+ apiFetch('/api/config').then(r => r.json()).then(data => {
+ const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+ const url = URL.createObjectURL(blob);
+ const a = document.createElement('a');
+ a.href = url; a.download = 'openclaw-config.json'; a.click();
+ URL.revokeObjectURL(url);
+ showToast('\u2705 \u914d\u7f6e\u5df2\u5bfc\u51fa', 'success');
+ }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
+}
+
+function startImport() {
+ const input = document.createElement('input');
+ input.type = 'file';
+ input.accept = '.json';
+ input.onchange = doImport;
+ input.click();
+}
+
+function doImport(event) {
+ const file = event.target.files[0];
+ if (!file) return;
+ const reader = new FileReader();
+ reader.onload = function(e) {
+ try {
+ const cfg = JSON.parse(e.target.result);
+ apiFetch('/api/config', {
+ method: 'POST',
+ headers: {'Content-Type':'application/json'},
+ body: JSON.stringify(cfg)
+ }).then(r => r.json()).then(data => {
+ if (data.ok) {
+ showToast('\u2705 \u914d\u7f6e\u5df2\u5bfc\u5165', 'success');
+ location.reload();
+ } else {
+ showToast('\u274c ' + (data.error || 'Import failed'), 'error');
+ }
+ });
+ } catch (err) {
+ showToast('\u274c \u65e0\u6548\u7684JSON\u6587\u4ef6', 'error');
+ }
+ };
+ reader.readAsText(file);
+}
+
+function viewConfig() {
+ apiFetch('/api/config').then(r => r.json()).then(data => {
+ const json = JSON.stringify(data, null, 2);
+ showModal('\u5f53\u524d\u914d\u7f6e', '<pre style="background:#0d1117;padding:12px;border-radius:8px;overflow:auto;max-height:400px;color:#e6edf3;font-size:12px;">' + json.replace(/</g,'&lt;') + '</pre>', [
+ {text:'\u5173\u95ed',cls:'btn',action:'closeModal'},
+ // handler closure captures `json` directly — no eval, no string
+ // interpolation of attacker-controlled data. (B22-03)
+ {text:'\u590d\u5236', cls:'btn btn-primary', handler: function() {
+ var p = navigator.clipboard && navigator.clipboard.writeText
+ ? navigator.clipboard.writeText(json)
+ : Promise.reject(new Error('clipboard API unavailable'));
+ Promise.resolve(p)
+ .then(function(){ showToast('\u2705 Copied','success'); closeModal(); })
+ .catch(function(e){ showToast('\u590d\u5236\u5931\u8d25: '+(e && e.message || e),'error'); });
+ }}
+ ]);
+ }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
+}
+
+// ===== LOGS =====
+function toggleLogs() {
+ var panel = document.getElementById('logPanel');
+ if (panel.style.display === 'none') {
+ panel.style.display = 'block';
+ refreshLogs();
+ } else {
+ panel.style.display = 'none';
+ }
+}
+
+function refreshLogs() {
+ var el = document.getElementById('logContent');
+ el.textContent = '加载中...';
+ apiFetch('/api/logs').then(function(r){return r.json();}).then(function(data){
+ if (data.lines && data.lines.length) {
+ el.textContent = data.lines.join('\n');
+ el.scrollTop = el.scrollHeight;
+ } else {
+ el.textContent = '暂无日志';
+ }
+ }).catch(function(){ el.textContent = '加载失败'; });
+}
+
+// ===== VERSION =====
+function loadVersion() {
+ apiFetch('/api/version').then(function(r){return r.json();}).then(function(data){
+ if (data.portable) {
+ // Update the version cell in the structured footer.
+ // (The hero #hero-version element was removed in the hero
+ // simplification pass — version now lives in the footer only.)
+ // textContent on the whole <footer> would wipe the y-footer
+ // grid (links, labels, theme toggle).
+ var footYear = document.getElementById('footer-year');
+ if (footYear) footYear.textContent = 'openclaw v' + data.portable;
+ }
+ }).catch(function(){});
+}
+
+// ===== UTILS =====
+// 包装 fetch 添加超时（默认 30s）防止 UI 无限等待
+function fetchT(url, opts) {
+ opts = opts || {};
+ var ms = opts.timeout || 30000;
+ var ctrl = new AbortController();
+ var timer = setTimeout(function(){ ctrl.abort(); }, ms);
+ return fetch(url, Object.assign({}, opts, {signal: ctrl.signal})).finally(function(){
+ clearTimeout(timer);
+ });
+}
+
+// ===== LOCAL MODEL AUTO-DETECT =====
+function scanLocalModels(opts) {
+ opts = opts || {};
+ var panel = document.getElementById('localPanel');
+ var listEl = document.getElementById('localRuntimes');
+ var titleEl = document.getElementById('localPanelTitle');
+ if (!panel || !listEl) return;
+ listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.8em;font-family:var(--font-mono);">扫描中...</div>';
+ panel.style.display = 'block';
+ if (titleEl) titleEl.textContent = '本地模型 — 扫描中';
+ apiFetch('/api/local/scan').then(function(r){return r.json();}).then(function(data){
+ var running = (data.runtimes || []).filter(function(r){return r.running;});
+ if (running.length === 0) {
+ // No runtime detected. Show install hints if explicitly requested
+ // (e.g. user clicked the 本地 chip), otherwise hide silently to
+ // avoid cluttering the page for users who only use cloud APIs.
+ if (opts.showHintsIfEmpty) {
+ if (titleEl) titleEl.textContent = '本地模型 — 未检测到运行';
+ showLocalModelHints();
+ } else {
+ panel.style.display = 'none';
+ }
+ return;
+ }
+ if (titleEl) titleEl.textContent = '检测到本地模型运行';
+ // HTML-escape user-controllable strings (model names from local
+ // runtime APIs). A malicious local server (or one infected via
+ // a model name) could otherwise inject script via innerHTML.
+ var esc = function(s) {
+ return String(s).replace(/[&<>"']/g, function(c) {
+ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+ });
+ };
+ listEl.innerHTML = running.map(function(rt){
+ var modelsHtml;
+ if (!rt.models || rt.models.length === 0) {
+ modelsHtml = '<span style="color:var(--fg-muted);font-size:0.78em;">运行中但未拉取到模型 — 在 ' + esc(rt.name) + ' 里下载一个模型后点重新扫描</span>';
+ } else {
+ var opts = rt.models.map(function(m){
+ var v = esc(m);
+ return '<option value="' + v + '">' + v + '</option>';
+ }).join('');
+ modelsHtml =
+ '<select id="local-' + esc(rt.id) + '-model" style="flex:1;min-width:140px;padding:6px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.78em;">' + opts + '</select>' +
+ '<button class="btn btn-sm" onclick="applyLocalRuntime(\'' + esc(rt.id) + '\',' + parseInt(rt.port,10) + ')" style="font-size:0.74em;">使用</button>';
+ }
+ return '<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">' +
+ '<span style="color:var(--fg);font-family:var(--font-mono);font-size:0.82em;min-width:90px;">' + esc(rt.name) + '</span>' +
+ '<span style="color:var(--fg-muted);font-family:var(--font-mono);font-size:0.72em;min-width:60px;">:' + parseInt(rt.port,10) + '</span>' +
+ modelsHtml +
+ '</div>';
+ }).join('');
+ }).catch(function(){
+ panel.style.display = 'none';
+ });
+}
+
+function applyLocalRuntime(runtimeId, port) {
+ var sel = document.getElementById('local-' + runtimeId + '-model');
+ if (!sel || !sel.value) return;
+ var modelName = sel.value;
+ // The OpenAI-compatible base URL pattern. All probed runtimes serve
+ // an OpenAI-compatible endpoint at /v1.
+ var base = 'http://127.0.0.1:' + port + '/v1';
+ // LM Studio uses the OpenAI Responses API shape; everything else uses
+ // Completions. Mirror the same heuristic the cloud buildConfig uses.
+ var apiType = (runtimeId === 'lmstudio') ? 'openai-responses' : 'openai-completions';
+ // Build a config payload similar to what saveConfig does for cloud providers.
+ // Local models don't need an API key (we send a placeholder).
+ var providerKey = 'local-' + runtimeId;
+ var providers = {};
+ providers[providerKey] = {
+ baseUrl: base,
+ apiKey: 'local-no-key',
+ api: apiType,
+ models: [{
+ id: modelName, name: modelName, reasoning: false,
+ input: ['text'],
+ cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+ contextWindow: 32768, maxTokens: 8192
+ }]
+ };
+ var ref = providerKey + '/' + modelName;
+ var cfg = {
+  gateway: { mode: 'local', auth: { mode: 'token', token: 'openclaw' } },
+  // Same rule as buildConfig(): `ownerDisplay` is a deprecated doctor-only
+  // legacy key in 2026.8.2 and makes the whole config invalid at runtime.
+  commands: { native: 'auto', nativeSkills: 'auto', restart: true },
+  models: { mode: 'merge', providers: providers },
+  // Write BOTH legacy + 2.0 scoped model refs (buildConfig does the same) so
+  // a 2.0 gateway doesn't keep its old agents.entries.main.model (schema drift).
+  agents: { defaults: { model: { primary: ref } }, entries: { main: { model: ref } } }
+ };
+ configData = cfg;
+ apiFetch('/api/config', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify(cfg)
+ }).then(function(r){return r.json();}).then(function(data){
+ if (data.ok) {
+ showToast('\u672c\u5730\u6a21\u578b \u5df2\u8bbe\u7f6e: ' + modelName + '\uff0c\u91cd\u542f\u4e2d...', 'success');
+ goStep(2);
+ showConfigSummary(cfg);
+ apiFetch('/api/restart', { method: 'POST' }).then(function(){
+ var waitCount = 0;
+ var waitReady = setInterval(function(){
+ waitCount++;
+ if (waitCount > 30) { clearInterval(waitReady); return; }
+ findGatewayPort().then(function(p){
+ if (p) { clearInterval(waitReady); checkGateway(); }
+ });
+ }, 2000);
+ }).catch(function(){});
+ } else {
+ showToast(data.error || '\u4fdd\u5b58\u5931\u8d25', 'error');
+ }
+ }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+}
+
+// Show local-model help when user clicks the 本地 filter chip but
+// no runtime is currently detected. Reuses the localPanel for hints.
+function showLocalModelHints() {
+ var panel = document.getElementById('localPanel');
+ var listEl = document.getElementById('localRuntimes');
+ if (!panel || !listEl) return;
+ panel.style.display = 'block';
+ // Caller (scanLocalModels) sets the title; we just fill the body.
+ listEl.innerHTML = '<div style="color:var(--fg-muted);font-size:0.82em;font-family:var(--font-mono);line-height:1.7;">' +
+ '<div style="margin-bottom:8px;">未检测到本地模型运行。安装并启动以下任一工具后点 <strong>重新扫描</strong>：</div>' +
+ '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;">' +
+ '<a href="https://ollama.com/" target="_blank" rel="noopener" style="color:var(--emerald);">Ollama →</a>' +
+ '<a href="https://lmstudio.ai/" target="_blank" rel="noopener" style="color:var(--emerald);">LM Studio →</a>' +
+ '<a href="https://gpt4all.io/" target="_blank" rel="noopener" style="color:var(--emerald);">GPT4All →</a>' +
+ '<a href="https://github.com/janhq/jan" target="_blank" rel="noopener" style="color:var(--emerald);">Jan.ai →</a>' +
+ '<a href="https://github.com/oobabooga/text-generation-webui" target="_blank" rel="noopener" style="color:var(--emerald);">Text Gen WebUI →</a>' +
+ '<a href="https://github.com/LostRuins/koboldcpp" target="_blank" rel="noopener" style="color:var(--emerald);">KoboldCpp →</a>' +
+ '<a href="https://github.com/ggerganov/llama.cpp" target="_blank" rel="noopener" style="color:var(--emerald);">llama.cpp →</a>' +
+ '<a href="https://docs.vllm.ai/" target="_blank" rel="noopener" style="color:var(--emerald);">vLLM →</a>' +
+ '<a href="https://github.com/xorbitsai/inference" target="_blank" rel="noopener" style="color:var(--emerald);">XInference →</a>' +
+ '<a href="https://localai.io/" target="_blank" rel="noopener" style="color:var(--emerald);">LocalAI →</a>' +
+ '</div></div>';
+}
+
+// ===== INIT =====
+(function init() {
+ // Bootstrap auth token from server (required for write endpoints).
+ // This is a same-origin GET that only responds to localhost requests.
+ // Timeout: if server is unreachable at boot, fail fast and let GET
+ // calls succeed without a token (they're public anyway).
+ var bootCtrl = new AbortController();
+ var bootTimer = setTimeout(function(){ bootCtrl.abort(); }, 5000);
+ fetch('/api/bootstrap', { signal: bootCtrl.signal }).then(function(r) {
+ clearTimeout(bootTimer);
+ return r.ok ? r.json() : {};
+ }).then(function(data) {
+ if (data && data.token) _serverToken = data.token;
+ }).catch(function() {
+ clearTimeout(bootTimer);
+ // If bootstrap fails, writes will get 401 — user sees error toast.
+ console.warn('[auth] bootstrap failed, write operations will be rejected');
+ });
+
+ loadVersion();
+ // Hot-updatable model catalog: apply local cache (or shipped copy)
+ // immediately; auto-refresh in background if stale (>7d).
+ loadCatalog(true);
+ // Auto-scan local model runtimes on load — silent if nothing is running.
+ setTimeout(scanLocalModels, 200);
+ // Check gateway
+ checkGateway();
+ setInterval(checkGateway, 15000);
+
+ // Load existing config to auto-advance
+ apiFetch('/api/config').then(function(r){
+ // Surface recovery: server sets X-OpenClaw-Recovery when main config
+ // file was unreadable and a backup was used instead.
+ var recoverySource = r.headers.get('X-OpenClaw-Recovery');
+ if (recoverySource) {
+ showToast('配置文件损坏，已从备份恢复：' + recoverySource, 'warning');
+ }
+ return r.json();
+ }).then(function(data) {
+ if (data && data.gateway && data.gateway.auth && data.gateway.auth.token) {
+ _gatewayToken = data.gateway.auth.token;
+ }
+ var hasExisting = false;
+ if (data && data.env && data.env.ZAI_API_KEY) hasExisting = true;
+ if (data && data.models && data.models.providers && Object.keys(data.models.providers).length > 0) hasExisting = true;
+ // OpenClaw 2.0 scoped schema keeps the model under agents.entries.<n>.model
+ // and the key in auth.profiles — neither is caught by the checks above, so a
+ // fully configured 2.0 config used to look "empty" and drop the user back to
+ // step 1 (where re-saving would rewrite the config in the legacy shape).
+ if (!hasExisting && getPrimaryModelRef(data)) hasExisting = true;
+ if (hasExisting) {
+ configData = data;
+ goStep(2);
+ // Feature 3: 显示配置摘要
+ showConfigSummary(data);
+ // Feature 4: 填充快速切换下拉
+ populateQuickSwitch(data);
+ // Feature 5: 高亮当前 provider
+ highlightCurrentProvider(data);
+ }
+ else goStep(1);
+ }).catch(function() { goStep(1); });
+
+ // Heartbeat — show disconnect overlay after 3 consecutive failures.
+ // Previously the failure check was synchronous (ran before fetch
+ // settled), so it always reflected the *previous* iteration's count.
+ // Now the check happens inside .then/.catch.
+ //
+ // Static preview guard: opening index.html directly via file:// has
+ // NO config-server behind it — every heartbeat would fail and pop
+ // the overlay as a false alarm. Only poll when actually served.
+ if (location.protocol !== 'file:') {
+ var _hbFails = 0;
+ var _hbBusy = false;
+ function _showOverlay(show) {
+ var ov = document.getElementById('disconnectOverlay');
+ if (!ov) return;
+ var wasShown = ov.classList.contains('show');
+ ov.classList.toggle('show', show);
+ if (show) {
+ var st = document.getElementById('dcStatus');
+ if (st) st.textContent = '自动重连中 · 已重试 ' + _hbFails + ' 次';
+ } else if (wasShown) {
+ showToast('连接已恢复', 'success');
+ }
+ }
+ function _hbCheck() {
+ if (_hbBusy) return; // skip overlapping requests on slow links
+ _hbBusy = true;
+ apiFetch('/api/heartbeat', { timeout: 3000 }).then(function(r) {
+ if (r.ok) {
+ _hbFails = 0;
+ _showOverlay(false);
+ } else {
+ _hbFails++;
+ if (_hbFails >= 3) _showOverlay(true);
+ }
+ }).catch(function() {
+ _hbFails++;
+ if (_hbFails >= 3) _showOverlay(true);
+ }).finally(function(){ _hbBusy = false; });
+ }
+ setInterval(function() {
+ // Skip when document is hidden — browser throttles intervals to
+ // ~1/min in background tabs; resuming would burst-fire stale
+ // pollers and falsely trip the offline overlay.
+ if (typeof document !== 'undefined' && document.hidden) return;
+ _hbCheck();
+ }, 5000);
+ // Manual retry — immediate probe instead of waiting for the next
+ // 5s tick. Shares _hbBusy so it can't stack with the poller.
+ var _dcRetry = document.getElementById('dcRetryBtn');
+ if (_dcRetry) _dcRetry.addEventListener('click', function() {
+ var st = document.getElementById('dcStatus');
+ if (st) st.textContent = '正在重试…';
+ _hbCheck();
+ });
+ var _dcReload = document.getElementById('dcReloadBtn');
+ if (_dcReload) _dcReload.addEventListener('click', function() { location.reload(); });
+ }
+})();
+
+</script>
 
 <script>
-'use strict';
-/* ═══════════════ 基础设施 ═══════════════ */
-var _token = null, _gwPort = 18789, _gwOnline = null, _catalog = null, _cfg = null;
-var _hotWatch = null, _otpVisible = false;
-
-function apiFetch(url, opts){
-  opts = opts || {};
-  opts.headers = Object.assign({}, opts.headers);
-  if (_token) opts.headers['X-OpenClaw-Token'] = _token;
-  if (opts.body && !opts.headers['Content-Type']) opts.headers['Content-Type'] = 'application/json';
-  var ms = opts.timeout || 30000, ctrl = new AbortController();
-  var timer = setTimeout(function(){ ctrl.abort(); }, ms);
-  opts.signal = ctrl.signal;
-  return fetch(url, opts).finally(function(){ clearTimeout(timer); });
-}
-function $(id){ return document.getElementById(id); }
-function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-function toast(msg, err){
-  var t = $('toast');
-  t.className = err ? 'show err' : 'show';
-  t.innerHTML = (err?'<svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>':'<svg class="ic" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>') + esc(msg);
-  clearTimeout(t._h); t._h = setTimeout(function(){ t.className=''; }, err?6000:3200);
+// ── Mobile Connect (手机连接) ──────────────────────────────────
+function toggleMobilePanel() {
+ var panel = document.getElementById('mobilePanel');
+ var arrow = document.getElementById('mobileToggleArrow');
+ if (panel.style.display === 'none') {
+ panel.style.display = 'block';
+ arrow.style.transform = 'rotate(180deg)';
+ loadMobileStatus();
+ } else {
+ panel.style.display = 'none';
+ arrow.style.transform = '';
+ }
 }
 
-/* ═══════════════ 启动状态门控 ═══════════════ */
-function bindOfficialBtn(){
-  $('openOfficial').onclick = function(){ window.open('http://127.0.0.1:'+_gwPort+'/', '_blank'); };
-}
-function setGate(online, port){
-  _gwOnline = online;
-  if (port) _gwPort = port;
-  var g = $('gate');
-  g.className = 'gate ' + (online ? 'online' : 'waiting');
-  $('gatePort').textContent = ':' + _gwPort;
-  bindOfficialBtn();
-  var steps = $('gateSteps').children;
-  if (online){
-    $('gateTitle').textContent = '网关已就绪';
-    $('gateDesc').textContent = '可以在官方控制台配置 Key，或在「独有配置」接入自定义平台';
-    $('gateBar').style.display = 'none';
-    for (var i=0;i<steps.length;i++) steps[i].classList.add('on');
-  } else {
-    $('gateTitle').textContent = 'OpenClaw 终端启动中…';
-    $('gateDesc').textContent = '⚠ 请等待终端窗口出现 ready 字样后，再配置 API Key（提前配置不会被网关加载）';
-    $('gateBar').style.display = '';
-    tickSteps();
-  }
-  $('ftGate').textContent = 'gateway 127.0.0.1:' + _gwPort + (online ? ' · online' : ' · offline');
-}
-var _stepIdx = 0, _stepTimer = null;
-function tickSteps(){
-  if (_stepTimer) return;
-  _stepTimer = setInterval(function(){
-    if (_gwOnline) { clearInterval(_stepTimer); _stepTimer = null; return; }
-    var steps = $('gateSteps').children;
-    _stepIdx = (_stepIdx + 1) % (steps.length + 1);
-    for (var i=0;i<steps.length;i++) steps[i].classList.toggle('on', i < _stepIdx);
-  }, 1800);
-}
-function pollStatus(){
-  return apiFetch('/api/status', {timeout:8000}).then(function(r){ return r.json(); }).then(function(d){
-    var on = !!(d.gateway && d.gateway.online);
-    setGate(on, d.gateway && d.gateway.port);
-    return on;
-  }).catch(function(){ setGate(false); return false; });
-}
-function forceCheck(){ $('hotFail').classList.add('hidden'); pollStatus().then(function(on){ toast(on ? '网关已恢复在线' : '网关仍未上线', !on); }); }
-
-/* ═══════════════ 目录 / 配置加载 ═══════════════ */
-function loadVersion(){
-  apiFetch('/api/version').then(function(r){ return r.json(); }).then(function(d){
-    $('vPortable').textContent = d.portable || '?';
-    $('vOpenclaw').textContent = d.openclaw || '?';
-    $('ftVer').textContent = 'OpenClaw Portable ' + (d.portable||'') + ' · core ' + (d.openclaw||'');
-  }).catch(function(){});
-}
-function loadConfig(){
-  return apiFetch('/api/config').then(function(r){ return r.json(); }).then(function(d){
-    _cfg = d || {};
-    if (_catalog) renderSys();
-    renderOwnList();
-  }).catch(function(){});
-}
-function loadCatalog(manual){
-  return apiFetch('/api/models/catalog').then(function(r){ return r.json(); }).then(function(d){
-    _catalog = d || {};
-    renderSys();
-  }).catch(function(){ if (manual) toast('目录加载失败', true); });
-}
-function isConfigured(pid){
-  try {
-    var p = _cfg && _cfg.models && _cfg.models.providers && _cfg.models.providers[pid];
-    return !!(p && p.apiKey);
-  } catch(e){ return false; }
+function loadMobileStatus() {
+ apiFetch('/api/config').then(function(r){return r.json();}).then(function(cfg) {
+ var isLan = cfg && cfg.gateway && cfg.gateway.bind === 'lan';
+ document.getElementById('mobileLanToggle').checked = isLan;
+ if (isLan) showMobileInfo(cfg);
+ else document.getElementById('mobileInfo').style.display = 'none';
+ }).catch(function(){});
 }
 
-/* ═══════════════ 系统配置（官方平台，只读引导） ═══════════════ */
-var _ownListRendered = false;
-function renderSys(){
-  var grid = $('sysGrid'), q = ($('sysSearch').value||'').toLowerCase();
-  var provs = (_catalog && _catalog.providers) || [];
-  var sys = provs.filter(function(p){ return p && p.builtIn; });
-  if (!q) sys.sort(function(a,b){ return (isConfigured(a.id)?0:1)-(isConfigured(b.id)?0:1); });
-  var list = sys.filter(function(p){
-    return !q || ((p.id||'')+' '+(p.name||'')+' '+(p.desc||'')).toLowerCase().indexOf(q) >= 0;
-  });
-  $('sysCount').textContent = list.length + ' / ' + sys.length + ' 个官方平台';
-  if (!list.length){
-    grid.innerHTML = '<div style="grid-column:1/-1;padding:26px;text-align:center;color:var(--fg-muted);font-size:.82rem">'
-      + (sys.length ? '没有匹配的平台' : '目录为空——点击上方「刷新目录」拉取最新官方平台列表') + '</div>';
-    return;
-  }
-  grid.innerHTML = list.map(function(p){
-    var ok = isConfigured(p.id);
-    return '<div class="card">'
-      + '<h3>' + esc(p.name || p.id) + (ok ? '<span class="badge ok">已配置</span>' : '<span class="badge no">未配置</span>') + '</h3>'
-      + '<div class="desc">' + esc(p.desc || p.id) + '</div>'
-      + '<div class="card-acts">'
-      +   '<button class="btn sm primary" onclick="openOfficialFor(\'' + esc(p.id) + '\')"><svg class="ic" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/></svg>去官方控制台填 Key</button>'
-      +   (p.link ? '<a class="btn sm ghost" href="' + esc(p.link) + '" target="_blank" rel="noopener">平台官网↗</a>' : '')
-      + '</div></div>';
-  }).join('');
-}
-function openOfficialFor(pid){
-  window.open('http://127.0.0.1:'+_gwPort+'/', '_blank');
-  toast('已打开官方控制台 → Settings → Models → 找到 ' + pid + ' 粘贴 Key');
+function toggleMobileLan(enabled) {
+ apiFetch('/api/config').then(function(r){return r.json();}).then(function(cfg) {
+ if (!cfg) cfg = {};
+ if (!cfg.gateway) cfg.gateway = {};
+
+ if (enabled) {
+ cfg.gateway.bind = 'lan';
+ if (!cfg.gateway.nodes) cfg.gateway.nodes = {};
+ if (!cfg.gateway.nodes.pairing) cfg.gateway.nodes.pairing = {};
+ cfg.gateway.nodes.pairing.autoApproveCidrs = ['192.168.0.0/16','10.0.0.0/8','172.16.0.0/12'];
+ } else {
+ delete cfg.gateway.bind;
+ if (cfg.gateway.nodes && cfg.gateway.nodes.pairing) {
+ delete cfg.gateway.nodes.pairing.autoApproveCidrs;
+ if (Object.keys(cfg.gateway.nodes.pairing).length === 0) delete cfg.gateway.nodes.pairing;
+ if (Object.keys(cfg.gateway.nodes).length === 0) delete cfg.gateway.nodes;
+ }
+ }
+
+ return apiFetch('/api/config', {
+ method: 'POST',
+ headers: {'Content-Type':'application/json'},
+ body: JSON.stringify(cfg)
+ });
+ }).then(function(r){return r.json();}).then(function(res) {
+ if (res && res.ok) {
+ if (enabled) {
+ loadMobileInfo();
+ } else {
+ document.getElementById('mobileInfo').style.display = 'none';
+ }
+ } else {
+ // Revert checkbox on failure
+ document.getElementById('mobileLanToggle').checked = !enabled;
+ }
+ }).catch(function(e) {
+ console.error('Mobile toggle failed:', e);
+ // Revert checkbox on error
+ document.getElementById('mobileLanToggle').checked = !enabled;
+ });
 }
 
-/* ═══════════════ 独有配置 ═══════════════ */
-function renderOtp(){
-  var v = $('ownKey').value, box = $('otpBox'), html = '';
-  var show = _otpVisible ? v : v.replace(/[^·\-_ ]/g, '•');
-  var pos = v.length;
-  for (var i = 0; i < v.length; i += 4){
-    var seg = show.slice(i, i+4);
-    var cls = ((pos >= i && pos < i+4) || (pos === i && i === 0)) ? 'seg-c active' : 'seg-c';
-    html += '<span class="' + cls + '">' + esc(seg) + '</span>';
-    if (i + 4 < v.length) html += '<span class="seg-gap"></span>';
-  }
-  if (!v.length) html = '<span class="ph">sk-…（点击输入或粘贴，分段显示）</span>';
-  box.innerHTML = html;
-}
-function toggleOtp(){ _otpVisible = !_otpVisible; renderOtp(); }
-function renderOwnList(){
-  if (_ownListRendered) return;
-  try {
-    var provs = (_cfg && _cfg.models && _cfg.models.providers) || {};
-    var managed = (_catalog && _catalog.managedProviders) || [];
-    var custom = Object.keys(provs).filter(function(id){
-      var p = provs[id];
-      return p && typeof p === 'object' && p.baseUrl && managed.indexOf(id) < 0;
-    });
-    if (!custom.length) return;
-    var html = '<div class="section-title"><svg class="ic" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg>已接入的自定义平台</div><div class="grid">';
-    custom.forEach(function(id){
-      var p = provs[id];
-      html += '<div class="card"><h3>' + esc(p.name || id) + (p.apiKey ? '<span class="badge ok">已配置</span>' : '<span class="badge no">无 Key</span>') + '</h3>'
-        + '<div class="desc" style="font-family:var(--mono);font-size:.68rem;word-break:break-all">' + esc(p.baseUrl) + '</div></div>';
-    });
-    $('localPanel').insertAdjacentHTML('afterbegin', html + '</div>');
-    _ownListRendered = true;
-  } catch(e){}
-}
-function ownValidate(){
-  var id = $('ownId').value.trim(), base = $('ownBase').value.trim(), model = $('ownModel').value.trim();
-  if (!/^[a-z0-9][a-z0-9-_]{1,31}$/i.test(id)) return {err:'平台 ID 需为 2-32 位字母数字/短横线'};
-  if (!/^https?:\/\/.+/.test(base)) return {err:'Base URL 必须以 http(s):// 开头'};
-  if (!model) return {err:'请填写默认模型 ID'};
-  return {id:id, base:base.replace(/\/+$/,''), model:model, key:$('ownKey').value.trim()};
-}
-function testKey(){
-  var v = ownValidate(); if (v.err) return toast(v.err, true);
-  $('ownMsg').textContent = '测试连接中…';
-  apiFetch('/api/key/test', {method:'POST', body:JSON.stringify({provider:v.id, baseUrl:v.base, apiKey:v.key||'none'})})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var n = d.modelCount || (d.models && d.models.length);
-      $('ownMsg').textContent = d.ok ? ('✓ 连接成功' + (n ? '（' + n + ' 个模型可见）' : '')) : ('✗ ' + (d.error||'连接失败'));
-    })
-    .catch(function(e){ $('ownMsg').textContent = '✗ ' + e.message; });
-}
-function saveOwn(){
-  var v = ownValidate(); if (v.err) return toast(v.err, true);
-  if (_gwOnline === false) { toast('网关未就绪：请等终端窗口出现 ready 后再保存', true); return; }
-  $('ownSave').disabled = true;
-  var prov = { name: $('ownName').value.trim() || v.id, baseUrl: v.base, api: 'openai-completions' };
-  if (v.key) prov.apiKey = v.key;
-  prov.models = [{ id:v.model, name:v.model, reasoning:false, input:['text'],
-    cost:{input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow:196608, maxTokens:8192 }];
-  var providers = {}; providers[v.id] = prov;
-  var body = { models: { mode:'merge', providers: providers } };
-  if ($('ownDefault').checked){
-    var ref = v.id + '/' + v.model;
-    body.agents = { defaults:{ model:{ primary: ref } }, entries:{ main:{ model: ref } } };
-  }
-  apiFetch('/api/config', {method:'POST', body:JSON.stringify(body)})
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if (d.ok === false) throw new Error(d.error || '保存失败');
-      $('ownMsg').textContent = '✓ 已写入配置' + (d.ignoredManaged && d.ignoredManaged.length ? '（官方托管平台已自动跳过）' : '');
-      toast('已保存，等待网关热加载…');
-      loadConfig();
-      watchHotReload();
-    })
-    .catch(function(e){ toast(e.message, true); $('ownMsg').textContent = '✗ ' + e.message; })
-    .finally(function(){ $('ownSave').disabled = false; });
+function loadMobileInfo() {
+ apiFetch('/api/mobile/info').then(function(r){return r.json();}).then(function(data) {
+ if (data && data.lanIps && data.lanIps.length > 0) {
+ showMobileInfoFromData(data);
+ }
+ }).catch(function(){
+ // Fallback: just show a generic message
+ var info = document.getElementById('mobileInfo');
+ info.style.display = 'block';
+ document.getElementById('mobileUrls').innerHTML =
+ '<div style="color:var(--fg-muted);">重启 Gateway 后生效，届时将显示连接地址。</div>';
+ });
 }
 
-/* ═══════════════ 热重载监控 ═══════════════
-   Key/模型变更通常热生效；若网关因变更自行退出且未恢复，
-   30 秒后亮红色横幅，引导用户关窗后重新双击启动器。 */
-function watchHotReload(){
-  if (_hotWatch) clearInterval(_hotWatch);
-  var waited = 0;
-  _hotWatch = setInterval(function(){
-    waited += 2;
-    pollStatus().then(function(on){
-      if (on){ clearInterval(_hotWatch); _hotWatch = null; $('hotFail').classList.add('hidden'); toast('网关在线，配置已生效'); return; }
-      if (waited >= 30){ clearInterval(_hotWatch); _hotWatch = null; $('hotFail').classList.remove('hidden'); }
-    });
-  }, 2000);
+function showMobileInfo(cfg) {
+ loadMobileInfo();
 }
 
-/* ═══════════════ 本地运行时扫描 ═══════════════ */
-function scanLocal(){
-  $('scanIcon').classList.add('spin');
-  $('localPanel').innerHTML = '<div style="color:var(--fg-muted);font-size:.8rem;font-family:var(--mono)">扫描本机常见端口…</div>';
-  apiFetch('/api/local/scan', {timeout:20000}).then(function(r){ return r.json(); }).then(function(d){
-    $('scanIcon').classList.remove('spin');
-    var rt = (d.runtimes || []).filter(function(x){ return x.running; });
-    if (!rt.length){
-      $('localPanel').innerHTML = '<div class="alert info" style="margin:0"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg><div class="alert-body">未发现运行中的本地运行时。启动 LM Studio / Ollama 后再试。</div></div>';
-      return;
-    }
-    var html = '<div class="grid">';
-    rt.forEach(function(r){
-      var models = r.models || [];
-      html += '<div class="card"><h3>' + esc(r.name) + '<span class="badge ok">运行中 :' + esc(r.port) + '</span></h3><div class="desc">' + models.length + ' 个模型</div><div class="card-acts">';
-      models.slice(0, 6).forEach(function(m){
-        var safe = esc(m).replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/\\/g, '\\\\');
-        html += '<button class="btn sm" onclick="prefillLocal(\'' + safe + '\')">' + esc(m) + '</button>';
-      });
-      if (models.length > 6) html += '<span class="chip">+' + (models.length - 6) + '</span>';
-      html += '</div></div>';
-    });
-    $('localPanel').innerHTML = html + '</div>';
-  }).catch(function(e){ $('scanIcon').classList.remove('spin'); $('localPanel').innerHTML = ''; toast('扫描失败：' + e.message, true); });
-}
-function prefillLocal(model){
-  $('ownId').value = (model.split(/[^a-z0-9]/i)[0] || 'local').toLowerCase();
-  $('ownName').value = model;
-  $('ownBase').value = 'http://127.0.0.1:11434/v1';
-  $('ownModel').value = model;
-  toast('已预填（默认 Ollama 端口），确认 Base URL 后保存');
+function showMobileInfoFromData(data) {
+ var info = document.getElementById('mobileInfo');
+ info.style.display = 'block';
+ var html = '';
+ var token = data.token || 'openclaw';
+ var port = data.port || 18789;
+ for (var i = 0; i < data.lanIps.length; i++) {
+ var ip = data.lanIps[i];
+ html += '<div style="margin-bottom:4px;">';
+ html += '浏览器: <a href="http://'+ip+':'+port+'/#token='+token+'" target="_blank" style="color:var(--emerald);">http://'+ip+':'+port+'/</a>';
+ html += '</div>';
+ html += '<div style="margin-bottom:4px;color:var(--fg-muted);">';
+ html += 'App: '+ip+':'+port+' · Token: '+token;
+ html += '</div>';
+ }
+ document.getElementById('mobileUrls').innerHTML = html;
 }
 
-/* ═══════════════ 生命周期 ═══════════════ */
-function restartGateway(){
-  if (!confirm('重启网关？聊天会话会短暂中断。')) return;
-  toast('重启指令已发出，监控恢复中…');
-  apiFetch('/api/restart', {method:'POST', timeout:35000}).catch(function(){});
-  watchHotReload();
-}
-function checkUpdate(){
-  $('updDesc').textContent = '检查中…';
-  apiFetch('/api/update/check', {timeout:25000}).then(function(r){ return r.json(); }).then(function(d){
-    if (d.isNewer){
-      $('updDesc').innerHTML = '新版本 <b>' + esc(d.latest) + '</b> 可用（当前 ' + esc(d.current) + '）—— <a href="' + esc(d.releaseUrl) + '" target="_blank" rel="noopener">查看发布页</a>';
-      toast('发现新版本 ' + d.latest);
-    } else {
-      $('updDesc').textContent = '已是最新版本（' + (d.current||'?') + '）';
-    }
-  }).catch(function(e){ $('updDesc').textContent = '检查失败：' + e.message; });
-}
-function openLogs(){
-  $('logMask').classList.add('show');
-  $('logBody').textContent = '加载中…';
-  apiFetch('/api/logs?lines=120').then(function(r){ return r.json(); }).then(function(d){
-    $('logBody').textContent = (d.lines || []).join('\n') || '(空)';
-    $('logBody').scrollTop = $('logBody').scrollHeight;
-  }).catch(function(e){ $('logBody').textContent = '加载失败：' + e.message; });
-}
+</script>
 
-/* ═══════════════ tabs & boot ═══════════════ */
-document.querySelectorAll('.seg button').forEach(function(b){
-  b.addEventListener('click', function(){
-    document.querySelectorAll('.seg button').forEach(function(x){ x.classList.remove('on'); });
-    b.classList.add('on');
-    $('tab-sys').classList.toggle('hidden', b.dataset.tab !== 'sys');
-    $('tab-own').classList.toggle('hidden', b.dataset.tab !== 'own');
-  });
-});
-(function boot(){
-  renderOtp();
-  bindOfficialBtn();
-  fetch('/api/bootstrap').then(function(r){ return r.json(); }).then(function(d){
-    _token = d.token;
-    pollStatus(); loadVersion(); loadCatalog(); loadConfig();
-  }).catch(function(){ setGate(false); toast('初始化失败：无法连接配置服务', true); });
-  setInterval(pollStatus, 3000);
+<script>
+(function(){
+ function lsGet(k){try{return localStorage.getItem(k);}catch(_){return null;}}
+ function lsSet(k,v){try{localStorage.setItem(k,v);}catch(_){}}
+ var btn=document.getElementById('y-theme-btn');
+ if(!btn) return;
+ var html=document.documentElement;
+ var sun=btn.querySelector('.y-theme-sun');
+ var moon=btn.querySelector('.y-theme-moon');
+ function syncIcons(isLight){sun.style.display=isLight?'none':'block';moon.style.display=isLight?'block':'none';}
+ var saved=lsGet('yuai-theme');
+ if(saved==='light'){html.setAttribute('data-theme','light');syncIcons(true);}
+ else if(saved==='dark'){html.setAttribute('data-theme','dark');syncIcons(false);}
+ else{var mql=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)');syncIcons(mql&&mql.matches);}
+ btn.onclick=function(){
+ var nowLight=html.getAttribute('data-theme')!=='light';
+ if(!html.getAttribute('data-theme')){var sysLight=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches;nowLight=!sysLight;}
+ html.setAttribute('data-theme',nowLight?'light':'dark');
+ lsSet('yuai-theme',nowLight?'light':'dark');
+ syncIcons(nowLight);
+ };
 })();
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeModal();
+    // Hide all feature panels
+    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
+  }
+});
 </script>
 </body>
 </html>
