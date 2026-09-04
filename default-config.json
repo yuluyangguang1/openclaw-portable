@@ -1,6 +1,13 @@
 {
   "gateway": {
     "mode": "local",
-    "auth": { "token": "openclaw" }
+    "auth": {
+      "token": "openclaw"
+    }
+  },
+  "memory": {
+    "search": {
+      "enabled": false
+    }
   }
 }

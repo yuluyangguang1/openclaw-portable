@@ -210,6 +210,9 @@
 
  /* Provider cards */
  .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+ /* Grid items default to min-width:auto — allow shrinking so wide OTP rows
+    scroll inside the card instead of stretching the grid column. */
+ .model-grid > .provider-card { min-width: 0; }
  .provider-card {
  background: var(--secondary);
  border: 1px solid var(--border);
@@ -268,18 +271,32 @@
  border-top: 1px solid var(--border);
  margin-top: 12px;
  }
- .provider-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
- .provider-card 
  .provider-card .input:focus { border-color: var(--fg); }
- .provider-card select
  .provider-card select.input option { background: var(--bg); color: var(--fg); }
- .provider-card .input-group input { flex: 1; padding-right: 44px; margin-bottom: 0; }
- .provider-card .btn-icon {
- position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
- background: none; border: none; color: var(--fg-muted); cursor: pointer;
- font-size: 0.78em; padding: 4px 8px; font-family: var(--font-mono);
+ /* Uniform geometry for EVERY field inside a card — same height, font
+    size and spacing, so base/model/key inputs and selects all line up. */
+ .provider-expand > .input {
+ display: block; width: 100%; box-sizing: border-box;
+ padding: 9px 12px; font-size: 0.88em; line-height: 1.4;
+ margin-bottom: 10px;
  }
- .provider-card .btn-icon:hover { color: var(--fg); }
+ /* All inputs/selects inside a card share the SAME geometry — no special
+    oversizing for the API Key box (it looked inconsistent next to the
+    base/model inputs). Show/hide relies on the browser's NATIVE
+    password-reveal control (the eye Edge/Chrome render inside password
+    fields) — no custom toggle button needed. */
+ /* Card footer action bar: secondary actions left, primary save right. */
+ .card-actions {
+ display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+ margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);
+ }
+ .card-actions .spacer { flex: 1 1 0; min-width: 0; }
+ /* Anchors and buttons render with different default line-height/box
+    model — pin both to the same flex box so 获取 Key / 测试 Key match. */
+ .card-actions .btn-sm {
+ display: inline-flex; align-items: center; justify-content: center;
+ line-height: 1; box-sizing: border-box; text-decoration: none;
+ }
  .provider-card .btn-sm {
  padding: 7px 14px; font-size: 0.82em;
  background: var(--secondary); color: var(--fg);
@@ -885,12 +902,6 @@
  /* ── Insight strip: five-in-one panel switcher (step 2) ──
     1px-gap + border-colored background draws separators correctly at
     ANY column count — no per-cell border math needed. */
- .insight-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); }
- .insight-strip button { background: var(--bg); border: none; padding: 12px 6px 10px; text-align: center; cursor: pointer; font-family: var(--font-mono); color: var(--fg); font-size: 0.72rem; letter-spacing: 0.05em; }
- .insight-strip button svg { display: block; margin: 0 auto 6px; opacity: 0.7; }
- .insight-strip button:hover { background: var(--secondary); }
- .insight-strip button.active { background: var(--secondary); box-shadow: inset 0 -2px 0 var(--accent); }
- @media (max-width: 640px) { .insight-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
  /* ── Complete the flatten pass: square off the remaining rounded UI ──
     (provider/channel cards, chips, tags, .btn family, launch button,
@@ -1097,7 +1108,27 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
-</style>
+
+ /* ==== kinetic progress + OTP key input + inline icon helpers (2026-09-04) ==== */
+ .yi { display:inline-block; vertical-align:-0.2em; line-height:0; }
+ .yi svg { display:block; }
+ .kprog { position:relative; height:6px; border-radius:99px; background:color-mix(in srgb,var(--fg) 10%,transparent); overflow:hidden; }
+ .kprog .kfill { position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:99px; background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 55%,transparent), var(--accent)); transition:width .5s cubic-bezier(.4,0,.2,1); }
+ .kprog .ksweep { position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg, transparent, color-mix(in srgb,var(--bg) 60%,transparent) 45%, transparent); animation:ksweep 1.3s cubic-bezier(.45,0,.2,1) infinite; }
+ .kprog .kticks { position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0 14px, var(--bg) 14px 16px); opacity:.5; }
+ @keyframes ksweep { 62% { transform:translateX(102%); } 100% { transform:translateX(102%); } }
+ .kprog.done .ksweep, .kprog.fail .ksweep { animation:none; opacity:0; }
+ .kprog.fail .kfill { background:linear-gradient(90deg, color-mix(in srgb,var(--destructive) 55%,transparent), var(--destructive)); }
+ .klabel { font-family:var(--font-mono); font-size:0.72em; letter-spacing:.08em; color:var(--fg-muted); margin-top:6px; }
+ /* Single-row horizontal scroll: long keys no longer wrap/overlap the
+    card, and every character stays reachable by scrolling.
+    flex:1 1 0 + min-width:0 are REQUIRED — without them the nowrap row's
+    min-content width blows out the input-group, the card, and finally
+    the 1fr 1fr model-grid (pushing the neighbour card off-screen). */
+ .picon-mono { filter: invert(1); }
+ [data-theme="light"] .picon-mono { filter: none; }
+ @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .picon-mono { filter: none; } }
+ </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
@@ -1164,25 +1195,39 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 <!-- Step 1 -->
 <section class="step-section active" id="step1" aria-label="配置模型"><div style="padding:24px;">
  <h2>选择模型平台</h2>
- <p class="desc">默认展示推荐项。搜索或点击标签可查看全部 <span id="providerTotal">32</span> 个平台。</p>
+ <p class="desc">搜索查看全部 <span id="providerTotal">32</span> 个平台。<b style="color:var(--emerald)">系统配置</b>＝官方内置平台（Key 去官方控制台填）；<b style="color:var(--warning)">独有配置</b>＝自定义 / 本地平台（在本页填写）。</p>
 
  <!-- 搜索 + 标签筛选 -->
- <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
- <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
- oninput="searchProviders(this.value)"
- style="flex:1;min-width:200px;padding:8px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;">
- <span id="providerCount" style="color:var(--fg-muted);font-size:0.75rem;font-family:var(--font-mono);"></span>
+ <!-- 首次配置门控：网关未就绪时醒目提示 -->
+ <div id="gateNotice" style="display:none;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--warning);border-left:3px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 12%,transparent);">
+ <span class="yi" style="color:var(--warning);"><svg width="22" height="22" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200,75.64V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V76a16.07,16.07,0,0,0,6.4,12.8L114.67,128,62.4,167.2A16.07,16.07,0,0,0,56,180v36a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V180.36a16.09,16.09,0,0,0-6.35-12.77L141.27,128l52.38-39.6A16.05,16.05,0,0,0,200,75.64ZM72,40H184V75.64L178.23,80H77.33L72,76Zm56,78L98.67,96h58.4Zm56,98H72V180l48-36v24a8,8,0,0,0,16,0V144.08l48,36.28Z"/></svg></span>
+ <div>
+ <div style="font-weight:600;color:var(--fg);font-size:0.9em;">请先等 OpenClaw 终端窗口出现 <span style="font-family:var(--font-mono);color:var(--warning);">ready</span> 后再填写 API Key</div>
+ <div style="color:var(--fg-muted);font-size:0.76em;margin-top:2px;">终端未就绪时保存的 Key 可能不生效。首次启动需 2–5 分钟安装插件，请耐心等待。</div>
  </div>
- <div id="providerFilterChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
- <button class="filter-chip active" data-filter="hot" onclick="applyProviderFilter('hot')" tabindex="0">推荐</button>
- <button class="filter-chip" data-filter="all" onclick="applyProviderFilter('all')" tabindex="0">全部</button>
- <button class="filter-chip" data-filter="cn" onclick="applyProviderFilter('cn')" tabindex="0">国产</button>
- <button class="filter-chip" data-filter="free" onclick="applyProviderFilter('free')" tabindex="0">免费</button>
- <button class="filter-chip" data-filter="fast" onclick="applyProviderFilter('fast')" tabindex="0">快</button>
- <button class="filter-chip" data-filter="cheap" onclick="applyProviderFilter('cheap')" tabindex="0">便宜</button>
- <button class="filter-chip" data-filter="local" onclick="applyProviderFilter('local')" tabindex="0">本地</button>
  </div>
 
+ <!-- 官方平台 Key 填写位置醒目标注 -->
+ <div style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--emerald);border-left:3px solid var(--emerald);border-radius:8px;background:color-mix(in srgb,var(--emerald) 10%,transparent);">
+ <span class="yi" style="color:var(--emerald);"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.7577 11.8281L18.6066 3.97919L20.0208 5.3934L18.6066 6.80761L21.0815 9.28249L19.6673 10.6967L17.1924 8.22183L15.7782 9.63604L17.8995 11.7574L16.4853 13.1716L14.364 11.0503L12.1719 13.2423C13.4581 15.1837 13.246 17.8251 11.5355 19.5355C9.58291 21.4882 6.41709 21.4882 4.46447 19.5355C2.51184 17.5829 2.51184 14.4171 4.46447 12.4645C6.17493 10.754 8.81633 10.5419 10.7577 11.8281ZM10.1213 18.1213C11.2929 16.9497 11.2929 15.0503 10.1213 13.8787C8.94975 12.7071 7.05025 12.7071 5.87868 13.8787C4.70711 15.0503 4.70711 16.9497 5.87868 18.1213C7.05025 19.2929 8.94975 19.2929 10.1213 18.1213Z"/></svg></span>
+ <div style="color:var(--fg);font-size:0.9em;"><b>系统配置</b>（官方内置平台）的 API Key 请到 <b>OpenClaw 官方控制台</b> 填写；下方「独有配置」（自定义 / 本地）才在本页填写。</div>
+ </div>
+
+ <!-- Z 引导: 去 yu.ai 官网免费模型活动页领取 Key（原 /keys/ 已下线，现为 key.html） -->
+ <a href="https://yuai-r.cn/key.html?from=openclaw" target="_blank" rel="noopener"
+    style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--accent);border-left:3px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--fg);text-decoration:none;font-family:var(--font-mono);font-size:0.9rem">
+   <span class="yi" style="color:var(--accent);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
+   <span>没有 API Key？<b>去 yu.ai 官网免费领取</b> → 27 家平台免费额度汇总，复制后粘到下方对应平台即可</span>
+ </a>
+
+ <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
+ <span style="position:relative;flex:1;min-width:200px;display:inline-flex;align-items:center;"><span class="yi" style="position:absolute;left:11px;color:var(--fg-muted);pointer-events:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/></svg></span><input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
+ oninput="searchProviders(this.value)"
+ style="flex:1;min-width:200px;padding:8px 12px 8px 34px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;"></span>
+ <span id="providerCount" style="color:var(--fg-muted);font-size:0.75rem;font-family:var(--font-mono);"></span>
+ </div>
+ 
+ <div id="catKbar" style="display:none;margin:0 0 12px;"><div class="kprog" style="height:4px;"><div class="kfill"></div><div class="ksweep"></div></div></div>
  <!-- 模型目录热更新：从维护者仓库拉取最新平台/模型列表，无需升级整个便携版 -->
  <div id="catalogBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;">
  <span id="catalogInfo" style="color:var(--fg-muted);font-size:0.72rem;font-family:var(--font-mono);">模型目录：内置版本</span>
@@ -1210,20 +1255,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div id="localRuntimes"></div>
  </div>
 
- <!-- Z 引导: 去 yu.ai 官网领取共享 Key -->
- <a href="https://yuai-r.cn/keys/?from=openclaw" target="_blank" rel="noopener"
-    style="display:flex;align-items:center;gap:8px;margin:4px 0 18px;padding:12px 16px;border:1px solid var(--emerald);border-left:3px solid var(--emerald);border-radius:8px;background:color-mix(in srgb,var(--emerald) 10%,transparent);color:var(--fg);text-decoration:none;font-family:var(--font-mono);font-size:0.9rem">
-   <span style="font-size:1.1rem">🎁</span>
-   <span>没有 API Key？<b>去 yu.ai 官网免费领取</b> → 复制后粘到下方对应平台即可</span>
- </a>
-
  <div class="model-grid" id="providerGrid" role="listbox" aria-label="模型平台列表"></div>
  <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
- 没有匹配的平台。<a href="#" onclick="event.preventDefault();applyProviderFilter('all');" style="color:var(--emerald);">点此显示全部</a>
+ 没有匹配的平台，换个关键词试试。
  </div>
- <div class="btn-row">
- <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled tabindex="0">保存并继续 →</button>
- </div>
+ <!-- 全局保存按钮已移除：每个厂商卡片内自带「保存并继续」，updateSaveBtn() 已改为 no-op -->
 </section>
 
 <!-- Step 2 -->
@@ -1242,93 +1278,29 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
  </div>
 
- <button class="btn-launch" onclick="saveChannelsAndOpen()" tabindex="0">打开聊天界面 →</button>
+ <div id="kSave" style="display:none;margin:18px 0 6px;"><div class="kprog" id="kSaveBar"><div class="kfill"></div><div class="ksweep"></div><div class="kticks"></div></div><div class="klabel" id="kSaveLabel">准备写入…</div></div>
+ <button class="btn-launch" onclick="openGateway()" tabindex="0"><span class="yi" style="margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5018 20.0048C14.8432 21.5841 13.5794 22.848 12 23.5066C10.4206 22.848 9.15679 21.5841 8.49816 20.0048H10.7575C11.0838 20.4934 11.5051 20.9171 12 21.248C12.4949 20.9171 12.9162 20.4934 13.2425 20.0048H15.5018ZM18 14.8095L20 17.0777V19.0048H4V17.0777L6 14.8095V9.00478C6 5.52153 8.50442 2.55822 12 1.45999C15.4956 2.55822 18 5.52153 18 9.00478V14.8095ZM17.2692 17.0048L16 15.5653V9.00478C16 6.68694 14.4292 4.57431 12 3.58384C9.57078 4.57431 8 6.68694 8 9.00478V15.5653L6.73076 17.0048H17.2692ZM12 11.0048C10.8954 11.0048 10 10.1093 10 9.00478C10 7.90021 10.8954 7.00478 12 7.00478C13.1046 7.00478 14 7.90021 14 9.00478C14 10.1093 13.1046 11.0048 12 11.0048Z"/></svg></span>打开聊天界面 →</button>
 
  <div class="cmd-grid">
  <div class="cmd-card" onclick="runCmd('update')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 13V18.585L14.8284 16.7574L16.2426 18.1716L12 22.4142L7.75736 18.1716L9.17157 16.7574L11 18.585V13H13ZM12 2C15.5934 2 18.5544 4.70761 18.9541 8.19395C21.2858 8.83154 23 10.9656 23 13.5C23 16.3688 20.8036 18.7246 18.0006 18.9776L18.0009 16.9644C19.6966 16.7214 21 15.2629 21 13.5C21 11.567 19.433 10 17.5 10C17.2912 10 17.0867 10.0183 16.8887 10.054C16.9616 9.7142 17 9.36158 17 9C17 6.23858 14.7614 4 12 4C9.23858 4 7 6.23858 7 9C7 9.36158 7.03838 9.7142 7.11205 10.0533C6.91331 10.0183 6.70879 10 6.5 10C4.567 10 3 11.567 3 13.5C3 15.2003 4.21241 16.6174 5.81986 16.934L6.00005 16.9646L6.00039 18.9776C3.19696 18.7252 1 16.3692 1 13.5C1 10.9656 2.71424 8.83154 5.04648 8.19411C5.44561 4.70761 8.40661 2 12 2Z"/></svg></div>
   <div class="cmd-name">更新</div><div class="cmd-desc">升级到最新版</div>
 </div>
 <div class="cmd-card" onclick="runCmd('doctor')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 7.53861L15 21.5386L18.6594 13H23V11H17.3406L15 16.4614L9 2.46143L5.3406 11H1V13H6.6594L9 7.53861Z"/></svg></div>
   <div class="cmd-name">诊断</div><div class="cmd-desc">检查运行环境</div>
 </div>
 <div class="cmd-card" onclick="runCmd('onboard')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM16.5 7.5L14 14L7.5 16.5L10 10L16.5 7.5ZM12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z"/></svg></div>
   <div class="cmd-name">引导</div><div class="cmd-desc">初始化设置</div>
 </div>
 <div class="cmd-card" onclick="runCmd('restart')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg></div>
   <div class="cmd-name">重启</div><div class="cmd-desc">使配置生效</div>
 </div>
  </div>
 
-  <!-- 运行洞察：五合一面板（自页首迁入；替代从未被填充的旧"已安装技能"静态网格） -->
- <div style="margin-top:24px;">
- <div class="insight-strip" role="tablist" aria-label="运行洞察">
- <button type="button" role="tab" aria-selected="false" data-feature="usage" onclick="showFeature('usage')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>成本追踪</button>
- <button type="button" role="tab" aria-selected="false" data-feature="monitor" onclick="showFeature('monitor')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>实时监控</button>
- <button type="button" role="tab" aria-selected="false" data-feature="memory" onclick="showFeature('memory')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>内存浏览器</button>
- <button type="button" role="tab" aria-selected="false" data-feature="sessions" onclick="showFeature('sessions')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>会话管理</button>
- <button type="button" role="tab" aria-selected="false" data-feature="skills" onclick="showFeature('skills')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>技能管理</button>
- </div>
-<!-- Feature Panels -->
-<div id="feature-panels">
-  <!-- Cost Tracking Panel -->
-  <div id="panel-usage" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">成本追踪</h3>
-    <div id="usage-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Real-time Monitoring Panel -->
-  <div id="panel-monitor" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">实时监控</h3>
-    <div id="monitor-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Memory Browser Panel -->
-  <div id="panel-memory" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">内存浏览器</h3>
-    <div id="memory-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Session Management Panel -->
-  <div id="panel-sessions" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">会话管理</h3>
-    <div id="sessions-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-
-  <!-- Skills Management Panel -->
-  <div id="panel-skills" style="display:none;margin-bottom:20px;">
-    <h3 style="color:var(--fg);font-size:0.9em;font-weight:500;letter-spacing:1px;">技能管理</h3>
-    <div id="skills-content" style="padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
-      <div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>
-    </div>
-  </div>
-</div>
- </div>
-
- <!-- 渠道配置 (默认折叠，避免淹没首屏) -->
- <div style="margin-top:28px;">
- <button id="channelToggle" onclick="toggleChannelsPanel()"
- style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:var(--font-mono);font-size:0.88em;cursor:pointer;text-align:left;">
- <span>接入聊天平台 (可选 · 12 个)</span>
- <span id="channelToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">v</span>
- </button>
- <div id="channelPanel" style="display:none;margin-top:12px;">
- <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:12px;">点击卡片展开填写凭证，不填可跳过。保存后需重启 Gateway 生效。</p>
- <div class="model-grid" id="channelGrid" role="listbox" aria-label="渠道列表"></div>
- </div>
- </div>
-
+  
  <!-- 手机连接 -->
  <div style="margin-top:28px;">
  <button id="mobileToggleBtn" onclick="toggleMobilePanel()"
@@ -1406,6 +1378,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
 </div>
 
+<div id="hotFailBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#2b0e0e;border-top:2px solid var(--destructive);padding:14px 24px;z-index:600;text-align:center;">
+ <span style="color:var(--destructive);font-size:0.9em;font-weight:600;"><span class="yi" style="display:inline-flex;vertical-align:-3px;margin-right:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.00001 20V14C4.00001 9.58172 7.58173 6 12 6C16.4183 6 20 9.58172 20 14V20H21V22H3.00001V20H4.00001ZM6.00001 20H18V14C18 10.6863 15.3137 8 12 8C8.6863 8 6.00001 10.6863 6.00001 14V20ZM11 2H13V5H11V2ZM19.7782 4.80761L21.1924 6.22183L19.0711 8.34315L17.6569 6.92893L19.7782 4.80761ZM2.80762 6.22183L4.22183 4.80761L6.34315 6.92893L4.92894 8.34315L2.80762 6.22183ZM7.00001 14C7.00001 11.2386 9.23858 9 12 9V11C10.3432 11 9.00001 12.3431 9.00001 14H7.00001Z"/></svg></span> 网关未能自动恢复</span>
+ <span style="color:var(--fg-muted);font-size:0.82em;margin-left:10px;">请关闭所有 OpenClaw 终端窗口，回到文件夹重新双击 <b style="color:var(--fg);">OpenClaw.vbs</b> 启动</span>
+ <button onclick="this.parentNode.style.display='none'" style="margin-left:12px;padding:6px 14px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78em;">知道了</button>
+</div>
 <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal()" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
  <div class="modal-box" onclick="event.stopPropagation();"><h3 id="modalTitle"></h3><p id="modalBody"></p><div class="modal-btns" id="modalBtns"></div></div>
@@ -1556,22 +1533,6 @@ const PROVIDERS = [
  {id:'ollama',name:'Ollama',tags:[],desc:'\u672c\u5730\u8fd0\u884c',base:'http://127.0.0.1:11434/v1',models:[],link:'https://ollama.com/',isLocal:true}
 ];
 
-// ===== CHANNELS =====
-const CHANNELS = [
- {id:'telegram',name:'Telegram',icon:'\u2708\ufe0f',fields:[{key:'token',label:'Bot Token',type:'password'}]},
- {id:'qqbot',name:'QQ Bot',icon:'\ud83d\udc27',fields:[{key:'appId',label:'App ID',type:'text'},{key:'clientSecret',label:'Client Secret',type:'password'}]},
- {id:'feishu',name:'\u98de\u4e66',icon:'\ud83d\udc26',fields:[{key:'appId',label:'App ID',type:'text'},{key:'appSecret',label:'App Secret',type:'password'}]},
- {id:'wecom',name:'\u4f01\u4e1a\u5fae\u4fe1',icon:'\ud83c\udfe2',fields:[{key:'botId',label:'Bot ID',type:'text'},{key:'secret',label:'Secret',type:'password'}]},
- {id:'discord',name:'Discord',icon:'\ud83c\udfae',fields:[{key:'token',label:'Bot Token',type:'password'}]},
- {id:'slack',name:'Slack',icon:'\ud83d\udcac',hint:'\u9700\u5148\u5b89\u88c5: openclaw plugins install @openclaw/slack',fields:[{key:'token',label:'Bot Token',type:'password'}]},
- {id:'whatsapp',name:'WhatsApp',icon:'\ud83d\udcf1',hint:'\u9700\u5148\u5b89\u88c5: openclaw plugins install @openclaw/whatsapp\uff0c\u7136\u540e openclaw channels login whatsapp',fields:[]},
- {id:'signal',name:'Signal',icon:'\ud83d\udd12',hint:'openclaw channels login signal',fields:[]},
- {id:'line',name:'LINE',icon:'\ud83d\udfe2',fields:[{key:'channelAccessToken',label:'Channel Access Token',type:'password'},{key:'channelSecret',label:'Channel Secret',type:'password'}]},
- {id:'googlechat',name:'Google Chat',icon:'\ud83d\udcec',fields:[{key:'serviceAccountPath',label:'Service Account JSON Path',type:'text'}]},
- {id:'msteams',name:'MS Teams',icon:'\ud83d\udcbb',fields:[{key:'appId',label:'App ID',type:'text'},{key:'password',label:'Password',type:'password'}]},
- {id:'wechat',name:'\u5fae\u4fe1',icon:'\ud83d\udcf2',special:'wechat',fields:[]}
-];
-
 // ===== STATE =====
 let selectedProvider = null;
 let selectedBase = '';
@@ -1581,8 +1542,6 @@ let gatewayPort = null;
 // Gateway auth token. Read from openclaw.json on load (loadConfig
 // below). Defaults to 'openclaw' if user hasn't customized it.
 let _gatewayToken = 'openclaw';
-let wechatPollTimer = null;
-let wechatSession = null;
 let configData = null;
 
 // ===== RENDER PROVIDERS =====
@@ -1604,60 +1563,45 @@ function _matchProvider(p) {
  if (p.isCustom) hay += ' custom 自定义 中转';
  return hay.indexOf(q) !== -1;
  }
- if (providerFilter === 'all') return true;
- if (providerFilter === 'local') return !!p.isLocal;
- return (p.tags || []).indexOf(providerFilter) !== -1;
-}
-
-function applyProviderFilter(tag) {
- providerFilter = tag;
- providerSearchQuery = '';
- var search = document.getElementById('providerSearch');
- if (search) search.value = '';
- document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
- c.classList.toggle('active', c.getAttribute('data-filter') === tag);
- });
- renderProviders();
- // When user clicks the 本地 chip, surface the local-model panel.
- // scanLocalModels() handles both the detected and not-detected
- // cases internally — no double-fetch.
- if (tag === 'local') {
- scanLocalModels({ showHintsIfEmpty: true });
- }
+ return true;
 }
 
 function searchProviders(q) {
  providerSearchQuery = q.trim();
- if (providerSearchQuery) {
- // Active search overrides any filter chip; clear visual state.
- // We deliberately don't change providerFilter here so that if the
- // user clears the search box without picking a chip, we restore
- // their previously-selected filter rather than jumping to 'hot'.
- document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
- c.classList.remove('active');
- });
- } else {
- // Empty search → restore the visual chip for the current filter.
- // Without this, after typing then clearing, the chip would remain
- // greyed out even though providerFilter is still active behind it.
- document.querySelectorAll('#providerFilterChips .filter-chip').forEach(function(c){
- c.classList.toggle('active', c.getAttribute('data-filter') === providerFilter);
- });
- }
  renderProviders();
 }
 
+
+// ===== KINETIC PROGRESS + OTP KEY INPUT (2026-09-04, remix/phosphor aesthetic) =====
+function kSaveShow(label){ var w=document.getElementById('kSave'); if(!w) return; w.style.display='block';
+ var b=document.getElementById('kSaveBar'); if(b) b.classList.remove('done','fail');
+ kSaveSet(6); kSaveLabel(label||'处理中…'); }
+function kSaveLabel(t){ var l=document.getElementById('kSaveLabel'); if(l) l.textContent=t; }
+function kSaveSet(pct){ var b=document.getElementById('kSaveBar'); if(!b) return;
+ var f=b.querySelector('.kfill'); if(f) f.style.width=Math.max(0,Math.min(100,pct))+'%'; }
+function kSaveDone(){ var b=document.getElementById('kSaveBar'); if(b){ b.classList.add('done'); kSaveSet(100); }
+ kSaveLabel('✓ 已就绪'); setTimeout(function(){ var w=document.getElementById('kSave'); if(w) w.style.display='none'; },1800); }
+function kSaveFail(){ var b=document.getElementById('kSaveBar'); if(b) b.classList.add('fail');
+ kSaveLabel('网关未自动恢复 — 请关闭所有窗口后回到文件夹重新双击 OpenClaw.vbs'); }
+function refreshCatalogBar(show){ var el=document.getElementById('catKbar'); if(el) el.style.display = show?'block':'none'; }
+
 // Provider icon helper — maps provider ID to SVG icon file
 var _iconMap = {zai:'zhipu',ernie:'baichuan',hunyuan:'qwen',siliconflow:'deepseek',novita:'openai',hyperbolic:'meta',deepinfra:'meta',stepfun:'yi',custom:'openrouter'};
+// Monochrome (currentColor) icons render black inside <img> — invisible on the dark
+// theme. .picon-mono inverts them in dark theme, restores in light theme.
+var _monoIcons = {anthropic:1,grok:1,groq:1,lmstudio:1,moonshot:1,nousresearch:1,ollama:1,openai:1,openrouter:1,replicate:1,xai:1,copilot:1};
 function providerIcon(id) {
  var name = _iconMap[id] || id;
- return '<img src="/icons/' + name + '.svg" width="20" height="20" alt="" style="border-radius:4px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+ var cls = _monoIcons[name] ? ' class="picon-mono"' : '';
+ return '<img src="/icons/' + name + '.svg"' + cls + ' width="20" height="20" alt="" style="border-radius:4px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
 }
 
 function renderProviders() {
  var grid = document.getElementById('providerGrid');
  if (!grid) return;
  var visible = PROVIDERS.filter(_matchProvider);
+ // Sort official-managed first so the two group headers never interleave
+ visible.sort(function(a,b){ return (isOfficialManaged(b)?1:0) - (isOfficialManaged(a)?1:0); });
  var emptyEl = document.getElementById('providerEmpty');
  var countEl = document.getElementById('providerCount');
  var totalEl = document.getElementById('providerTotal');
@@ -1676,19 +1620,28 @@ function renderProviders() {
  }
  grid.style.display = '';
  if (emptyEl) emptyEl.style.display = 'none';
- grid.innerHTML = visible.map(p => {
+ var _st = { sysDone: false, ownDone: false };
+ var _head = function(label, sub) {
+ return '<div style="grid-column:1/-1;margin:16px 0 4px;padding-bottom:6px;border-bottom:1px solid var(--border);font-family:var(--font-mono);font-size:0.8em;">'
+ + '<span style="color:var(--emerald);font-weight:600;">' + label + '</span>'
+ + '<span style="color:var(--fg-muted);"> ' + sub + '</span></div>';
+ };
+grid.innerHTML = visible.map(p => {
+ var headHtml = '';
+ if (isOfficialManaged(p)) { if (!_st.sysDone) { _st.sysDone = true; headHtml = _head('系统配置', '· 官方内置 · Key 请到官方控制台填写'); } }
+ else if (!_st.ownDone) { _st.ownDone = true; headHtml = _head('独有配置', '· 自定义 / 本地 · 在本页填写'); }
  // Defense in depth: PROVIDERS is now dynamic (hot-updatable catalog
  // pulled from the maintainer's repo or imported by the user), so every
  // interpolation below must be escaped. _e is defined BEFORE first use
- // (tagsHtml) — the catalog path made tags/base untrusted inputs.
+ // — the catalog path made tags/base untrusted inputs.
  // (B23-03, extended for hot-update)
  const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
- const tagsHtml = (p.tags || []).map(t => '<span class="tag ' + _e(t) + '">' + _e(({hot:'\u63a8\u8350',free:'\u514d\u8d39',cn:'\u56fd\u5185',fast:'\u5feb',cheap:'\u4f4e\u4ef7'}[t]||t)) + '</span>').join('');
- // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
+ var saveBtnHtml = function(pid){ return '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); saveCard(\'' + _e(pid) + '\')">保存并继续</button>'; };
+  // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
  // configured in the official Control UI, NOT here. Show an informational
  // card (no editable form) that points the user to the official UI.
  if (isOfficialManaged(p)) {
-  return '<div class="provider-card managed-card" data-id="' + _e(p.id) + '" data-managed="1">' +
+  return headHtml + '<div class="provider-card managed-card" data-id="' + _e(p.id) + '" data-managed="1">' +
    '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' +
    '<span class="tag managed-tag">官方托管</span></div>' +
    '<div class="provider-desc">' + _e(p.desc) + '</div>' +
@@ -1703,26 +1656,27 @@ function renderProviders() {
  formHtml = '<div class="provider-expand">' +
  '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
- '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
- '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div></div>';
+ '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<div class="card-actions"><span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  } else if (p.isLocal) {
  var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
  formHtml = '<div class="provider-expand">' +
  '<input type="text" class="input" placeholder="Port (default: ' + _e(_port) + ')" data-field="port" value="' + _e(_port) + '">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
- '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button></div>';
+ '<div class="card-actions"><button class="btn btn-sm" onclick="event.stopPropagation(); testLocal(\'' + _e(p.id) + '\')">检测连接</button><span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  } else {
  const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
  formHtml = '<div class="provider-expand">' +
  '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
- '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
- '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div>' +
- '<a href="' + _e(p.link) + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
- '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+ _e(p.id) +'\')">' +
- '测试 Key</button><span id="keytest-'+ _e(p.id) +'" style="margin-left:8px;font-size:0.78em;"></span></div>';
+ '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<div class="card-actions">' +
+ '<a class="btn btn-sm" href="' + _e(p.link) + '" target="_blank" rel="noopener">获取 Key ↗</a>' +
+ '<button class="btn btn-sm" onclick="event.stopPropagation(); testKey(\'' + _e(p.id) + '\')">测试 Key</button>' +
+ '<span id="keytest-' + _e(p.id) + '" style="font-size:0.78em;"></span>' +
+ '<span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  }
- return '<div class="provider-card" data-id="' + _e(p.id) + '" onclick="toggleProvider(this,\'' + _e(p.id) + '\')">' +
- '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + tagsHtml + '</div>' +
+ return headHtml + '<div class="provider-card" data-id="' + _e(p.id) + '" onclick="toggleProvider(this,\'' + _e(p.id) + '\')">' +
+ '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + '</div>' +
  '<div class="provider-desc">' + _e(p.desc) + '</div>' + formHtml + '</div>';
  }).join('');
 }
@@ -1770,6 +1724,7 @@ function updateCatalogBadge() {
 // refreshes take the extra-safe path: if anything is dirty they skip
 // the swap entirely and let the next page load pick the catalog up.
 function applyCatalog(providers, info, auto) {
+ refreshCatalogBar(false);
  if (!Array.isArray(providers) || providers.length === 0) return false;
  var grid = document.getElementById('providerGrid');
  var dirty = [];
@@ -1824,6 +1779,8 @@ function loadCatalog(auto) {
 
 function refreshCatalog(silent) {
  if (!silent) showToast('正在拉取最新模型目录…', 'info');
+ refreshCatalogBar(true);
+ setTimeout(function(){ refreshCatalogBar(false); }, 15000);
  apiFetch('/api/models/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
  .then(function(r){ return r.json(); })
  .then(function(data) {
@@ -1896,54 +1853,6 @@ function resetCatalog() {
  .catch(function() { showToast('恢复失败：网络错误', 'error'); });
 }
 
-// ===== CHANNELS PANEL TOGGLE =====
-function toggleChannelsPanel() {
- var panel = document.getElementById('channelPanel');
- var arrow = document.getElementById('channelToggleArrow');
- if (!panel) return;
- var isOpen = panel.style.display === 'block';
- panel.style.display = isOpen ? 'none' : 'block';
- if (arrow) arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
-}
-
-// ===== RENDER CHANNELS =====
-(function renderChannels() {
- const grid = document.getElementById('channelGrid');
- if (!grid) return;
- grid.innerHTML = CHANNELS.map(ch => {
- let formHtml = '';
- // Hint paragraph: shown above fields when present (e.g. Slack/WhatsApp
- // need a plugin install before the credentials can be saved). For
- // hint-only channels (no fields), the hint replaces the form body.
- const hintHtml = ch.hint
- ? '<p class="hint" style="margin-bottom:8px;">\u63d0\u793a: <code>' + ch.hint + '</code></p>'
- : '';
- if (ch.special === 'wechat') {
- formHtml = '<div class="provider-expand channel-form">' +
- '<p>\u626b\u7801\u767b\u5f55\u4e2a\u4eba\u5fae\u4fe1</p>' +
- '<div id="wechat-qr"></div>' +
- '<button class="btn btn-primary" onclick="startWeChatLogin(event)">Start QR Login</button>' +
- '<p class="hint" id="wechat-status"></p></div>';
- } else if (!ch.fields || ch.fields.length === 0) {
- // No fields: hint-only channel (e.g. WhatsApp where login is via CLI).
- formHtml = '<div class="provider-expand channel-form">' +
- hintHtml +
- '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
- } else {
- const inputs = ch.fields.map(f =>
- '<div class="input-group"><input type="' + f.type + '" class="input" placeholder="' + f.label + '" data-channel="' + ch.id + '" data-key="' + f.key + '" id="ch-' + ch.id + '-' + f.key + '">' +
- (f.type === 'password' ? '<button class="btn-icon" onclick="togglePw(\'' + ch.id + '-' + f.key + '\')">显示</button>' : '') + '</div>'
- ).join('');
- // hint + fields together — the hint informs users about prerequisites
- // (e.g. plugin install) without hiding the credential inputs.
- formHtml = '<div class="provider-expand channel-form">' + hintHtml + inputs +
- '<button class="btn btn-sm" onclick="testChannel(event,\'' + ch.id + '\')">Test</button></div>';
- }
- return '<div class="channel-card" data-type="' + ch.id + '" onclick="toggleChannel(this,\'' + ch.id + '\')">' +
- '<div class="channel-name">' + ch.name + '</div>' + formHtml + '</div>';
- }).join('');
-})();
-
 // ===== TOGGLE PROVIDER =====
 function toggleProvider(card, id) {
  // Don't toggle if user clicked on an input, select, button, or link inside the expand
@@ -1981,65 +1890,18 @@ function toggleProvider(card, id) {
  updateSaveBtn();
 }
 
-// ===== UPDATE SAVE BUTTON =====
-function updateSaveBtn() {
- const btn = document.getElementById('saveBtn');
- if (!btn) return;
- const p = PROVIDERS.find(x => x.id === selectedProvider);
- if (!p) { btn.disabled = true; return; }
-
- const card = document.querySelector('.provider-card[data-id="' + selectedProvider + '"]');
- if (!card) { btn.disabled = true; return; }
-
- if (p.isLocal) {
- const port = card.querySelector('[data-field="port"]');
- const model = card.querySelector('[data-field="model"]');
- btn.disabled = !(port && port.value && model && model.value);
- } else if (p.isCustom) {
- const base = card.querySelector('[data-field="base"]');
- const model = card.querySelector('[data-field="model"]');
- const key = card.querySelector('[data-field="apikey"]');
- btn.disabled = !(base && base.value && model && model.value && key && key.value);
- } else {
- const model = card.querySelector('[data-field="model"]');
- const key = card.querySelector('[data-field="apikey"]');
- btn.disabled = !(model && model.value && key && key.value);
- }
-}
-
-// ===== TOGGLE CHANNEL =====
-function toggleChannel(card, type) {
- var evt = window.event || arguments[2];
- if (evt && evt.target) {
- var tag = evt.target.tagName.toLowerCase();
- if (tag === 'input' || tag === 'select' || tag === 'button' || tag === 'a' || tag === 'option' || tag === 'textarea') return;
- if (evt.target.closest && evt.target.closest('.channel-form')) return;
- }
- const grid = document.getElementById('channelGrid');
- const allCards = grid.querySelectorAll('.channel-card');
- const expand = card.querySelector('.channel-form');
- const isOpen = expand && expand.classList.contains('open');
-
- allCards.forEach(c => {
- c.classList.remove('selected');
- const ex = c.querySelector('.channel-form');
- if (ex) ex.classList.remove('open');
- });
-
- if (!isOpen && expand) {
- card.classList.add('selected');
- expand.classList.add('open');
- setTimeout(() => card.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
- }
-}
+// ===== UPDATE SAVE BUTTON (no-op) =====
+// The global save button (#saveBtn) was removed — each provider card
+// carries its own "保存并继续" now. Kept as a deliberate no-op so the
+// call sites above stay untouched; do NOT re-add a getElementById for
+// the removed node, the CI static check asserts every referenced ID
+// exists in the HTML.
+function updateSaveBtn() {}
 
 // ===== TOGGLE PASSWORD =====
-function togglePw(id) {
- const el = document.getElementById('key-' + id) || document.getElementById('ch-' + id);
- if (el) {
- el.type = el.type === 'password' ? 'text' : 'password';
- }
-}
+// Removed: key show/hide now uses the browser's NATIVE password-reveal
+// control rendered inside password inputs (eye icon, Edge/Chrome). No
+// custom toggle button or JS is needed anymore.
 
 // ===== TEST LOCAL =====
 function testLocal(providerId) {
@@ -2076,109 +1938,6 @@ function testLocal(providerId) {
  clearTimeout(tt);
  showToast('\u8fde\u63a5\u5931\u8d25: ' + (err.name === 'AbortError' ? '超时' : err.message), 'error');
  });
-}
-
-// ===== TEST CHANNEL =====
-function testChannel(e, type) {
- e.stopPropagation();
- const card = document.querySelector('.channel-card[data-type="' + type + '"]');
- if (!card) return;
- const inputs = card.querySelectorAll('[data-channel="' + type + '"]');
- const creds = {};
- inputs.forEach(inp => { creds[inp.dataset.key] = inp.value; });
- apiFetch('/api/channel/test', {
- method: 'POST',
- headers: {'Content-Type':'application/json'},
- body: JSON.stringify({type: type, config: creds})
- }).then(r => r.json()).then(data => {
- if (data.ok) showToast(type + ' \u8fde\u63a5\u6210\u529f', 'success');
- else showToast((data.error || '\u8fde\u63a5\u5931\u8d25'), 'error');
- }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
-}
-
-// ===== WECHAT LOGIN =====
-function startWeChatLogin(e) {
- e.stopPropagation();
- // 清理旧的 polling timer，防止重复点击导致多个 timer
- if (wechatPollTimer) { clearInterval(wechatPollTimer); wechatPollTimer = null; }
- const statusEl = document.getElementById('wechat-status');
- const qrEl = document.getElementById('wechat-qr');
- if (statusEl) statusEl.textContent = '\u6b63\u5728\u542f\u52a8...';
- apiFetch('/api/wechat/start', {method:'POST'}).then(function(r){return r.json();}).then(function(data) {
- if (data.qrcodeUrl) {
- wechatSession = data.sessionKey;
- // Validate URL scheme to prevent XSS via crafted qrcodeUrl
- if (/^data:image\//.test(data.qrcodeUrl) || /^https?:\/\//.test(data.qrcodeUrl)) {
- var qrImg = document.createElement('img');
- qrImg.src = data.qrcodeUrl;
- qrImg.style.cssText = 'max-width:180px;border-radius:8px;';
- qrEl.textContent = '';
- qrEl.appendChild(qrImg);
- } else {
- qrEl.textContent = 'QR code unavailable';
- }
- if (statusEl) statusEl.textContent = '\u8bf7\u7528\u5fae\u4fe1\u626b\u63cf\u4e8c\u7ef4\u7801';
- pollWeChatStatus();
- } else {
- if (statusEl) statusEl.textContent = '\u274c ' + (data.error || 'Failed');
- }
- }).catch(err => {
- if (statusEl) statusEl.textContent = '\u7f51\u7edc\u9519\u8bef';
- });
-}
-
-function pollWeChatStatus() {
- if (wechatPollTimer) clearInterval(wechatPollTimer);
- // Consecutive-failure counter: if the config-server restarts mid-poll
- // every request rejects and the catch swallowed it silently, leaving
- // the UI stuck on "请扫码" forever. Stop after 10 misses (~20s) and
- // tell the user to re-scan.
- var wcFails = 0;
- wechatPollTimer = setInterval(() => {
- apiFetch('/api/wechat/status?session=' + encodeURIComponent(wechatSession || '')).then(function(r){return r.json();}).then(function(data) {
- wcFails = 0;
- const statusEl = document.getElementById('wechat-status');
- const qrEl = document.getElementById('wechat-qr');
- // Server returns: 'wait' | 'refreshed' | 'confirmed' | 'expired' | 'error'
- // Frontend used to look for 'logged_in' which the server never returns,
- // so successful logins silently never finished from the UI's view.
- if (data.status === 'confirmed') {
- clearInterval(wechatPollTimer);
- wechatPollTimer = null;
- if (statusEl) statusEl.textContent = '\u2705 \u767b\u5f55\u6210\u529f' + (data.accountId ? ' (' + data.accountId + ')' : '');
- showToast('\u5fae\u4fe1\u767b\u5f55\u6210\u529f\uff01\u91cd\u542f Gateway \u540e\u751f\u6548', 'success');
- } else if (data.status === 'refreshed' && data.qrcodeUrl) {
- // QR code expired and was auto-refreshed; swap the image in place
- if (qrEl) {
- if (/^data:image\//.test(data.qrcodeUrl) || /^https?:\/\//.test(data.qrcodeUrl)) {
- var rImg = document.createElement('img');
- rImg.src = data.qrcodeUrl;
- rImg.style.cssText = 'max-width:180px;border-radius:8px;';
- qrEl.textContent = '';
- qrEl.appendChild(rImg);
- }
- }
- if (statusEl) statusEl.textContent = '\u4e8c\u7ef4\u7801\u5df2\u5237\u65b0\uff0c\u8bf7\u91cd\u626b';
- } else if (data.status === 'expired') {
- clearInterval(wechatPollTimer);
- wechatPollTimer = null;
- if (statusEl) statusEl.textContent = '\u274c \u4f1a\u8bdd\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u626b\u7801';
- } else if (data.status === 'error') {
- clearInterval(wechatPollTimer);
- wechatPollTimer = null;
- if (statusEl) statusEl.textContent = '\u274c ' + (data.message || data.error || 'Error');
- }
- // 'wait' = still waiting for scan, no UI update needed
- }).catch(() => {
- wcFails++;
- if (wcFails >= 10) {
- clearInterval(wechatPollTimer);
- wechatPollTimer = null;
- var stEl = document.getElementById('wechat-status');
- if (stEl) stEl.textContent = '\u274c \u8fde\u63a5\u4e2d\u65ad\uff0c\u8bf7\u91cd\u65b0\u626b\u7801';
- }
- });
- }, 2000);
 }
 
 // ===== TEST API KEY =====
@@ -2494,6 +2253,8 @@ function buildConfig(provider, base, model, apiKey) {
 // handled the config writes atomically, but two restart spawns racing
 // each other could land on different ports or kill each other.
 var _saveConfigBusy = false;
+function saveCard(id){ selectedProvider = id; saveConfig(); }
+
 function saveConfig() {
  if (_saveConfigBusy) return;
  if (!selectedProvider) { showToast('\u8bf7\u5148\u9009\u62e9\u6a21\u578b\u63d0\u4f9b\u5546', 'error'); return; }
@@ -2526,6 +2287,7 @@ function saveConfig() {
  configData = cfg;
 
  _saveConfigBusy = true;
+ kSaveShow('写入配置…');
  apiFetch('/api/config', {
  method: 'POST',
  headers: {'Content-Type':'application/json'},
@@ -2534,6 +2296,7 @@ function saveConfig() {
  _saveConfigBusy = false;
  if (data.ok) {
  showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
+ kSaveSet(25); kSaveLabel('重启 Gateway…');
  try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
  goStep(2);
  // 显示配置摘要
@@ -2542,73 +2305,38 @@ function saveConfig() {
  // 自动重启 Gateway 使新配置生效
  apiFetch('/api/restart', {method:'POST'}).then(function(){
  showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
+ kSaveSet(40); kSaveLabel('等待网关就绪…');
  var waitCount = 0;
  var waitReady = setInterval(function(){
  waitCount++;
- if (waitCount > 30) { clearInterval(waitReady); return; }
+ if (waitCount > 30) {
+ clearInterval(waitReady);
+ kSaveSet(40 + Math.min(waitCount * 1.8, 56)); kSaveLabel('等待网关就绪… ' + waitCount + 's / 60s');
+ var _hf = document.getElementById('hotFailBanner');
+ if (_hf) _hf.style.display = 'block';
+ showToast('Gateway \u672a\u80fd\u81ea\u52a8\u6062\u590d\uff0c\u8bf7\u5173\u95ed\u6240\u6709\u7a97\u53e3\u540e\u91cd\u65b0\u542f\u52a8', 'error');
+ return;
+ }
  findGatewayPort().then(function(port){
  if (port) {
  clearInterval(waitReady);
  showToast('Gateway \u5df2\u5c31\u7eea', 'success');
+ var _hfo = document.getElementById('hotFailBanner'); if (_hfo) _hfo.style.display = 'none';
+ kSaveDone();
  checkGateway();
  }
  });
  }, 2000);
  }).catch(function(){});
  } else {
+ kSaveFail();
  showToast((data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
  }
  }).catch(function(err) {
  _saveConfigBusy = false;
+ kSaveFail();
  showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error');
  });
-}
-
-// ===== SAVE CHANNELS AND OPEN =====
-function saveChannelsAndOpen() {
- const channels = {};
- CHANNELS.forEach(ch => {
- const card = document.querySelector('.channel-card[data-type="' + ch.id + '"]');
- if (!card) return;
- const inputs = card.querySelectorAll('[data-channel="' + ch.id + '"]');
- const creds = {};
- let hasValue = false;
- inputs.forEach(inp => {
- if (inp.value) { creds[inp.dataset.key] = inp.value; hasValue = true; }
- });
- if (hasValue) channels[ch.id] = creds;
- });
-
- if (Object.keys(channels).length === 0) {
- // 等 Gateway 重启完成再打开（saveConfig 已触发重启）
- showToast('\u7b49\u5f85 Gateway \u5c31\u7eea...', 'info');
- var _waitOpen = setInterval(function(){
- findGatewayPort().then(function(port){
- if (port) { clearInterval(_waitOpen); openGateway(); }
- });
- }, 2000);
- setTimeout(function(){ clearInterval(_waitOpen); openGateway(); }, 15000);
- return;
- }
-
- // 先获取最新配置再合并，避免清空已有 models 字段
- apiFetch('/api/config').then(function(r){return r.json();}).then(function(existing){
- var payload = Object.assign({}, existing || {}, {channels: channels});
- return apiFetch('/api/config', {
- method: 'POST',
- headers: {'Content-Type':'application/json'},
- body: JSON.stringify(payload)
- });
- }).then(r => r.json()).then(data => {
- if (data.ok) {
- showToast('\u6e20\u9053\u5df2\u4fdd\u5b58\uff0c\u91cd\u542f Gateway...', 'success');
- apiFetch('/api/restart', {method:'POST'}).then(function(){
- setTimeout(function(){ openGateway(); }, 5000);
- });
- } else {
- showToast('\u274c ' + (data.error || 'Save failed'), 'error');
- }
- }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
 // ===== RESET CONFIG =====
@@ -2791,6 +2519,7 @@ async function checkGateway() {
  if (port) {
  _gwOfflineCount = 0;
  _gwEverOnline = true;
+ var _gn = document.getElementById('gateNotice'); if (_gn) _gn.style.display = 'none';
  dot.className = 'dot on';
  // 大按钮加在线指示
  var launchBtn = document.querySelector('.btn-launch');
@@ -2800,6 +2529,7 @@ async function checkGateway() {
  _setLiveStatus('p', ' [ok] gateway running on :' + port);
  } else {
  _gwOfflineCount++;
+ var _gn2 = document.getElementById('gateNotice'); if (_gn2) _gn2.style.display = 'flex';
  if (_gwOfflineCount >= 2) {
  if (!_gwEverOnline && _gwOfflineCount < 40) {
  dot.className = 'dot off';
@@ -2907,27 +2637,6 @@ function doUpdate() {
  showToast('\u66f4\u65b0\u5931\u8d25: '+e.message, 'error');
  });
 }
-
-// ===== SKILLS =====
-var SKILLS_CN = [
- {id:'china-search', name:'国内搜索', desc:'百度/搜狗搜索'},
- {id:'china-translate', name:'中英翻译', desc:'翻译工具'},
- {id:'china-weather', name:'天气查询', desc:'城市天气'},
- {id:'xiaohongshu-writer', name:'小红书文案', desc:'种草笔记'},
- {id:'zhihu-writer', name:'知乎回答', desc:'专业回答'},
- {id:'weibo-poster', name:'微博文案', desc:'热点文案'},
- {id:'wechat-article', name:'公众号文章', desc:'长文写作'},
- {id:'bilibili-helper', name:'B站助手', desc:'视频文案'},
- {id:'douyin-script', name:'抖音脚本', desc:'短视频脚本'},
- {id:'deepseek-helper', name:'DeepSeek增强', desc:'深度思考'}
-];
-
-// (block-1's static loadSkills was removed: it was shadowed by the
-// API-backed definitions in later script blocks and referenced the
-// deleted #skillsList element. The setTimeout below resolves to the
-// live definition at call time.)
-// 页面加载时显示技能
-setTimeout(loadSkills, 100);
 
 // ===== EXPORT / IMPORT CONFIG =====
 function exportConfig() {
@@ -3161,7 +2870,8 @@ function applyLocalRuntime(runtimeId, port) {
  } else {
  showToast(data.error || '\u4fdd\u5b58\u5931\u8d25', 'error');
  }
- }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+ }).catch(function(err){ kSaveFail();
+ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
 }
 
 // Show local-model help when user clicks the 本地 filter chip but
@@ -3251,18 +2961,6 @@ function showLocalModelHints() {
  else goStep(1);
  }).catch(function() { goStep(1); });
 
- // 页面卸载时清理资源
- window.addEventListener('beforeunload', function() {
- if (wechatSession) {
- // 用 sendBeacon 确保请求发出（fetch 在 unload 时会被取消）
- try {
- navigator.sendBeacon('/api/wechat/cancel',
- new Blob([JSON.stringify({session: wechatSession})], {type:'application/json'}));
- } catch(e) {}
- }
- if (wechatPollTimer) { clearInterval(wechatPollTimer); }
- });
-
  // Heartbeat — show disconnect overlay after 3 consecutive failures.
  // Previously the failure check was synchronous (ran before fetch
  // settled), so it always reflected the *previous* iteration's count.
@@ -3322,226 +3020,6 @@ function showLocalModelHints() {
  }
 })();
 
-// ═══════════════════════════════════════════════════════════
-// Feature Navigation
-// ═══════════════════════════════════════════════════════════
-function showFeature(name) {
-  // Toggle: clicking the active feature's button closes its panel.
-  const panel = document.getElementById('panel-' + name);
-  const wasOpen = panel && panel.style.display !== 'none';
-  // Hide all panels
-  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
-  // Sync insight-strip button states
-  document.querySelectorAll('.insight-strip button').forEach(b => {
-    const on = !wasOpen && b.getAttribute('data-feature') === name;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  if (wasOpen || !panel) return;
-  // Show selected panel
-  panel.style.display = 'block';
-  // Load data
-  switch(name) {
-    case 'usage': loadUsage(); break;
-    case 'monitor': loadMonitor(); break;
-    case 'memory': loadMemory(); break;
-    case 'sessions': loadSessions(); break;
-    case 'skills': loadSkills(); break;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 1: Cost Tracking
-// ═══════════════════════════════════════════════════════════
-function loadUsage() {
-  const el = document.getElementById('usage-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/usage').then(r => r.json()).then(data => {
-    if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无使用数据。使用后会自动记录。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    const providers = Object.entries(data.usage);
-    providers.forEach(([provider, usage]) => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + provider + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      html += '请求: ' + (usage.requests || 0) + ' | ';
-      html += 'Token: ' + (usage.tokens || 0).toLocaleString() + ' | ';
-      html += '费用: $' + (usage.cost || 0).toFixed(4);
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 2: Real-time Monitoring
-// ═══════════════════════════════════════════════════════════
-function loadMonitor() {
-  const el = document.getElementById('monitor-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/status').then(r => r.json()).then(data => {
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    
-    // Gateway status
-    const gw = data.gateway || {};
-    const gwStatus = gw.online ? '在线' : '离线';
-    const gwColor = gw.online ? 'var(--emerald)' : 'var(--destructive)';
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<div style="color:var(--fg);font-weight:500;">Gateway</div>';
-    html += '<div style="color:' + gwColor + ';">' + gwStatus + ' (:' + (gw.port || 18789) + ')</div>';
-    html += '</div>';
-    
-    // Config status
-    const cfg = data.config || {};
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<div style="color:var(--fg);font-weight:500;">配置</div>';
-    html += '<div style="color:var(--fg-muted);">Provider: ' + (cfg.providers || 0) + ' 个</div>';
-    html += '</div>';
-    
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 3: Memory Browser
-// ═══════════════════════════════════════════════════════════
-function loadMemory() {
-  const el = document.getElementById('memory-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/memory').then(r => r.json()).then(data => {
-    if (!data.ok || !data.memories || data.memories.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无记忆文件。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    _memList = data.memories;
-    data.memories.forEach((mem, mi) => {
-      // Pass the list INDEX, not the filename: names come from the
-      // filesystem and may contain quotes/markup that would break the
-      // inline onclick string. The display side is HTML-escaped.
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(' + mi + ')">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(mem.name) + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-function viewMemory(mi) {
-  // Look up by index in the render-time snapshot — no filename ever
-  // round-trips through JS string contexts.
-  const mem = _memList && _memList[mi];
-  if (mem) {
-    showModal('记忆: ' + _escHtml(mem.name), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
-        {text: '关闭', cls: 'btn', action: 'closeModal'}
-      ]);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 4: Session Management
-// ═══════════════════════════════════════════════════════════
-function loadSessions() {
-  const el = document.getElementById('sessions-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/sessions').then(r => r.json()).then(data => {
-    if (!data.ok || !data.sessions || data.sessions.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无会话记录。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
-    data.sessions.forEach(session => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(session.id) + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      if (session.model) html += '模型: ' + _escHtml(session.model) + ' | ';
-      html += '消息: ' + (session.messages || 0);
-      if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
-      else html += ' | 创建: 未知';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 5: Skills Management
-// ═══════════════════════════════════════════════════════════
-function loadSkills() {
-  const el = document.getElementById('skills-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/skills').then(r => r.json()).then(data => {
-    if (!data.ok || !data.skills || data.skills.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无已安装技能。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.skills.length + ' 个技能</div>';
-    data.skills.forEach(skill => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + skill.name + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      html += skill.hasSkill ? '✓ 已安装' : '⚠ 缺少 SKILL.md';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeModal();
-    // Hide all feature panels
-    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
-  }
-});
 </script>
 
 <script>
@@ -3646,226 +3124,6 @@ function showMobileInfoFromData(data) {
  document.getElementById('mobileUrls').innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════
-// Feature Navigation
-// ═══════════════════════════════════════════════════════════
-function showFeature(name) {
-  // Toggle: clicking the active feature's button closes its panel.
-  const panel = document.getElementById('panel-' + name);
-  const wasOpen = panel && panel.style.display !== 'none';
-  // Hide all panels
-  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
-  // Sync insight-strip button states
-  document.querySelectorAll('.insight-strip button').forEach(b => {
-    const on = !wasOpen && b.getAttribute('data-feature') === name;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  if (wasOpen || !panel) return;
-  // Show selected panel
-  panel.style.display = 'block';
-  // Load data
-  switch(name) {
-    case 'usage': loadUsage(); break;
-    case 'monitor': loadMonitor(); break;
-    case 'memory': loadMemory(); break;
-    case 'sessions': loadSessions(); break;
-    case 'skills': loadSkills(); break;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 1: Cost Tracking
-// ═══════════════════════════════════════════════════════════
-function loadUsage() {
-  const el = document.getElementById('usage-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/usage').then(r => r.json()).then(data => {
-    if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无使用数据。使用后会自动记录。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    const providers = Object.entries(data.usage);
-    providers.forEach(([provider, usage]) => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + provider + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      html += '请求: ' + (usage.requests || 0) + ' | ';
-      html += 'Token: ' + (usage.tokens || 0).toLocaleString() + ' | ';
-      html += '费用: $' + (usage.cost || 0).toFixed(4);
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 2: Real-time Monitoring
-// ═══════════════════════════════════════════════════════════
-function loadMonitor() {
-  const el = document.getElementById('monitor-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/status').then(r => r.json()).then(data => {
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    
-    // Gateway status
-    const gw = data.gateway || {};
-    const gwStatus = gw.online ? '在线' : '离线';
-    const gwColor = gw.online ? 'var(--emerald)' : 'var(--destructive)';
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<div style="color:var(--fg);font-weight:500;">Gateway</div>';
-    html += '<div style="color:' + gwColor + ';">' + gwStatus + ' (:' + (gw.port || 18789) + ')</div>';
-    html += '</div>';
-    
-    // Config status
-    const cfg = data.config || {};
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<div style="color:var(--fg);font-weight:500;">配置</div>';
-    html += '<div style="color:var(--fg-muted);">Provider: ' + (cfg.providers || 0) + ' 个</div>';
-    html += '</div>';
-    
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 3: Memory Browser
-// ═══════════════════════════════════════════════════════════
-function loadMemory() {
-  const el = document.getElementById('memory-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/memory').then(r => r.json()).then(data => {
-    if (!data.ok || !data.memories || data.memories.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无记忆文件。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    _memList = data.memories;
-    data.memories.forEach((mem, mi) => {
-      // Pass the list INDEX, not the filename: names come from the
-      // filesystem and may contain quotes/markup that would break the
-      // inline onclick string. The display side is HTML-escaped.
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(' + mi + ')">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(mem.name) + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-function viewMemory(mi) {
-  // Look up by index in the render-time snapshot — no filename ever
-  // round-trips through JS string contexts.
-  const mem = _memList && _memList[mi];
-  if (mem) {
-    showModal('记忆: ' + _escHtml(mem.name), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
-        {text: '关闭', cls: 'btn', action: 'closeModal'}
-      ]);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 4: Session Management
-// ═══════════════════════════════════════════════════════════
-function loadSessions() {
-  const el = document.getElementById('sessions-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/sessions').then(r => r.json()).then(data => {
-    if (!data.ok || !data.sessions || data.sessions.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无会话记录。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
-    data.sessions.forEach(session => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(session.id) + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      if (session.model) html += '模型: ' + _escHtml(session.model) + ' | ';
-      html += '消息: ' + (session.messages || 0);
-      if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
-      else html += ' | 创建: 未知';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 5: Skills Management
-// ═══════════════════════════════════════════════════════════
-function loadSkills() {
-  const el = document.getElementById('skills-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/skills').then(r => r.json()).then(data => {
-    if (!data.ok || !data.skills || data.skills.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无已安装技能。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.skills.length + ' 个技能</div>';
-    data.skills.forEach(skill => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + skill.name + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      html += skill.hasSkill ? '✓ 已安装' : '⚠ 缺少 SKILL.md';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    closeModal();
-    // Hide all feature panels
-    document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
-  }
-});
 </script>
 
 <script>
@@ -3890,218 +3148,6 @@ document.addEventListener('keydown', function(e) {
  syncIcons(nowLight);
  };
 })();
-
-// ═══════════════════════════════════════════════════════════
-// Feature Navigation
-// ═══════════════════════════════════════════════════════════
-function showFeature(name) {
-  // Toggle: clicking the active feature's button closes its panel.
-  const panel = document.getElementById('panel-' + name);
-  const wasOpen = panel && panel.style.display !== 'none';
-  // Hide all panels
-  document.querySelectorAll('[id^="panel-"]').forEach(p => p.style.display = 'none');
-  // Sync insight-strip button states
-  document.querySelectorAll('.insight-strip button').forEach(b => {
-    const on = !wasOpen && b.getAttribute('data-feature') === name;
-    b.classList.toggle('active', on);
-    b.setAttribute('aria-selected', on ? 'true' : 'false');
-  });
-  if (wasOpen || !panel) return;
-  // Show selected panel
-  panel.style.display = 'block';
-  // Load data
-  switch(name) {
-    case 'usage': loadUsage(); break;
-    case 'monitor': loadMonitor(); break;
-    case 'memory': loadMemory(); break;
-    case 'sessions': loadSessions(); break;
-    case 'skills': loadSkills(); break;
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 1: Cost Tracking
-// ═══════════════════════════════════════════════════════════
-function loadUsage() {
-  const el = document.getElementById('usage-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/usage').then(r => r.json()).then(data => {
-    if (!data.ok || !data.usage || Object.keys(data.usage).length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无使用数据。使用后会自动记录。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    const providers = Object.entries(data.usage);
-    providers.forEach(([provider, usage]) => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + provider + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      html += '请求: ' + (usage.requests || 0) + ' | ';
-      html += 'Token: ' + (usage.tokens || 0).toLocaleString() + ' | ';
-      html += '费用: $' + (usage.cost || 0).toFixed(4);
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 2: Real-time Monitoring
-// ═══════════════════════════════════════════════════════════
-function loadMonitor() {
-  const el = document.getElementById('monitor-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/status').then(r => r.json()).then(data => {
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    
-    // Gateway status
-    const gw = data.gateway || {};
-    const gwStatus = gw.online ? '在线' : '离线';
-    const gwColor = gw.online ? 'var(--emerald)' : 'var(--destructive)';
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<div style="color:var(--fg);font-weight:500;">Gateway</div>';
-    html += '<div style="color:' + gwColor + ';">' + gwStatus + ' (:' + (gw.port || 18789) + ')</div>';
-    html += '</div>';
-    
-    // Config status
-    const cfg = data.config || {};
-    html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-    html += '<div style="color:var(--fg);font-weight:500;">配置</div>';
-    html += '<div style="color:var(--fg-muted);">Provider: ' + (cfg.providers || 0) + ' 个</div>';
-    html += '</div>';
-    
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 3: Memory Browser
-// ═══════════════════════════════════════════════════════════
-function loadMemory() {
-  const el = document.getElementById('memory-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/memory').then(r => r.json()).then(data => {
-    if (!data.ok || !data.memories || data.memories.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无记忆文件。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    _memList = data.memories;
-    data.memories.forEach((mem, mi) => {
-      // Pass the list INDEX, not the filename: names come from the
-      // filesystem and may contain quotes/markup that would break the
-      // inline onclick string. The display side is HTML-escaped.
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="viewMemory(' + mi + ')">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(mem.name) + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">' + mem.size + ' 字符</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.75em;margin-top:4px;max-height:60px;overflow:hidden;">' + mem.content.slice(0, 100).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-function viewMemory(mi) {
-  // Look up by index in the render-time snapshot — no filename ever
-  // round-trips through JS string contexts.
-  const mem = _memList && _memList[mi];
-  if (mem) {
-    showModal('记忆: ' + _escHtml(mem.name), '<pre style="background:var(--bg);padding:12px;border-radius:6px;font-family:var(--font-mono);font-size:0.82em;max-height:400px;overflow:auto;white-space:pre-wrap;">' + mem.content.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>', [
-        {text: '关闭', cls: 'btn', action: 'closeModal'}
-      ]);
-  }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 4: Session Management
-// ═══════════════════════════════════════════════════════════
-function loadSessions() {
-  const el = document.getElementById('sessions-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/sessions').then(r => r.json()).then(data => {
-    if (!data.ok || !data.sessions || data.sessions.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无会话记录。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.sessions.length + ' 个会话</div>';
-    data.sessions.forEach(session => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + _escHtml(session.id) + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      if (session.model) html += '模型: ' + _escHtml(session.model) + ' | ';
-      html += '消息: ' + (session.messages || 0);
-      if (session.created) html += ' | 创建: ' + new Date(session.created).toLocaleDateString();
-      else html += ' | 创建: 未知';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
-// ═══════════════════════════════════════════════════════════
-// Feature 5: Skills Management
-// ═══════════════════════════════════════════════════════════
-function loadSkills() {
-  const el = document.getElementById('skills-content');
-  if (!el) return;
-  try {
-  el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;display:flex;align-items:center;gap:8px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>加载中...</div>';
-  
-  apiFetch('/api/skills').then(r => r.json()).then(data => {
-    if (!data.ok || !data.skills || data.skills.length === 0) {
-      el.innerHTML = '<div style="color:var(--fg-muted);font-size:0.85em;">暂无已安装技能。</div>';
-      return;
-    }
-    
-    let html = '<div style="font-family:var(--font-mono);font-size:0.82em;">';
-    html += '<div style="color:var(--fg-muted);font-size:0.78em;margin-bottom:8px;">共 ' + data.skills.length + ' 个技能</div>';
-    data.skills.forEach(skill => {
-      html += '<div style="padding:8px 0;border-bottom:1px solid var(--border);">';
-      html += '<div style="color:var(--fg);font-weight:500;">' + skill.name + '</div>';
-      html += '<div style="color:var(--fg-muted);font-size:0.78em;">';
-      html += skill.hasSkill ? '✓ 已安装' : '⚠ 缺少 SKILL.md';
-      html += '</div></div>';
-    });
-    html += '</div>';
-    el.innerHTML = html;
-  }).catch(() => {
-    el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>';
-  });
-  } catch(e) { el.innerHTML = '<div style="color:var(--destructive);font-size:0.85em;">加载失败</div>'; }
-}
-
 
 // Keyboard shortcuts
 document.addEventListener('keydown', function(e) {
