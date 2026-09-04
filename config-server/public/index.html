@@ -1111,6 +1111,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  @keyframes kcaret { 50% { opacity:0; } }
  .otp .otp-hint { margin-left:6px; font-family:var(--font-mono); font-size:0.7em; color:var(--fg-muted); }
  .otp-real { position:absolute !important; left:0; top:0; width:1px !important; height:1px !important; opacity:0 !important; padding:0 !important; border:0 !important; }
+ .picon-mono { filter: invert(1); }
+ [data-theme="light"] .picon-mono { filter: none; }
+ @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .picon-mono { filter: none; } }
  </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -1578,6 +1581,9 @@ function wireOtpAll(scope){
   var otp = document.createElement('div'); otp.className='otp';
   grp.insertBefore(otp, inp);
   inp.classList.add('otp-real');
+  inp.setAttribute('autocomplete','off');
+  otp.style.cursor='text';
+  otp.addEventListener('mousedown', function(e){ e.preventDefault(); setTimeout(function(){ inp.focus(); },0); });
   function render(){
    var show = inp.type !== 'password';
    var val = inp.value || '';
@@ -1606,15 +1612,21 @@ function wireOtpAll(scope){
 
 // Provider icon helper — maps provider ID to SVG icon file
 var _iconMap = {zai:'zhipu',ernie:'baichuan',hunyuan:'qwen',siliconflow:'deepseek',novita:'openai',hyperbolic:'meta',deepinfra:'meta',stepfun:'yi',custom:'openrouter'};
+// Monochrome (currentColor) icons render black inside <img> — invisible on the dark
+// theme. .picon-mono inverts them in dark theme, restores in light theme.
+var _monoIcons = {anthropic:1,grok:1,groq:1,lmstudio:1,moonshot:1,nousresearch:1,ollama:1,openai:1,openrouter:1,replicate:1,xai:1,copilot:1};
 function providerIcon(id) {
  var name = _iconMap[id] || id;
- return '<img src="/icons/' + name + '.svg" width="20" height="20" alt="" style="border-radius:4px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
+ var cls = _monoIcons[name] ? ' class="picon-mono"' : '';
+ return '<img src="/icons/' + name + '.svg"' + cls + ' width="20" height="20" alt="" style="border-radius:4px;flex-shrink:0;" onerror="this.style.display=\'none\'">';
 }
 
 function renderProviders() {
  var grid = document.getElementById('providerGrid');
  if (!grid) return;
  var visible = PROVIDERS.filter(_matchProvider);
+ // Sort official-managed first so the two group headers never interleave
+ visible.sort(function(a,b){ return (isOfficialManaged(b)?1:0) - (isOfficialManaged(a)?1:0); });
  var emptyEl = document.getElementById('providerEmpty');
  var countEl = document.getElementById('providerCount');
  var totalEl = document.getElementById('providerTotal');
@@ -1649,6 +1661,7 @@ grid.innerHTML = visible.map(p => {
  // — the catalog path made tags/base untrusted inputs.
  // (B23-03, extended for hot-update)
  const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+ var saveBtnHtml = function(pid){ return '<button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="event.stopPropagation(); saveCard(\'' + _e(pid) + '\')">保存并继续</button>'; };
   // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
  // configured in the official Control UI, NOT here. Show an informational
  // card (no editable form) that points the user to the official UI.
@@ -1669,13 +1682,13 @@ grid.innerHTML = visible.map(p => {
  '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
  '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '">' +
- '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div></div>';
+ '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div>' + saveBtnHtml(p.id) + '</div>';
  } else if (p.isLocal) {
  var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
  formHtml = '<div class="provider-expand">' +
  '<input type="text" class="input" placeholder="Port (default: ' + _e(_port) + ')" data-field="port" value="' + _e(_port) + '">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
- '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button></div>';
+ '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button>' + saveBtnHtml(p.id) + '</div>';
  } else {
  const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
  formHtml = '<div class="provider-expand">' +
@@ -1684,7 +1697,7 @@ grid.innerHTML = visible.map(p => {
  '<button class="btn-icon" onclick="togglePw(\'' + _e(p.id) + '\')">显示</button></div>' +
  '<a href="' + _e(p.link) + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
  '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+ _e(p.id) +'\')">' +
- '测试 Key</button><span id="keytest-'+ _e(p.id) +'" style="margin-left:8px;font-size:0.78em;"></span></div>';
+ '测试 Key</button><span id="keytest-'+ _e(p.id) +'" style="margin-left:8px;font-size:0.78em;"></span>' + saveBtnHtml(p.id) + '</div>';
  }
  return headHtml + '<div class="provider-card" data-id="' + _e(p.id) + '" onclick="toggleProvider(this,\'' + _e(p.id) + '\')">' +
  '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + '</div>' +
@@ -2286,6 +2299,8 @@ function buildConfig(provider, base, model, apiKey) {
 // handled the config writes atomically, but two restart spawns racing
 // each other could land on different ports or kill each other.
 var _saveConfigBusy = false;
+function saveCard(id){ selectedProvider = id; saveConfig(); }
+
 function saveConfig() {
  if (_saveConfigBusy) return;
  if (!selectedProvider) { showToast('\u8bf7\u5148\u9009\u62e9\u6a21\u578b\u63d0\u4f9b\u5546', 'error'); return; }
