@@ -691,6 +691,15 @@ function mergeSave(existing, incoming) {
         if (hasNoRealKey && base.models.providers[id]) {
           merged.apiKey = base.models.providers[id].apiKey; // keep stored secret
         }
+        // SELF-HEAL: the merge above is shallow, so a `models[]` row written by
+        // an older build would survive forever when the client simply stops
+        // sending one — silently shadowing the extension's official catalog
+        // with synthesised metadata (name = raw id, reasoning false,
+        // contextWindow 196608, maxTokens 8192, cost 0). When the client sends
+        // no `models` for a provider it is expressing "no custom model rows",
+        // so drop whatever is stored. Clients that DO send explicit rows (e.g.
+        // a custom/relay provider) are unaffected.
+        if (!Object.prototype.hasOwnProperty.call(p, 'models')) delete merged.models;
         base.models.providers[id] = merged;
       } else {
         base.models.providers[id] = cloneJson(p);
