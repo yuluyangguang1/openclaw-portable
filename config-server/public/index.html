@@ -273,13 +273,18 @@
  }
  .provider-card .input:focus { border-color: var(--fg); }
  .provider-card select.input option { background: var(--bg); color: var(--fg); }
- /* API Key box — larger and taller for comfortable pasting of long keys.
-    Show/hide relies on the browser's NATIVE password-reveal control (the
-    eye button Edge/Chrome render inside password fields) — no custom
-    toggle button needed. */
- .provider-card .input-key {
- font-size: 1.05em; padding: 12px 14px; letter-spacing: .05em;
+ /* Uniform geometry for EVERY field inside a card — same height, font
+    size and spacing, so base/model/key inputs and selects all line up. */
+ .provider-expand > .input {
+ display: block; width: 100%; box-sizing: border-box;
+ padding: 9px 12px; font-size: 0.88em; line-height: 1.4;
+ margin-bottom: 10px;
  }
+ /* All inputs/selects inside a card share the SAME geometry — no special
+    oversizing for the API Key box (it looked inconsistent next to the
+    base/model inputs). Show/hide relies on the browser's NATIVE
+    password-reveal control (the eye Edge/Chrome render inside password
+    fields) — no custom toggle button needed. */
  /* Card footer action bar: secondary actions left, primary save right. */
  .card-actions {
  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -1646,7 +1651,7 @@ grid.innerHTML = visible.map(p => {
  formHtml = '<div class="provider-expand">' +
  '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
- '<input type="password" class="input input-key" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
  '<div class="card-actions"><span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  } else if (p.isLocal) {
  var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
@@ -1658,7 +1663,7 @@ grid.innerHTML = visible.map(p => {
  const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
  formHtml = '<div class="provider-expand">' +
  '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
- '<input type="password" class="input input-key" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
  '<div class="card-actions">' +
  '<a class="btn btn-sm" href="' + _e(p.link) + '" target="_blank" rel="noopener">获取 Key ↗</a>' +
  '<button class="btn btn-sm" onclick="event.stopPropagation(); testKey(\'' + _e(p.id) + '\')">测试 Key</button>' +
