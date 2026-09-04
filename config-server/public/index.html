@@ -1091,7 +1091,27 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   padding-bottom: 12px;
   border-bottom: 1px solid var(--border);
 }
-</style>
+
+ /* ==== kinetic progress + OTP key input + inline icon helpers (2026-09-04) ==== */
+ .yi { display:inline-block; vertical-align:-0.2em; line-height:0; }
+ .yi svg { display:block; }
+ .kprog { position:relative; height:6px; border-radius:99px; background:color-mix(in srgb,var(--fg) 10%,transparent); overflow:hidden; }
+ .kprog .kfill { position:absolute; left:0; top:0; bottom:0; width:0%; border-radius:99px; background:linear-gradient(90deg, color-mix(in srgb,var(--accent) 55%,transparent), var(--accent)); transition:width .5s cubic-bezier(.4,0,.2,1); }
+ .kprog .ksweep { position:absolute; inset:0; transform:translateX(-100%); background:linear-gradient(90deg, transparent, color-mix(in srgb,var(--bg) 60%,transparent) 45%, transparent); animation:ksweep 1.3s cubic-bezier(.45,0,.2,1) infinite; }
+ .kprog .kticks { position:absolute; inset:0; background:repeating-linear-gradient(90deg, transparent 0 14px, var(--bg) 14px 16px); opacity:.5; }
+ @keyframes ksweep { 62% { transform:translateX(102%); } 100% { transform:translateX(102%); } }
+ .kprog.done .ksweep, .kprog.fail .ksweep { animation:none; opacity:0; }
+ .kprog.fail .kfill { background:linear-gradient(90deg, color-mix(in srgb,var(--destructive) 55%,transparent), var(--destructive)); }
+ .klabel { font-family:var(--font-mono); font-size:0.72em; letter-spacing:.08em; color:var(--fg-muted); margin-top:6px; }
+ .otp { position:relative; display:flex; align-items:center; gap:4px; flex-wrap:wrap; min-height:30px; }
+ .otp .cell { width:16px; height:26px; border:1px solid var(--border); border-radius:4px; background:var(--secondary); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; color:var(--fg); transition:border-color .15s, box-shadow .15s; }
+ .otp .cell.filled { border-color:color-mix(in srgb,var(--emerald) 60%,var(--border)); color:var(--emerald); }
+ .otp.focused .cell.active { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
+ .otp.focused .cell.active::after { content:''; width:1px; height:14px; background:var(--accent); animation:kcaret 1.05s steps(1) infinite; }
+ @keyframes kcaret { 50% { opacity:0; } }
+ .otp .otp-hint { margin-left:6px; font-family:var(--font-mono); font-size:0.7em; color:var(--fg-muted); }
+ .otp-real { position:absolute !important; left:0; top:0; width:1px !important; height:1px !important; opacity:0 !important; padding:0 !important; border:0 !important; }
+ </style>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
@@ -1163,7 +1183,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <!-- 搜索 + 标签筛选 -->
  <!-- 首次配置门控：网关未就绪时醒目提示 -->
  <div id="gateNotice" style="display:none;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--warning);border-left:3px solid var(--warning);border-radius:8px;background:color-mix(in srgb,var(--warning) 12%,transparent);">
- <span style="font-size:1.2rem;">⏳</span>
+ <span class="yi" style="color:var(--warning);"><svg width="22" height="22" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M200,75.64V40a16,16,0,0,0-16-16H72A16,16,0,0,0,56,40V76a16.07,16.07,0,0,0,6.4,12.8L114.67,128,62.4,167.2A16.07,16.07,0,0,0,56,180v36a16,16,0,0,0,16,16H184a16,16,0,0,0,16-16V180.36a16.09,16.09,0,0,0-6.35-12.77L141.27,128l52.38-39.6A16.05,16.05,0,0,0,200,75.64ZM72,40H184V75.64L178.23,80H77.33L72,76Zm56,78L98.67,96h58.4Zm56,98H72V180l48-36v24a8,8,0,0,0,16,0V144.08l48,36.28Z"/></svg></span>
  <div>
  <div style="font-weight:600;color:var(--fg);font-size:0.9em;">请先等 OpenClaw 终端窗口出现 <span style="font-family:var(--font-mono);color:var(--warning);">ready</span> 后再填写 API Key</div>
  <div style="color:var(--fg-muted);font-size:0.76em;margin-top:2px;">终端未就绪时保存的 Key 可能不生效。首次启动需 2–5 分钟安装插件，请耐心等待。</div>
@@ -1172,17 +1192,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 
  <!-- 官方平台 Key 填写位置醒目标注 -->
  <div style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--emerald);border-left:3px solid var(--emerald);border-radius:8px;background:color-mix(in srgb,var(--emerald) 10%,transparent);">
- <span style="font-size:1.2rem;">🔑</span>
+ <span class="yi" style="color:var(--emerald);"><svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M10.7577 11.8281L18.6066 3.97919L20.0208 5.3934L18.6066 6.80761L21.0815 9.28249L19.6673 10.6967L17.1924 8.22183L15.7782 9.63604L17.8995 11.7574L16.4853 13.1716L14.364 11.0503L12.1719 13.2423C13.4581 15.1837 13.246 17.8251 11.5355 19.5355C9.58291 21.4882 6.41709 21.4882 4.46447 19.5355C2.51184 17.5829 2.51184 14.4171 4.46447 12.4645C6.17493 10.754 8.81633 10.5419 10.7577 11.8281ZM10.1213 18.1213C11.2929 16.9497 11.2929 15.0503 10.1213 13.8787C8.94975 12.7071 7.05025 12.7071 5.87868 13.8787C4.70711 15.0503 4.70711 16.9497 5.87868 18.1213C7.05025 19.2929 8.94975 19.2929 10.1213 18.1213Z"/></svg></span>
  <div style="color:var(--fg);font-size:0.9em;"><b>系统配置</b>（官方内置平台）的 API Key 请到 <b>OpenClaw 官方控制台</b> 填写；下方「独有配置」（自定义 / 本地）才在本页填写。</div>
  </div>
 
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
- <input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
+ <span style="position:relative;flex:1;min-width:200px;display:inline-flex;align-items:center;"><span class="yi" style="position:absolute;left:11px;color:var(--fg-muted);pointer-events:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/></svg></span><input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
  oninput="searchProviders(this.value)"
- style="flex:1;min-width:200px;padding:8px 12px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;">
+ style="flex:1;min-width:200px;padding:8px 12px 8px 34px;background:var(--secondary);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.85em;"></span>
  <span id="providerCount" style="color:var(--fg-muted);font-size:0.75rem;font-family:var(--font-mono);"></span>
  </div>
  
+ <div id="catKbar" style="display:none;margin:0 0 12px;"><div class="kprog" style="height:4px;"><div class="kfill"></div><div class="ksweep"></div></div></div>
  <!-- 模型目录热更新：从维护者仓库拉取最新平台/模型列表，无需升级整个便携版 -->
  <div id="catalogBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;">
  <span id="catalogInfo" style="color:var(--fg-muted);font-size:0.72rem;font-family:var(--font-mono);">模型目录：内置版本</span>
@@ -1242,23 +1263,24 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
  </div>
 
- <button class="btn-launch" onclick="openGateway()" tabindex="0">打开聊天界面 →</button>
+ <div id="kSave" style="display:none;margin:18px 0 6px;"><div class="kprog" id="kSaveBar"><div class="kfill"></div><div class="ksweep"></div><div class="kticks"></div></div><div class="klabel" id="kSaveLabel">准备写入…</div></div>
+ <button class="btn-launch" onclick="openGateway()" tabindex="0"><span class="yi" style="margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5018 20.0048C14.8432 21.5841 13.5794 22.848 12 23.5066C10.4206 22.848 9.15679 21.5841 8.49816 20.0048H10.7575C11.0838 20.4934 11.5051 20.9171 12 21.248C12.4949 20.9171 12.9162 20.4934 13.2425 20.0048H15.5018ZM18 14.8095L20 17.0777V19.0048H4V17.0777L6 14.8095V9.00478C6 5.52153 8.50442 2.55822 12 1.45999C15.4956 2.55822 18 5.52153 18 9.00478V14.8095ZM17.2692 17.0048L16 15.5653V9.00478C16 6.68694 14.4292 4.57431 12 3.58384C9.57078 4.57431 8 6.68694 8 9.00478V15.5653L6.73076 17.0048H17.2692ZM12 11.0048C10.8954 11.0048 10 10.1093 10 9.00478C10 7.90021 10.8954 7.00478 12 7.00478C13.1046 7.00478 14 7.90021 14 9.00478C14 10.1093 13.1046 11.0048 12 11.0048Z"/></svg></span>打开聊天界面 →</button>
 
  <div class="cmd-grid">
  <div class="cmd-card" onclick="runCmd('update')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 13V18.585L14.8284 16.7574L16.2426 18.1716L12 22.4142L7.75736 18.1716L9.17157 16.7574L11 18.585V13H13ZM12 2C15.5934 2 18.5544 4.70761 18.9541 8.19395C21.2858 8.83154 23 10.9656 23 13.5C23 16.3688 20.8036 18.7246 18.0006 18.9776L18.0009 16.9644C19.6966 16.7214 21 15.2629 21 13.5C21 11.567 19.433 10 17.5 10C17.2912 10 17.0867 10.0183 16.8887 10.054C16.9616 9.7142 17 9.36158 17 9C17 6.23858 14.7614 4 12 4C9.23858 4 7 6.23858 7 9C7 9.36158 7.03838 9.7142 7.11205 10.0533C6.91331 10.0183 6.70879 10 6.5 10C4.567 10 3 11.567 3 13.5C3 15.2003 4.21241 16.6174 5.81986 16.934L6.00005 16.9646L6.00039 18.9776C3.19696 18.7252 1 16.3692 1 13.5C1 10.9656 2.71424 8.83154 5.04648 8.19411C5.44561 4.70761 8.40661 2 12 2Z"/></svg></div>
   <div class="cmd-name">更新</div><div class="cmd-desc">升级到最新版</div>
 </div>
 <div class="cmd-card" onclick="runCmd('doctor')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 7.53861L15 21.5386L18.6594 13H23V11H17.3406L15 16.4614L9 2.46143L5.3406 11H1V13H6.6594L9 7.53861Z"/></svg></div>
   <div class="cmd-name">诊断</div><div class="cmd-desc">检查运行环境</div>
 </div>
 <div class="cmd-card" onclick="runCmd('onboard')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM16.5 7.5L14 14L7.5 16.5L10 10L16.5 7.5ZM12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z"/></svg></div>
   <div class="cmd-name">引导</div><div class="cmd-desc">初始化设置</div>
 </div>
 <div class="cmd-card" onclick="runCmd('restart')">
-  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div>
+  <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg></div>
   <div class="cmd-name">重启</div><div class="cmd-desc">使配置生效</div>
 </div>
  </div>
@@ -1342,7 +1364,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </div>
 
 <div id="hotFailBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#2b0e0e;border-top:2px solid var(--destructive);padding:14px 24px;z-index:600;text-align:center;">
- <span style="color:var(--destructive);font-size:0.9em;font-weight:600;">⚠ 网关未能自动恢复</span>
+ <span style="color:var(--destructive);font-size:0.9em;font-weight:600;"><span class="yi" style="display:inline-flex;vertical-align:-3px;margin-right:4px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.00001 20V14C4.00001 9.58172 7.58173 6 12 6C16.4183 6 20 9.58172 20 14V20H21V22H3.00001V20H4.00001ZM6.00001 20H18V14C18 10.6863 15.3137 8 12 8C8.6863 8 6.00001 10.6863 6.00001 14V20ZM11 2H13V5H11V2ZM19.7782 4.80761L21.1924 6.22183L19.0711 8.34315L17.6569 6.92893L19.7782 4.80761ZM2.80762 6.22183L4.22183 4.80761L6.34315 6.92893L4.92894 8.34315L2.80762 6.22183ZM7.00001 14C7.00001 11.2386 9.23858 9 12 9V11C10.3432 11 9.00001 12.3431 9.00001 14H7.00001Z"/></svg></span> 网关未能自动恢复</span>
  <span style="color:var(--fg-muted);font-size:0.82em;margin-left:10px;">请关闭所有 OpenClaw 终端窗口，回到文件夹重新双击 <b style="color:var(--fg);">OpenClaw.vbs</b> 启动</span>
  <button onclick="this.parentNode.style.display='none'" style="margin-left:12px;padding:6px 14px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:6px;cursor:pointer;font-size:0.78em;">知道了</button>
 </div>
@@ -1534,6 +1556,54 @@ function searchProviders(q) {
  renderProviders();
 }
 
+
+// ===== KINETIC PROGRESS + OTP KEY INPUT (2026-09-04, remix/phosphor aesthetic) =====
+function kSaveShow(label){ var w=document.getElementById('kSave'); if(!w) return; w.style.display='block';
+ var b=document.getElementById('kSaveBar'); if(b) b.classList.remove('done','fail');
+ kSaveSet(6); kSaveLabel(label||'处理中…'); }
+function kSaveLabel(t){ var l=document.getElementById('kSaveLabel'); if(l) l.textContent=t; }
+function kSaveSet(pct){ var b=document.getElementById('kSaveBar'); if(!b) return;
+ var f=b.querySelector('.kfill'); if(f) f.style.width=Math.max(0,Math.min(100,pct))+'%'; }
+function kSaveDone(){ var b=document.getElementById('kSaveBar'); if(b){ b.classList.add('done'); kSaveSet(100); }
+ kSaveLabel('✓ 已就绪'); setTimeout(function(){ var w=document.getElementById('kSave'); if(w) w.style.display='none'; },1800); }
+function kSaveFail(){ var b=document.getElementById('kSaveBar'); if(b) b.classList.add('fail');
+ kSaveLabel('网关未自动恢复 — 请关闭所有窗口后回到文件夹重新双击 OpenClaw.vbs'); }
+function refreshCatalogBar(show){ var el=document.getElementById('catKbar'); if(el) el.style.display = show?'block':'none'; }
+
+function wireOtpAll(scope){
+ var inputs=(scope||document).querySelectorAll('input[data-field="apikey"]');
+ Array.prototype.forEach.call(inputs, function(inp){
+  if (inp.dataset.otpWired) return; inp.dataset.otpWired='1';
+  var grp = inp.parentNode;
+  var otp = document.createElement('div'); otp.className='otp';
+  grp.insertBefore(otp, inp);
+  inp.classList.add('otp-real');
+  function render(){
+   var show = inp.type !== 'password';
+   var val = inp.value || '';
+   var n = Math.max(val.length + 2, 16); if (n > 28) n = 28;
+   var h='';
+   for (var i=0;i<n;i++){
+    var ch = val.charAt(i);
+    var cls = 'cell' + (ch ? ' filled' : '') + (i === Math.min(val.length, n-1) ? ' active' : '');
+    h += '<span class="'+cls+'">'+(ch ? (show ? ch : '•') : '')+'</span>';
+   }
+   otp.innerHTML = h + '<span class="otp-hint">'+(val.length ? val.length+' 位' : '')+'</span>';
+  }
+  inp._otpRender = render;
+  inp.addEventListener('input', render);
+  inp.addEventListener('focus', function(){ otp.classList.add('focused'); render(); });
+  inp.addEventListener('blur', function(){ otp.classList.remove('focused'); render(); });
+  render();
+ });
+ if (!window.__otpPwPatched && window.togglePw) {
+  var _t = window.togglePw;
+  window.togglePw = function(id){ _t(id);
+   var el=document.getElementById('key-'+id); if (el && el._otpRender) setTimeout(el._otpRender, 0); };
+  window.__otpPwPatched = true;
+ }
+}
+
 // Provider icon helper — maps provider ID to SVG icon file
 var _iconMap = {zai:'zhipu',ernie:'baichuan',hunyuan:'qwen',siliconflow:'deepseek',novita:'openai',hyperbolic:'meta',deepinfra:'meta',stepfun:'yi',custom:'openrouter'};
 function providerIcon(id) {
@@ -1620,6 +1690,7 @@ grid.innerHTML = visible.map(p => {
  '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + '</div>' +
  '<div class="provider-desc">' + _e(p.desc) + '</div>' + formHtml + '</div>';
  }).join('');
+ wireOtpAll();
 }
 
 // Initial render + delegated input listener (only attached once)
@@ -1665,6 +1736,7 @@ function updateCatalogBadge() {
 // refreshes take the extra-safe path: if anything is dirty they skip
 // the swap entirely and let the next page load pick the catalog up.
 function applyCatalog(providers, info, auto) {
+ refreshCatalogBar(false);
  if (!Array.isArray(providers) || providers.length === 0) return false;
  var grid = document.getElementById('providerGrid');
  var dirty = [];
@@ -1719,6 +1791,8 @@ function loadCatalog(auto) {
 
 function refreshCatalog(silent) {
  if (!silent) showToast('正在拉取最新模型目录…', 'info');
+ refreshCatalogBar(true);
+ setTimeout(function(){ refreshCatalogBar(false); }, 15000);
  apiFetch('/api/models/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
  .then(function(r){ return r.json(); })
  .then(function(data) {
@@ -2244,6 +2318,7 @@ function saveConfig() {
  configData = cfg;
 
  _saveConfigBusy = true;
+ kSaveShow('写入配置…');
  apiFetch('/api/config', {
  method: 'POST',
  headers: {'Content-Type':'application/json'},
@@ -2252,6 +2327,7 @@ function saveConfig() {
  _saveConfigBusy = false;
  if (data.ok) {
  showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
+ kSaveSet(25); kSaveLabel('重启 Gateway…');
  try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
  goStep(2);
  // 显示配置摘要
@@ -2260,11 +2336,13 @@ function saveConfig() {
  // 自动重启 Gateway 使新配置生效
  apiFetch('/api/restart', {method:'POST'}).then(function(){
  showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
+ kSaveSet(40); kSaveLabel('等待网关就绪…');
  var waitCount = 0;
  var waitReady = setInterval(function(){
  waitCount++;
  if (waitCount > 30) {
  clearInterval(waitReady);
+ kSaveSet(40 + Math.min(waitCount * 1.8, 56)); kSaveLabel('等待网关就绪… ' + waitCount + 's / 60s');
  var _hf = document.getElementById('hotFailBanner');
  if (_hf) _hf.style.display = 'block';
  showToast('Gateway \u672a\u80fd\u81ea\u52a8\u6062\u590d\uff0c\u8bf7\u5173\u95ed\u6240\u6709\u7a97\u53e3\u540e\u91cd\u65b0\u542f\u52a8', 'error');
@@ -2275,16 +2353,19 @@ function saveConfig() {
  clearInterval(waitReady);
  showToast('Gateway \u5df2\u5c31\u7eea', 'success');
  var _hfo = document.getElementById('hotFailBanner'); if (_hfo) _hfo.style.display = 'none';
+ kSaveDone();
  checkGateway();
  }
  });
  }, 2000);
  }).catch(function(){});
  } else {
+ kSaveFail();
  showToast((data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
  }
  }).catch(function(err) {
  _saveConfigBusy = false;
+ kSaveFail();
  showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error');
  });
 }
@@ -2820,7 +2901,8 @@ function applyLocalRuntime(runtimeId, port) {
  } else {
  showToast(data.error || '\u4fdd\u5b58\u5931\u8d25', 'error');
  }
- }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+ }).catch(function(err){ kSaveFail();
+ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
 }
 
 // Show local-model help when user clicks the 本地 filter chip but
