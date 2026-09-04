@@ -271,32 +271,15 @@
  border-top: 1px solid var(--border);
  margin-top: 12px;
  }
- .provider-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; min-width: 0; }
- .provider-card 
  .provider-card .input:focus { border-color: var(--fg); }
- .provider-card select
  .provider-card select.input option { background: var(--bg); color: var(--fg); }
- .provider-card .input-group input { flex: 1; padding-right: 44px; margin-bottom: 0; }
- .provider-card .btn-icon {
- position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
- background: none; border: none; color: var(--fg-muted); cursor: pointer;
- font-size: 0.78em; padding: 4px 8px; font-family: var(--font-mono);
+ /* API Key box — larger and taller for comfortable pasting of long keys.
+    Show/hide relies on the browser's NATIVE password-reveal control (the
+    eye button Edge/Chrome render inside password fields) — no custom
+    toggle button needed. */
+ .provider-card .input-key {
+ font-size: 1.05em; padding: 12px 14px; letter-spacing: .05em;
  }
- .provider-card .btn-icon:hover { color: var(--fg); }
- /* Key visibility toggle — compact square ghost button that sits at the
-    end of the model-select row (same row, right side). Normal flow, so
-    it can never overlap the key input. */
- .pw-toggle {
- flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
- width: 32px; height: 32px; padding: 0;
- background: var(--secondary); border: 1px solid var(--border); border-radius: 6px;
- color: var(--fg-muted); cursor: pointer; transition: border-color .15s, color .15s;
- }
- .pw-toggle:hover { color: var(--fg); border-color: var(--fg-muted); }
- .pw-toggle svg { display: block; }
- /* One-row field + trailing icon button (e.g. model select + eye). */
- .input-row { display: flex; align-items: center; gap: 8px; }
- .input-row .input { flex: 1 1 0; min-width: 0; }
  /* Card footer action bar: secondary actions left, primary save right. */
  .card-actions {
  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -1220,6 +1203,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div style="color:var(--fg);font-size:0.9em;"><b>系统配置</b>（官方内置平台）的 API Key 请到 <b>OpenClaw 官方控制台</b> 填写；下方「独有配置」（自定义 / 本地）才在本页填写。</div>
  </div>
 
+ <!-- Z 引导: 去 yu.ai 官网免费模型活动页领取 Key（原 /keys/ 已下线，现为 key.html） -->
+ <a href="https://yuai-r.cn/key.html?from=openclaw" target="_blank" rel="noopener"
+    style="display:flex;align-items:center;gap:10px;margin:0 0 14px;padding:13px 16px;border:1px solid var(--accent);border-left:3px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--fg);text-decoration:none;font-family:var(--font-mono);font-size:0.9rem">
+   <span class="yi" style="color:var(--accent);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg></span>
+   <span>没有 API Key？<b>去 yu.ai 官网免费领取</b> → 27 家平台免费额度汇总，复制后粘到下方对应平台即可</span>
+ </a>
+
  <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap;">
  <span style="position:relative;flex:1;min-width:200px;display:inline-flex;align-items:center;"><span class="yi" style="position:absolute;left:11px;color:var(--fg-muted);pointer-events:none;"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.031 16.6168L22.3137 20.8995L20.8995 22.3137L16.6168 18.031C15.0769 19.263 13.124 20 11 20C6.032 20 2 15.968 2 11C2 6.032 6.032 2 11 2C15.968 2 20 6.032 20 11C20 13.124 19.263 15.0769 18.031 16.6168ZM16.0247 15.8748C17.2475 14.6146 18 12.8956 18 11C18 7.1325 14.8675 4 11 4C7.1325 4 4 7.1325 4 11C4 14.8675 7.1325 18 11 18C12.8956 18 14.6146 17.2475 15.8748 16.0247L16.0247 15.8748Z"/></svg></span><input id="providerSearch" type="text" placeholder="搜索平台或模型名…例如 deepseek / 国产 / 免费" aria-label="搜索平台或模型"
  oninput="searchProviders(this.value)"
@@ -1254,13 +1244,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
  <div id="localRuntimes"></div>
  </div>
-
- <!-- Z 引导: 去 yu.ai 官网领取共享 Key -->
- <a href="https://yuai-r.cn/keys/?from=openclaw" target="_blank" rel="noopener"
-    style="display:flex;align-items:center;gap:8px;margin:4px 0 18px;padding:12px 16px;border:1px solid var(--emerald);border-left:3px solid var(--emerald);border-radius:8px;background:color-mix(in srgb,var(--emerald) 10%,transparent);color:var(--fg);text-decoration:none;font-family:var(--font-mono);font-size:0.9rem">
-   <span style="font-size:1.1rem">🎁</span>
-   <span>没有 API Key？<b>去 yu.ai 官网免费领取</b> → 复制后粘到下方对应平台即可</span>
- </a>
 
  <div class="model-grid" id="providerGrid" role="listbox" aria-label="模型平台列表"></div>
  <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
@@ -1644,12 +1627,6 @@ grid.innerHTML = visible.map(p => {
  // (B23-03, extended for hot-update)
  const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
  var saveBtnHtml = function(pid){ return '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); saveCard(\'' + _e(pid) + '\')">保存并继续</button>'; };
- // Eye / eye-off icons (stroke style matches the inline Remix/Feather set).
- // .pw-toggle sits at the end of the model-select row; togglePw() swaps the
- // icon so the button reflects the current visibility state.
- var eyeSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>';
- var eyeOffSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
- var pwToggleHtml = function(pid){ return '<button type="button" class="pw-toggle" title="显示/隐藏 Key" aria-label="显示或隐藏 API Key" onclick="event.stopPropagation(); togglePw(\'' + pid + '\')">' + eyeSvg + '</button>'; };
   // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
  // configured in the official Control UI, NOT here. Show an informational
  // card (no editable form) that points the user to the official UI.
@@ -1668,8 +1645,8 @@ grid.innerHTML = visible.map(p => {
  if (p.isCustom) {
  formHtml = '<div class="provider-expand">' +
  '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
- '<div class="input-row"><input type="text" class="input" placeholder="Model Name" data-field="model">' + pwToggleHtml(_e(p.id)) + '</div>' +
- '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
+ '<input type="password" class="input input-key" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
  '<div class="card-actions"><span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  } else if (p.isLocal) {
  var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
@@ -1680,8 +1657,8 @@ grid.innerHTML = visible.map(p => {
  } else {
  const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
  formHtml = '<div class="provider-expand">' +
- '<div class="input-row"><select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' + pwToggleHtml(_e(p.id)) + '</div>' +
- '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
+ '<input type="password" class="input input-key" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
  '<div class="card-actions">' +
  '<a class="btn btn-sm" href="' + _e(p.link) + '" target="_blank" rel="noopener">获取 Key ↗</a>' +
  '<button class="btn btn-sm" onclick="event.stopPropagation(); testKey(\'' + _e(p.id) + '\')">测试 Key</button>' +
@@ -1912,23 +1889,9 @@ function toggleProvider(card, id) {
 function updateSaveBtn() {}
 
 // ===== TOGGLE PASSWORD =====
-// Flips input type and keeps the card's eye button in sync (eye = masked,
-// eye-off = visible), so the icon always reflects the current state.
-var EYE_ON_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>';
-var EYE_OFF_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-function togglePw(id) {
- const el = document.getElementById('key-' + id) || document.getElementById('ch-' + id);
- if (!el) return;
- el.type = el.type === 'password' ? 'text' : 'password';
- const card = document.querySelector('.provider-card[data-id="' + id + '"]');
- if (card) {
- const btn = card.querySelector('.pw-toggle');
- if (btn) {
- btn.innerHTML = el.type === 'password' ? EYE_ON_ICON : EYE_OFF_ICON;
- btn.title = el.type === 'password' ? '显示 Key' : '隐藏 Key';
- }
- }
-}
+// Removed: key show/hide now uses the browser's NATIVE password-reveal
+// control rendered inside password inputs (eye icon, Edge/Chrome). No
+// custom toggle button or JS is needed anymore.
 
 // ===== TEST LOCAL =====
 function testLocal(providerId) {
