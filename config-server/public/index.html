@@ -283,17 +283,27 @@
  font-size: 0.78em; padding: 4px 8px; font-family: var(--font-mono);
  }
  .provider-card .btn-icon:hover { color: var(--fg); }
- /* Key visibility toggle — icon-only, sits BELOW the OTP cell row.
-    The old absolute-positioned .btn-icon floated mid-row on top of the
-    OTP cells; a normal-flow ghost button avoids that entirely. */
+ /* Key visibility toggle — compact square ghost button that sits at the
+    end of the model-select row (same row, right side). Normal flow, so
+    it can never overlap the key input. */
  .pw-toggle {
- display: inline-flex; align-items: center; justify-content: center;
- gap: 5px; margin: 4px 0 2px; padding: 3px 9px;
- background: transparent; border: 1px solid var(--border); border-radius: 6px;
+ flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+ width: 32px; height: 32px; padding: 0;
+ background: var(--secondary); border: 1px solid var(--border); border-radius: 6px;
  color: var(--fg-muted); cursor: pointer; transition: border-color .15s, color .15s;
  }
  .pw-toggle:hover { color: var(--fg); border-color: var(--fg-muted); }
  .pw-toggle svg { display: block; }
+ /* One-row field + trailing icon button (e.g. model select + eye). */
+ .input-row { display: flex; align-items: center; gap: 8px; }
+ .input-row .input { flex: 1 1 0; min-width: 0; }
+ /* Card footer action bar: secondary actions left, primary save right. */
+ .card-actions {
+ display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+ margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border);
+ }
+ .card-actions .spacer { flex: 1 1 0; min-width: 0; }
+ .card-actions a.btn-sm { text-decoration: none; display: inline-flex; align-items: center; }
  .provider-card .btn-sm {
  padding: 7px 14px; font-size: 0.82em;
  background: var(--secondary); color: var(--fg);
@@ -1122,14 +1132,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
     flex:1 1 0 + min-width:0 are REQUIRED — without them the nowrap row's
     min-content width blows out the input-group, the card, and finally
     the 1fr 1fr model-grid (pushing the neighbour card off-screen). */
- .otp { position:relative; display:flex; align-items:center; gap:4px; flex-wrap:nowrap; flex:1 1 0; min-width:0; overflow-x:auto; overflow-y:hidden; max-width:100%; min-height:30px; padding-bottom:2px; scrollbar-width:thin; }
- .otp .cell { flex:0 0 auto; width:16px; height:26px; border:1px solid var(--border); border-radius:4px; background:var(--secondary); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; color:var(--fg); transition:border-color .15s, box-shadow .15s; }
- .otp .cell.filled { border-color:color-mix(in srgb,var(--emerald) 60%,var(--border)); color:var(--emerald); }
- .otp.focused .cell.active { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
- .otp.focused .cell.active::after { content:''; width:1px; height:14px; background:var(--accent); animation:kcaret 1.05s steps(1) infinite; }
- @keyframes kcaret { 50% { opacity:0; } }
- .otp .otp-hint { margin-left:6px; font-family:var(--font-mono); font-size:0.7em; color:var(--fg-muted); }
- .otp-real { position:absolute !important; left:0; top:0; width:1px !important; height:1px !important; opacity:0 !important; padding:0 !important; border:0 !important; }
  .picon-mono { filter: invert(1); }
  [data-theme="light"] .picon-mono { filter: none; }
  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .picon-mono { filter: none; } }
@@ -1590,46 +1592,6 @@ function kSaveFail(){ var b=document.getElementById('kSaveBar'); if(b) b.classLi
  kSaveLabel('网关未自动恢复 — 请关闭所有窗口后回到文件夹重新双击 OpenClaw.vbs'); }
 function refreshCatalogBar(show){ var el=document.getElementById('catKbar'); if(el) el.style.display = show?'block':'none'; }
 
-function wireOtpAll(scope){
- var inputs=(scope||document).querySelectorAll('input[data-field="apikey"]');
- Array.prototype.forEach.call(inputs, function(inp){
-  if (inp.dataset.otpWired) return; inp.dataset.otpWired='1';
-  var grp = inp.parentNode;
-  if (grp && getComputedStyle(grp).position === 'static') grp.style.position = 'relative';
-  var otp = document.createElement('div'); otp.className='otp';
-  grp.insertBefore(otp, inp);
-  inp.classList.add('otp-real');
-  inp.setAttribute('autocomplete','off');
-  otp.style.cursor='text';
-  otp.addEventListener('mousedown', function(e){ e.preventDefault(); setTimeout(function(){ inp.focus(); },0); });
-  function render(){
-   var show = inp.type !== 'password';
-   var val = inp.value || '';
-   var n = Math.min(Math.max(val.length + 2, 16), 96);
-   var h='';
-   for (var i=0;i<n;i++){
-    var ch = val.charAt(i);
-    var cls = 'cell' + (ch ? ' filled' : '') + (i === Math.min(val.length, n-1) ? ' active' : '');
-    h += '<span class="'+cls+'">'+(ch ? (show ? ch : '•') : '')+'</span>';
-   }
-   otp.innerHTML = h + '<span class="otp-hint">'+(val.length ? val.length+' 位' : '')+'</span>';
-   var ac = otp.querySelector('.cell.active');
-   if (ac && ac.scrollIntoView) { try { ac.scrollIntoView({block:'nearest', inline:'nearest'}); } catch(e){} }
-  }
-  inp._otpRender = render;
-  inp.addEventListener('input', render);
-  inp.addEventListener('focus', function(){ otp.classList.add('focused'); render(); });
-  inp.addEventListener('blur', function(){ otp.classList.remove('focused'); render(); });
-  render();
- });
- if (!window.__otpPwPatched && window.togglePw) {
-  var _t = window.togglePw;
-  window.togglePw = function(id){ _t(id);
-   var el=document.getElementById('key-'+id); if (el && el._otpRender) setTimeout(el._otpRender, 0); };
-  window.__otpPwPatched = true;
- }
-}
-
 // Provider icon helper — maps provider ID to SVG icon file
 var _iconMap = {zai:'zhipu',ernie:'baichuan',hunyuan:'qwen',siliconflow:'deepseek',novita:'openai',hyperbolic:'meta',deepinfra:'meta',stepfun:'yi',custom:'openrouter'};
 // Monochrome (currentColor) icons render black inside <img> — invisible on the dark
@@ -1681,11 +1643,13 @@ grid.innerHTML = visible.map(p => {
  // — the catalog path made tags/base untrusted inputs.
  // (B23-03, extended for hot-update)
  const _e = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
- var saveBtnHtml = function(pid){ return '<button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="event.stopPropagation(); saveCard(\'' + _e(pid) + '\')">保存并继续</button>'; };
- // Eye icon (stroke style matches the inline Remix/Feather set) — key
- // visibility toggle, rendered BELOW the OTP cell row via .pw-toggle.
+ var saveBtnHtml = function(pid){ return '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); saveCard(\'' + _e(pid) + '\')">保存并继续</button>'; };
+ // Eye / eye-off icons (stroke style matches the inline Remix/Feather set).
+ // .pw-toggle sits at the end of the model-select row; togglePw() swaps the
+ // icon so the button reflects the current visibility state.
  var eyeSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>';
- var pwToggleHtml = function(pid){ return '<button class="pw-toggle" title="显示/隐藏 Key" aria-label="显示或隐藏 API Key" onclick="event.stopPropagation(); togglePw(\'' + pid + '\')">' + eyeSvg + '</button>'; };
+ var eyeOffSvg = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+ var pwToggleHtml = function(pid){ return '<button type="button" class="pw-toggle" title="显示/隐藏 Key" aria-label="显示或隐藏 API Key" onclick="event.stopPropagation(); togglePw(\'' + pid + '\')">' + eyeSvg + '</button>'; };
   // DIRECTION-A: OpenClaw-built-in providers (minimax/openai/anthropic/…) are
  // configured in the official Control UI, NOT here. Show an informational
  // card (no editable form) that points the user to the official UI.
@@ -1704,30 +1668,30 @@ grid.innerHTML = visible.map(p => {
  if (p.isCustom) {
  formHtml = '<div class="provider-expand">' +
  '<input type="url" class="input" placeholder="Base URL (https://...)" data-field="base">' +
- '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
- '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '"></div>' +
- pwToggleHtml(_e(p.id)) + saveBtnHtml(p.id) + '</div>';
+ '<div class="input-row"><input type="text" class="input" placeholder="Model Name" data-field="model">' + pwToggleHtml(_e(p.id)) + '</div>' +
+ '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<div class="card-actions"><span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  } else if (p.isLocal) {
  var _port = ((String(p.base || '').match(/:(\d+)/)) || [])[1] || '';
  formHtml = '<div class="provider-expand">' +
  '<input type="text" class="input" placeholder="Port (default: ' + _e(_port) + ')" data-field="port" value="' + _e(_port) + '">' +
  '<input type="text" class="input" placeholder="Model Name" data-field="model">' +
- '<button class="btn btn-sm" onclick="testLocal(\'' + _e(p.id) + '\')">检测连接</button>' + saveBtnHtml(p.id) + '</div>';
+ '<div class="card-actions"><button class="btn btn-sm" onclick="event.stopPropagation(); testLocal(\'' + _e(p.id) + '\')">检测连接</button><span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  } else {
  const opts = p.models.map(m => '<option value="' + _e(m) + '">' + _e(modelLabel(p, m)) + '</option>').join('');
  formHtml = '<div class="provider-expand">' +
- '<select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' +
- '<div class="input-group"><input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '"></div>' +
- pwToggleHtml(_e(p.id)) +
- '<a href="' + _e(p.link) + '" target="_blank" rel="noopener" class="buy-link">获取 Key →</a> ' +
- '<button class="btn btn-sm" style="margin-top:8px;" onclick="testKey(\''+ _e(p.id) +'\')">' +
- '测试 Key</button><span id="keytest-'+ _e(p.id) +'" style="margin-left:8px;font-size:0.78em;"></span>' + saveBtnHtml(p.id) + '</div>';
+ '<div class="input-row"><select class="input" data-field="model"><option value="">-- 选择模型 --</option>' + opts + '</select>' + pwToggleHtml(_e(p.id)) + '</div>' +
+ '<input type="password" class="input" placeholder="API Key" data-field="apikey" id="key-' + _e(p.id) + '" autocomplete="off" spellcheck="false">' +
+ '<div class="card-actions">' +
+ '<a class="btn btn-sm" href="' + _e(p.link) + '" target="_blank" rel="noopener">获取 Key ↗</a>' +
+ '<button class="btn btn-sm" onclick="event.stopPropagation(); testKey(\'' + _e(p.id) + '\')">测试 Key</button>' +
+ '<span id="keytest-' + _e(p.id) + '" style="font-size:0.78em;"></span>' +
+ '<span class="spacer"></span>' + saveBtnHtml(_e(p.id)) + '</div></div>';
  }
  return headHtml + '<div class="provider-card" data-id="' + _e(p.id) + '" onclick="toggleProvider(this,\'' + _e(p.id) + '\')">' +
  '<div class="provider-header">' + providerIcon(p.id) + '<span class="provider-name">' + _e(p.name) + '</span>' + '</div>' +
  '<div class="provider-desc">' + _e(p.desc) + '</div>' + formHtml + '</div>';
  }).join('');
- wireOtpAll();
 }
 
 // Initial render + delegated input listener (only attached once)
@@ -1948,10 +1912,21 @@ function toggleProvider(card, id) {
 function updateSaveBtn() {}
 
 // ===== TOGGLE PASSWORD =====
+// Flips input type and keeps the card's eye button in sync (eye = masked,
+// eye-off = visible), so the icon always reflects the current state.
+var EYE_ON_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>';
+var EYE_OFF_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 function togglePw(id) {
  const el = document.getElementById('key-' + id) || document.getElementById('ch-' + id);
- if (el) {
+ if (!el) return;
  el.type = el.type === 'password' ? 'text' : 'password';
+ const card = document.querySelector('.provider-card[data-id="' + id + '"]');
+ if (card) {
+ const btn = card.querySelector('.pw-toggle');
+ if (btn) {
+ btn.innerHTML = el.type === 'password' ? EYE_ON_ICON : EYE_OFF_ICON;
+ btn.title = el.type === 'password' ? '显示 Key' : '隐藏 Key';
+ }
  }
 }
 
