@@ -1103,8 +1103,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  .kprog.done .ksweep, .kprog.fail .ksweep { animation:none; opacity:0; }
  .kprog.fail .kfill { background:linear-gradient(90deg, color-mix(in srgb,var(--destructive) 55%,transparent), var(--destructive)); }
  .klabel { font-family:var(--font-mono); font-size:0.72em; letter-spacing:.08em; color:var(--fg-muted); margin-top:6px; }
- .otp { position:relative; display:flex; align-items:center; gap:4px; flex-wrap:wrap; min-height:30px; }
- .otp .cell { width:16px; height:26px; border:1px solid var(--border); border-radius:4px; background:var(--secondary); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; color:var(--fg); transition:border-color .15s, box-shadow .15s; }
+ /* Single-row horizontal scroll: long keys no longer wrap/overlap the
+    card, and every character stays reachable by scrolling. */
+ .otp { position:relative; display:flex; align-items:center; gap:4px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; max-width:100%; min-height:30px; padding-bottom:2px; scrollbar-width:thin; }
+ .otp .cell { flex:0 0 auto; width:16px; height:26px; border:1px solid var(--border); border-radius:4px; background:var(--secondary); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; color:var(--fg); transition:border-color .15s, box-shadow .15s; }
  .otp .cell.filled { border-color:color-mix(in srgb,var(--emerald) 60%,var(--border)); color:var(--emerald); }
  .otp.focused .cell.active { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
  .otp.focused .cell.active::after { content:''; width:1px; height:14px; background:var(--accent); animation:kcaret 1.05s steps(1) infinite; }
@@ -1245,9 +1247,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
  没有匹配的平台，换个关键词试试。
  </div>
- <div class="btn-row">
- <button class="btn btn-primary" id="saveBtn" onclick="saveConfig()" disabled tabindex="0">保存并继续 →</button>
- </div>
+ <!-- 全局保存按钮已移除：每个厂商卡片内自带「保存并继续」，updateSaveBtn() 对缺失节点有空值保护 -->
 </section>
 
 <!-- Step 2 -->
@@ -1578,6 +1578,7 @@ function wireOtpAll(scope){
  Array.prototype.forEach.call(inputs, function(inp){
   if (inp.dataset.otpWired) return; inp.dataset.otpWired='1';
   var grp = inp.parentNode;
+  if (grp && getComputedStyle(grp).position === 'static') grp.style.position = 'relative';
   var otp = document.createElement('div'); otp.className='otp';
   grp.insertBefore(otp, inp);
   inp.classList.add('otp-real');
@@ -1587,7 +1588,7 @@ function wireOtpAll(scope){
   function render(){
    var show = inp.type !== 'password';
    var val = inp.value || '';
-   var n = Math.max(val.length + 2, 16); if (n > 28) n = 28;
+   var n = Math.min(Math.max(val.length + 2, 16), 96);
    var h='';
    for (var i=0;i<n;i++){
     var ch = val.charAt(i);
@@ -1595,6 +1596,8 @@ function wireOtpAll(scope){
     h += '<span class="'+cls+'">'+(ch ? (show ? ch : '•') : '')+'</span>';
    }
    otp.innerHTML = h + '<span class="otp-hint">'+(val.length ? val.length+' 位' : '')+'</span>';
+   var ac = otp.querySelector('.cell.active');
+   if (ac && ac.scrollIntoView) { try { ac.scrollIntoView({block:'nearest', inline:'nearest'}); } catch(e){} }
   }
   inp._otpRender = render;
   inp.addEventListener('input', render);
