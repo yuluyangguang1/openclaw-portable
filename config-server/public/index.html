@@ -210,6 +210,9 @@
 
  /* Provider cards */
  .model-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+ /* Grid items default to min-width:auto — allow shrinking so wide OTP rows
+    scroll inside the card instead of stretching the grid column. */
+ .model-grid > .provider-card { min-width: 0; }
  .provider-card {
  background: var(--secondary);
  border: 1px solid var(--border);
@@ -268,7 +271,7 @@
  border-top: 1px solid var(--border);
  margin-top: 12px;
  }
- .provider-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
+ .provider-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; min-width: 0; }
  .provider-card 
  .provider-card .input:focus { border-color: var(--fg); }
  .provider-card select
@@ -1104,8 +1107,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  .kprog.fail .kfill { background:linear-gradient(90deg, color-mix(in srgb,var(--destructive) 55%,transparent), var(--destructive)); }
  .klabel { font-family:var(--font-mono); font-size:0.72em; letter-spacing:.08em; color:var(--fg-muted); margin-top:6px; }
  /* Single-row horizontal scroll: long keys no longer wrap/overlap the
-    card, and every character stays reachable by scrolling. */
- .otp { position:relative; display:flex; align-items:center; gap:4px; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; max-width:100%; min-height:30px; padding-bottom:2px; scrollbar-width:thin; }
+    card, and every character stays reachable by scrolling.
+    flex:1 1 0 + min-width:0 are REQUIRED — without them the nowrap row's
+    min-content width blows out the input-group, the card, and finally
+    the 1fr 1fr model-grid (pushing the neighbour card off-screen). */
+ .otp { position:relative; display:flex; align-items:center; gap:4px; flex-wrap:nowrap; flex:1 1 0; min-width:0; overflow-x:auto; overflow-y:hidden; max-width:100%; min-height:30px; padding-bottom:2px; scrollbar-width:thin; }
  .otp .cell { flex:0 0 auto; width:16px; height:26px; border:1px solid var(--border); border-radius:4px; background:var(--secondary); display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:12px; color:var(--fg); transition:border-color .15s, box-shadow .15s; }
  .otp .cell.filled { border-color:color-mix(in srgb,var(--emerald) 60%,var(--border)); color:var(--emerald); }
  .otp.focused .cell.active { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 30%,transparent); }
@@ -1247,7 +1253,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div id="providerEmpty" style="display:none;text-align:center;padding:24px;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.85em;">
  没有匹配的平台，换个关键词试试。
  </div>
- <!-- 全局保存按钮已移除：每个厂商卡片内自带「保存并继续」，updateSaveBtn() 对缺失节点有空值保护 -->
+ <!-- 全局保存按钮已移除：每个厂商卡片内自带「保存并继续」，updateSaveBtn() 已改为 no-op -->
 </section>
 
 <!-- Step 2 -->
@@ -1918,31 +1924,13 @@ function toggleProvider(card, id) {
  updateSaveBtn();
 }
 
-// ===== UPDATE SAVE BUTTON =====
-function updateSaveBtn() {
- const btn = document.getElementById('saveBtn');
- if (!btn) return;
- const p = PROVIDERS.find(x => x.id === selectedProvider);
- if (!p) { btn.disabled = true; return; }
-
- const card = document.querySelector('.provider-card[data-id="' + selectedProvider + '"]');
- if (!card) { btn.disabled = true; return; }
-
- if (p.isLocal) {
- const port = card.querySelector('[data-field="port"]');
- const model = card.querySelector('[data-field="model"]');
- btn.disabled = !(port && port.value && model && model.value);
- } else if (p.isCustom) {
- const base = card.querySelector('[data-field="base"]');
- const model = card.querySelector('[data-field="model"]');
- const key = card.querySelector('[data-field="apikey"]');
- btn.disabled = !(base && base.value && model && model.value && key && key.value);
- } else {
- const model = card.querySelector('[data-field="model"]');
- const key = card.querySelector('[data-field="apikey"]');
- btn.disabled = !(model && model.value && key && key.value);
- }
-}
+// ===== UPDATE SAVE BUTTON (no-op) =====
+// The global save button (#saveBtn) was removed — each provider card
+// carries its own "保存并继续" now. Kept as a deliberate no-op so the
+// call sites above stay untouched; do NOT re-add a getElementById for
+// the removed node, the CI static check asserts every referenced ID
+// exists in the HTML.
+function updateSaveBtn() {}
 
 // ===== TOGGLE PASSWORD =====
 function togglePw(id) {
