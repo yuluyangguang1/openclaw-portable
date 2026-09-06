@@ -29,7 +29,7 @@ DIM='\033[2m'
 NC='\033[0m'
 
 OPENCLAW_VER="unknown"
-[ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+[ -f "$PORTABLE_DIR/system/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/system/OPENCLAW_VERSION" | tr -d '[:space:]')"
 
 echo ""
 echo -e "  ${CYAN}╔══════════════════════════════════════╗${NC}"

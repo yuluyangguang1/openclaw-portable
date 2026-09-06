@@ -34,12 +34,12 @@ if /I "!_SCRIPT_PARENT!"=="system" (
     set "PORTABLE_DIR=%~dp0"
 )
 
-REM Read version from OPENCLAW_VERSION at the portable root (must run
-REM AFTER PORTABLE_DIR is resolved — in the release zip layout the .bat
-REM lives in system\ while OPENCLAW_VERSION is one level up).
+REM Read version from OPENCLAW_VERSION in system\ (must run AFTER
+REM PORTABLE_DIR is resolved — in both layouts the version file now
+REM lives in system\ next to the .bat, at $PORTABLE_DIR\system\).
 set "OPENCLAW_VER=unknown"
-if exist "!PORTABLE_DIR!OPENCLAW_VERSION" (
-    for /f "usebackq tokens=* delims=" %%v in ("!PORTABLE_DIR!OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+if exist "!PORTABLE_DIR!system\OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("!PORTABLE_DIR!system\OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
 )
 
 echo.

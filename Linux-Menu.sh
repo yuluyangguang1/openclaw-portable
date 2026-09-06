@@ -91,7 +91,7 @@ show_menu() {
     [ -f "$CONFIG_PATH" ] && CFG_STATUS="${GREEN}已配置${NC}"
 
     local OPENCLAW_VER="unknown"
-    [ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+    [ -f "$PORTABLE_DIR/system/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/system/OPENCLAW_VERSION" | tr -d '[:space:]')"
     echo ""
     echo -e "  ${CYAN}${BOLD}╔══════════════════════════════════════╗"
     echo -e "  ║   OpenClaw Portable $OPENCLAW_VER"

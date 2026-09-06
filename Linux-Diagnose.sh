@@ -26,7 +26,7 @@ echo ""
 
 # Clear old log
 OPENCLAW_VER="unknown"
-[ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+[ -f "$PORTABLE_DIR/system/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/system/OPENCLAW_VERSION" | tr -d '[:space:]')"
 cat > "$LOG_FILE" << EOF
 OpenClaw Portable Diagnostic Report (Linux)
 Version: $OPENCLAW_VER

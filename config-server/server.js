@@ -1000,11 +1000,11 @@ const server = http.createServer((req, res) => {
     if (!global._versionCache || Date.now() - global._versionCache.t > 60000) {
       let portable = 'unknown', openclaw = 'unknown';
       try {
-        const pf = path.join(__dirname, '../PORTABLE_VERSION');
+        const pf = path.join(__dirname, '../system/PORTABLE_VERSION');
         if (fs.existsSync(pf)) portable = fs.readFileSync(pf, 'utf8').trim();
       } catch(e) {}
       try {
-        const of = path.join(__dirname, '../OPENCLAW_VERSION');
+        const of = path.join(__dirname, '../system/OPENCLAW_VERSION');
         if (fs.existsSync(of)) openclaw = fs.readFileSync(of, 'utf8').trim();
       } catch(e) {}
       global._versionCache = {portable, openclaw, t: Date.now()};
@@ -1072,8 +1072,8 @@ const server = http.createServer((req, res) => {
         if (!r.ok) throw new Error('GitHub API error: ' + r.status);
         const release = await readJsonBounded(r);
         const latestTag = release.tag_name || '';
-        const currentVer = fs.existsSync(path.join(__dirname, '../PORTABLE_VERSION'))
-          ? fs.readFileSync(path.join(__dirname, '../PORTABLE_VERSION'), 'utf8').trim()
+        const currentVer = fs.existsSync(path.join(__dirname, '../system/PORTABLE_VERSION'))
+          ? fs.readFileSync(path.join(__dirname, '../system/PORTABLE_VERSION'), 'utf8').trim()
           : 'unknown';
         // Semver-aware compare. Old impl was string equality, which
         // returned true even when latest < current (e.g. user has dev
@@ -1344,7 +1344,7 @@ const server = http.createServer((req, res) => {
         fs.rmSync(extractDir, { recursive: true, force: true });
 
         // 6. Update OPENCLAW_VERSION if present in new release
-        const newVerFile = path.join(baseDir, 'PORTABLE_VERSION');
+        const newVerFile = path.join(baseDir, 'system', 'PORTABLE_VERSION');
         if (fs.existsSync(newVerFile)) {
           console.log('Update: new version = ' + fs.readFileSync(newVerFile, 'utf8').trim());
         }
@@ -1874,7 +1874,7 @@ if (req.url === '/api/status' && req.method === 'GET') {
 // could only change when the maintainer shipped a new portable build.
 // Now the catalog is data:
 //
-//   repo-root models-catalog.json  ← maintainer's single source (shipped)
+//   system/models-catalog.json  ← maintainer's single source (shipped)
 //   data/.openclaw/models-catalog.json  ← user-pulled cache (SURVIVES
 //                                          in-app updates — the updater
 //                                          skips data/)
@@ -1884,13 +1884,13 @@ if (req.url === '/api/status' && req.method === 'GET') {
 // works from both global and CN networks. Advanced users can override
 // the source list by writing data/.openclaw/catalog-sources.json.
 const MODEL_CATALOG_USER = path.join(OPENCLAW_DIR, 'models-catalog.json');
-const MODEL_CATALOG_SHIPPED = path.join(__dirname, '../models-catalog.json');
+const MODEL_CATALOG_SHIPPED = path.join(__dirname, '../system/models-catalog.json');
 const MODEL_CATALOG_STALE_MS = 7 * 24 * 3600_000;
 const MODEL_CATALOG_FETCH_CAP = 2 * 1024 * 1024; // 2 MB — real catalogs are <300 KB
 const DEFAULT_CATALOG_SOURCES = [
-  'https://cdn.jsdelivr.net/gh/yuluyangguang1/openclaw-portable@main/models-catalog.json',
-  'https://raw.githubusercontent.com/yuluyangguang1/openclaw-portable/main/models-catalog.json',
-  'https://ghproxy.net/https://raw.githubusercontent.com/yuluyangguang1/openclaw-portable/main/models-catalog.json',
+  'https://cdn.jsdelivr.net/gh/yuluyangguang1/openclaw-portable@main/system/models-catalog.json',
+  'https://raw.githubusercontent.com/yuluyangguang1/openclaw-portable/main/system/models-catalog.json',
+  'https://ghproxy.net/https://raw.githubusercontent.com/yuluyangguang1/openclaw-portable/main/system/models-catalog.json',
 ];
 
 function readCatalogFile(filePath) {

@@ -9,7 +9,7 @@
 
 LOG_DIR="$DATA_DIR/logs"
 BACKUP_DIR="$DATA_DIR/backups"
-DEFAULT_CONFIG="$PORTABLE_DIR/default-config.json"
+DEFAULT_CONFIG="$PORTABLE_DIR/system/default-config.json"
 
 # Detect install mode: installed (~/.openclaw-portable), usb (/Volumes or /media), portable (other)
 detect_install_mode() {

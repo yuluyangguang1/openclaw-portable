@@ -167,7 +167,7 @@ fi
 # already exists. The actual npm install is still skipped when
 # already-installed AND the version matches.
 mkdir -p "$CORE_DIR"
-OPENCLAW_VERSION_FILE="$(dirname "$0")/OPENCLAW_VERSION"
+OPENCLAW_VERSION_FILE="$(dirname "$0")/system/OPENCLAW_VERSION"
 OPENCLAW_VERSION="2026.9.2"
 if [ -f "$OPENCLAW_VERSION_FILE" ]; then
     OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"

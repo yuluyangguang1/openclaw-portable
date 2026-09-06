@@ -30,7 +30,7 @@ NC='\033[0m'
 
 # Read version from file
 OPENCLAW_VER="unknown"
-[ -f "$PORTABLE_DIR/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/OPENCLAW_VERSION" | tr -d '[:space:]')"
+[ -f "$PORTABLE_DIR/system/OPENCLAW_VERSION" ] && OPENCLAW_VER="$(cat "$PORTABLE_DIR/system/OPENCLAW_VERSION" | tr -d '[:space:]')"
 
 # ---- Tree-kill helper (used by stale-port cleanup AND on_exit_handler) ----
 #

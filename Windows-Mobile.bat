@@ -49,8 +49,8 @@ set "OPENCLAW_SUPERVISOR_MODE=external"
 
 REM Read version
 set "OPENCLAW_VER=unknown"
-if exist "!PORTABLE_DIR!OPENCLAW_VERSION" (
-    for /f "usebackq tokens=* delims=" %%v in ("!PORTABLE_DIR!OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+if exist "!PORTABLE_DIR!system\OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("!PORTABLE_DIR!system\OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
 )
 
 echo.

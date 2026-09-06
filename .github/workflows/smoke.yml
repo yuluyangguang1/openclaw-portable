@@ -69,13 +69,14 @@ jobs:
 
       - name: JSON validity
         run: |
-          node -e "JSON.parse(require('fs').readFileSync('default-config.json','utf8'))" && echo "OK: default-config.json"
+          node -e "JSON.parse(require('fs').readFileSync('system/default-config.json','utf8'))" && echo "OK: system/default-config.json"
 
       - name: skills-zh integrity
         run: |
-          # Compare skills-zh/ against skills-zh-manifest.json (sha256,
-          # LF-normalized). Catches missing/tampered/extra vendored files.
-          python3 verify-skills-zh.py
+          # Compare system/skills-zh/ against system/skills-zh-manifest.json
+          # (sha256, LF-normalized). Catches missing/tampered/extra vendored
+          # files.
+          python3 system/verify-skills-zh.py
 
   runtime:
     name: Runtime smoke (${{ matrix.os }})

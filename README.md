@@ -143,31 +143,27 @@ OpenClawPortable/
  OpenClaw.app macOS 启动器
  OpenClaw.vbs Windows 启动器
  OpenClawPortable使用说明.html 用户手册
- OPENCLAW_VERSION 上游版本号
- PORTABLE_VERSION Portable 版本号
  data/ 用户数据（API Key、对话历史等）
  app/ Node.js 运行时 + OpenClaw 核心
  config-server/ 配置中心 Web UI + API
- default-config.json 默认配置
- system/ 底层脚本 + Linux 启动器 + README
- OpenClaw.desktop Linux 启动器
- README.md 离线文档
- Mac-Start.command
- Mac-Menu.command
- Mac-Mobile.command 手机连接
- Mac-Diagnose.command
- Linux-Start.sh
- Linux-Menu.sh
- Linux-Mobile.sh 手机连接
- Linux-Diagnose.sh
- Windows-Start.bat
- Windows-Menu.bat
- Windows-Mobile.bat 手机连接
- Windows-Diagnose.bat
- lib/ preflight / maintain / mobile 帮助库
+ system/ 底层脚本 + 配置 + 技能包：
+  ├─ OPENCLAW_VERSION 上游版本号
+  ├─ PORTABLE_VERSION Portable 版本号
+  ├─ default-config.json 默认配置
+  ├─ models-catalog.json 模型目录（维护者单源）
+  ├─ skills-zh-manifest.json 中文技能清单
+  ├─ verify-skills-zh.py 技能清单校验脚本
+  ├─ skills-zh/ 中文技能包（内置）
+  ├─ skills-zh-optional/ 中文技能包（可选，手动安装）
+  ├─ OpenClaw.desktop Linux 启动器
+  ├─ README.md 离线文档
+  ├─ Mac-Start/Menu/Mobile/Diagnose.command
+  ├─ Linux-Start/Menu/Mobile/Diagnose.sh
+  ├─ Windows-Start/Menu/Mobile/Diagnose.bat
+  └─ lib/ preflight / maintain / mobile 帮助库
 ```
 
-源码仓库中 `system/` 里的文件放在根目录（dev 模式），CI 打包时移入 `system/`。
+源码仓库与发布包布局一致：除 `OpenClaw.app` / `OpenClaw.vbs` 双击入口和 `app/`、`config-server/`、`data/` 外，其余脚本与配置全部位于 `system/`（CI 打包时再把启动器从仓库根移入 `system/`）。
 
 ---
 
@@ -199,7 +195,7 @@ OpenClawPortable/
 
 - **用户侧**：配置中心"选择模型平台"页顶部有目录工具栏（`更新目录 / 导入 / 导出 / 恢复内置`）。点击"更新目录"即从本仓库拉取最新列表；缓存超过 7 天会在打开页面时自动后台刷新。离线用户可先在其他设备下载 `models-catalog.json`，再点"导入"。
 - **缓存位置**：`data/.openclaw/models-catalog.json`（data/ 目录在整包升级时保留，升级不丢）。
-- **维护者侧**：只需修改仓库根目录的 [`models-catalog.json`](models-catalog.json)（`version` 字段建议用日期如 `2026.08.22`），提交后用户即可拉到。拉取源依次为 jsDelivr → raw.githubusercontent → ghproxy 镜像，国内网络可达。
+- **维护者侧**：只需修改仓库 `system/` 目录下的 [`models-catalog.json`](system/models-catalog.json)（`version` 字段建议用日期如 `2026.08.22`），提交后用户即可拉到。拉取源依次为 jsDelivr → raw.githubusercontent → ghproxy 镜像，国内网络可达。
 - **自定义源**：高级用户可在 `data/.openclaw/catalog-sources.json` 写入 URL 数组覆盖默认源（如自建镜像）。
 - 已保存的模型配置不受目录更新影响——目录只影响下拉选项，配置里的模型名原样保留。
 

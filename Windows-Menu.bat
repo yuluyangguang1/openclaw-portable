@@ -42,8 +42,8 @@ cls
 
 REM Read version
 set "OPENCLAW_VER=unknown"
-if exist "%PORTABLE_DIR%OPENCLAW_VERSION" (
-    for /f "usebackq tokens=* delims=" %%v in ("%PORTABLE_DIR%OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
+if exist "%PORTABLE_DIR%system\OPENCLAW_VERSION" (
+    for /f "usebackq tokens=* delims=" %%v in ("%PORTABLE_DIR%system\OPENCLAW_VERSION") do set "OPENCLAW_VER=%%v"
 )
 
 echo.
@@ -470,8 +470,8 @@ echo   [3/4] Clearing memory...
 rmdir /s /q "%DATA_DIR%\memory" 2>nul
 mkdir "%DATA_DIR%\memory" 2>nul
 echo   [4/4] Restoring default config...
-if exist "%PORTABLE_DIR%default-config.json" (
-    copy "%PORTABLE_DIR%default-config.json" "%STATE_DIR%\openclaw.json" >nul
+if exist "%PORTABLE_DIR%system\default-config.json" (
+    copy "%PORTABLE_DIR%system\default-config.json" "%STATE_DIR%\openclaw.json" >nul
 ) else (
     (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )

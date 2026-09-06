@@ -208,7 +208,7 @@ $packageJsonPath = Join-Path $coreDir "package.json"
 # Always regenerate package.json to ensure the version matches
 # OPENCLAW_VERSION. Previously the file was git-tracked with a stale
 # version and the "if not exists" guard meant changes never took effect.
-$openclawVersionFile = Join-Path $PSScriptRoot "OPENCLAW_VERSION"
+$openclawVersionFile = Join-Path $PSScriptRoot "system\OPENCLAW_VERSION"
 $openclawVersion = "2026.9.2"
 if (Test-Path -Path $openclawVersionFile -PathType Leaf) {
     $openclawVersion = (Get-Content -Path $openclawVersionFile -Raw).Trim()
