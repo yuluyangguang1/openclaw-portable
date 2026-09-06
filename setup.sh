@@ -11,7 +11,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 APP_DIR="$SCRIPT_DIR/app"
 CORE_DIR="$APP_DIR/core"
 RUNTIME_DIR="$APP_DIR/runtime"
-MIRROR="https://registry.npmmirror.com"
+# npm registry. Default: China mirror (fast for end users). CI overrides
+# via NPM_REGISTRY=https://registry.npmjs.org — npmmirror can lag upstream
+# releases by hours (v2026.9.2 provider pkgs were missing for 22h+ and
+# broke the beta.5 build with npm ETARGET).
+MIRROR="${NPM_REGISTRY:-https://registry.npmmirror.com}"
 NODE_MIRROR="https://npmmirror.com/mirrors/node"
 # Node 24 LTS (active LTS until 2026-10, maintenance until 2028-04).
 # Upgraded from v22.22.1 to match hermes-portable and get full

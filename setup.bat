@@ -7,7 +7,10 @@ set "SCRIPT_DIR=%~dp0"
 set "APP_DIR=%SCRIPT_DIR%app"
 set "CORE_DIR=%APP_DIR%\core"
 set "RUNTIME_DIR=%APP_DIR%\runtime"
-set "MIRROR=https://registry.npmmirror.com"
+REM npm registry. Default: China mirror. CI overrides via NPM_REGISTRY env
+REM (npmmirror can lag upstream releases by hours and break npm install).
+if not defined NPM_REGISTRY set "NPM_REGISTRY=https://registry.npmmirror.com"
+set "MIRROR=%NPM_REGISTRY%"
 set "NODE_MIRROR=https://npmmirror.com/mirrors/node"
 set "NODE_VERSION=v24.15.0"
 set "ALL_PLATFORMS=false"

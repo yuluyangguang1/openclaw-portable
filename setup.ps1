@@ -9,7 +9,9 @@ $appDir = Join-Path $scriptDir "app"
 $coreDir = Join-Path $appDir "core"
 $runtimeDir = Join-Path $appDir "runtime"
 
-$mirror = "https://registry.npmmirror.com"
+# npm registry. Default: China mirror. CI overrides via NPM_REGISTRY env
+# (npmmirror can lag upstream releases by hours and break npm install).
+$mirror = if ($env:NPM_REGISTRY) { $env:NPM_REGISTRY } else { "https://registry.npmmirror.com" }
 $nodeMirror = "https://npmmirror.com/mirrors/node"
 $nodeVersion = "v24.15.0"
 

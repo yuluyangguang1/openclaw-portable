@@ -27,6 +27,13 @@ jobs:
           persist-credentials: false
 
       - name: Build universal package (all platforms)
+        env:
+          # npmmirror (the default in setup.*) syncs upstream npm releases
+          # with multi-hour gaps — @openclaw/* 2026.9.2 was missing for 22h+
+          # and broke the beta.5 build with npm ETARGET. CI runners are
+          # overseas: use the official registry, keep the mirror default
+          # for end users only.
+          NPM_REGISTRY: https://registry.npmjs.org
         run: bash setup.sh --all-platforms
 
       - name: Verify runtimes
