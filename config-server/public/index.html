@@ -1278,6 +1278,39 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
  </div>
 
+ <div id="advSettings" style="margin-bottom:16px;display:none;">
+ <details>
+ <summary style="cursor:pointer;font-size:0.78em;color:var(--fg-muted);font-family:var(--font-mono);user-select:none;padding:4px 0;">高级设置（OpenClaw 2026.9.2+）</summary>
+ <div style="margin-top:10px;padding:12px 14px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;display:flex;flex-direction:column;gap:12px;">
+ <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+ <label style="font-size:0.8em;color:var(--fg);display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="advSwarm" style="cursor:pointer;">Swarm 子代理</label>
+ <span style="font-size:0.72em;color:var(--fg-muted);">并发上限</span>
+ <input type="number" id="advSwarmMax" min="1" max="64" placeholder="8" style="width:64px;padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.8em;">
+ <span style="font-size:0.72em;color:var(--fg-muted);">留空用默认（8）</span>
+ </div>
+ <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+ <span style="font-size:0.8em;color:var(--fg);">会话可见性</span>
+ <select id="advVis" style="padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.8em;">
+ <option value="all">all（全可见，9.2 默认）</option>
+ <option value="agent">agent（仅代理树内）</option>
+ <option value="self">self（仅本代理）</option>
+ </select>
+ </div>
+ <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+ <span style="font-size:0.8em;color:var(--fg);">配置热加载</span>
+ <select id="advReload" style="padding:6px 8px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.8em;">
+ <option value="hybrid">hybrid（自动热加载，默认）</option>
+ <option value="off">off（改配置需手动重启）</option>
+ </select>
+ </div>
+ <div style="display:flex;align-items:center;gap:10px;">
+ <button onclick="saveAdvancedSettings()" style="padding:8px 16px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-family:var(--font-mono);font-size:0.8em;cursor:pointer;">保存高级设置</button>
+ <span style="font-size:0.72em;color:var(--fg-muted);">保存即生效，无需重启网关</span>
+ </div>
+ </div>
+ </details>
+ </div>
+
  <div id="kSave" style="display:none;margin:18px 0 6px;"><div class="kprog" id="kSaveBar"><div class="kfill"></div><div class="ksweep"></div><div class="kticks"></div></div><div class="klabel" id="kSaveLabel">准备写入…</div></div>
  <button class="btn-launch" onclick="openGateway()" tabindex="0"><span class="yi" style="margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5018 20.0048C14.8432 21.5841 13.5794 22.848 12 23.5066C10.4206 22.848 9.15679 21.5841 8.49816 20.0048H10.7575C11.0838 20.4934 11.5051 20.9171 12 21.248C12.4949 20.9171 12.9162 20.4934 13.2425 20.0048H15.5018ZM18 14.8095L20 17.0777V19.0048H4V17.0777L6 14.8095V9.00478C6 5.52153 8.50442 2.55822 12 1.45999C15.4956 2.55822 18 5.52153 18 9.00478V14.8095ZM17.2692 17.0048L16 15.5653V9.00478C16 6.68694 14.4292 4.57431 12 3.58384C9.57078 4.57431 8 6.68694 8 9.00478V15.5653L6.73076 17.0048H17.2692ZM12 11.0048C10.8954 11.0048 10 10.1093 10 9.00478C10 7.90021 10.8954 7.00478 12 7.00478C13.1046 7.00478 14 7.90021 14 9.00478C14 10.1093 13.1046 11.0048 12 11.0048Z"/></svg></span>打开聊天界面 →</button>
 
@@ -1388,8 +1421,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div class="modal-box" onclick="event.stopPropagation();"><h3 id="modalTitle"></h3><p id="modalBody"></p><div class="modal-btns" id="modalBtns"></div></div>
 </div>
 <div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#062424;border-top:1px solid rgba(0,255,200,0.15);padding:12px 24px;z-index:500;text-align:center;">
- <span style="color:var(--fg-muted);font-size:0.85em;">配置已保存，重启后生效</span>
- <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">重启 Gateway</button>
+ <span style="color:var(--fg-muted);font-size:0.85em;">配置已保存，网关将自动热加载（个别改动仍需重启）</span>
+ <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">手动重启</button>
 </div>
 <div id="disconnectOverlay" role="alertdialog" aria-labelledby="dcTitle" aria-describedby="dcDesc">
  <div class="dc-card">
@@ -2107,6 +2140,8 @@ function showConfigSummary(cfg) {
     }
   }
   el.style.display = 'block';
+ var _adv = document.getElementById('advSettings');
+ if (_adv) { _adv.style.display = 'block'; loadAdvancedSettings(); }
  // Build with DOM nodes (not innerHTML) — provider/model come from the
  // user's openclaw.json which they may have imported from anywhere. A
  // string like "<img onerror=...>" would otherwise execute.
@@ -2157,20 +2192,58 @@ function quickSwitchModel() {
  prov.models[0].name = sel.value;
  }
  }
- // 保存并重启
+ // 保存（9.2+ 网关自动热加载，无需重启）
  apiFetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(configData)})
  .then(function(r){return r.json();})
  .then(function(data){
  if (data.ok) {
- showToast('\u5df2\u5207\u6362\u5230 ' + sel.value + '\uff0c\u91cd\u542f\u4e2d...', 'success');
+ showToast('\u5df2\u5207\u6362\u5230 ' + sel.value + '\uff0c\u7f51\u5173\u5c06\u81ea\u52a8\u70ed\u52a0\u8f7d', 'success');
  showConfigSummary(configData);
- apiFetch('/api/restart', {method:'POST'}).then(function(){
  setTimeout(checkGateway, 4000);
- });
  } else {
  showToast('\u274c ' + (data.error || '\u4fdd\u5b58\u5931\u8d25'), 'error');
  }
  });
+}
+
+function loadAdvancedSettings() {
+ apiFetch('/api/config').then(function(r){return r.json();}).then(function(cfg){
+ if (!cfg) return;
+ var sw = (cfg.tools && cfg.tools.swarm) || {};
+ var cb = document.getElementById('advSwarm');
+ if (cb) cb.checked = sw.enabled !== false; // 9.2 upstream default: on
+ var mx = document.getElementById('advSwarmMax');
+ if (mx) mx.value = sw.maxConcurrent || '';
+ var vis = document.getElementById('advVis');
+ if (vis) vis.value = (cfg.tools && cfg.tools.sessions && cfg.tools.sessions.visibility) || 'all';
+ var rl = document.getElementById('advReload');
+ if (rl) rl.value = (cfg.gateway && cfg.gateway.reload && cfg.gateway.reload.mode) || 'hybrid';
+ }).catch(function(){});
+}
+
+function saveAdvancedSettings() {
+ apiFetch('/api/config').then(function(r){return r.json();}).then(function(cfg){
+ if (!cfg || typeof cfg !== 'object') cfg = {};
+ if (!cfg.tools) cfg.tools = {};
+ // Swarm: unchecking writes an explicit enabled:false (opt-out); checking
+ // deletes the key so we follow the upstream default for this kernel.
+ var swarm = cfg.tools.swarm || {};
+ var maxV = parseInt(document.getElementById('advSwarmMax').value, 10);
+ if (!document.getElementById('advSwarm').checked) swarm.enabled = false;
+ else delete swarm.enabled;
+ if (maxV >= 1) swarm.maxConcurrent = maxV; else delete swarm.maxConcurrent;
+ if (Object.keys(swarm).length) cfg.tools.swarm = swarm; else delete cfg.tools.swarm;
+ if (!cfg.tools.sessions) cfg.tools.sessions = {};
+ cfg.tools.sessions.visibility = document.getElementById('advVis').value;
+ if (!cfg.gateway) cfg.gateway = {};
+ if (!cfg.gateway.reload) cfg.gateway.reload = {};
+ cfg.gateway.reload.mode = document.getElementById('advReload').value;
+ if (cfg.tools && Object.keys(cfg.tools).length === 0) delete cfg.tools;
+ return apiFetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(cfg)});
+ }).then(function(r){return r.json();}).then(function(res){
+ if (res && res.ok) showToast('\u9ad8\u7ea7\u8bbe\u7f6e\u5df2\u4fdd\u5b58\uff0c\u7f51\u5173\u5c06\u81ea\u52a8\u70ed\u52a0\u8f7d', 'success');
+ else showToast('\u274c ' + ((res && res.error) || '\u4fdd\u5b58\u5931\u8d25'), 'error');
+ }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
 }
 
 function highlightCurrentProvider(cfg) {

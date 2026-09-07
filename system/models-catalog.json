@@ -1,6 +1,6 @@
 {
-  "version": "2026.08.22-2",
-  "updatedAt": "2026-08-22T14:44:48.598Z",
+  "version": "2026.09.07",
+  "updatedAt": "2026-09-07T08:20:00.000Z",
   "providers": [
     {
       "id": "minimax",
@@ -298,9 +298,10 @@
       "tags": [
         "hot"
       ],
-      "desc": "GPT-5.6 Sol/Terra/Luna / 5.5 Pro / Codex / o4-mini",
+      "desc": "GPT-6 Astra (1M ctx) / 5.6 Sol/Terra/Luna / 5.5 Pro / Codex / o4-mini",
       "base": "https://api.openai.com/v1",
       "models": [
+        "gpt-6-astra",
         "gpt-5.6-sol",
         "gpt-5.6-sol-pro",
         "gpt-5.6-terra",
