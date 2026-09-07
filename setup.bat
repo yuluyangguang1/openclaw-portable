@@ -238,7 +238,7 @@ REM OPENCLAW_BUNDLED_SKILLS_DIR=<portable>\skills-zh, which OpenClaw resolves
 REM natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
 REM Zero-copy survives openclaw reinstalls/upgrades and enables true
 REM hot-reload on 2.0 (the skills watcher ignores node_modules).
-if exist "%SCRIPT_DIR%skills-zh" (
+if exist "%SCRIPT_DIR%system\skills-zh" (
     echo   [OK] skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)
 )
 

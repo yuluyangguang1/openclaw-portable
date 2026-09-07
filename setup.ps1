@@ -345,7 +345,7 @@ if ((Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Containe
 # which OpenClaw resolves natively (env override in
 # resolveBundledSkillsDir(), both 6.11 and 2.0). Zero-copy survives
 # openclaw reinstalls and enables true hot-reload on 2.0.
-if (Test-Path -Path (Join-Path $scriptDir "skills-zh") -PathType Container) {
+if (Test-Path -Path (Join-Path $scriptDir "system\skills-zh") -PathType Container) {
     Write-Step "OK" "skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)." "Green"
 }
 

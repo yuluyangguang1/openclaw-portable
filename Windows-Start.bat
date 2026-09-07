@@ -75,7 +75,7 @@ set "OPENCLAW_DISABLE_BONJOUR=1"
 set "OPENCLAW_CONFIG_PATH=!STATE_DIR!\openclaw.json"
 rem Zero-copy bundled skills dir (survives openclaw reinstalls; enables
 rem true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
-set "OPENCLAW_BUNDLED_SKILLS_DIR=!_SCRIPT_DIR!\skills-zh"
+set "OPENCLAW_BUNDLED_SKILLS_DIR=!PORTABLE_DIR!system\skills-zh"
 rem OpenClaw 2.0: keep its native service supervisor out of the way -
 rem the portable wrapper manages the gateway process itself.
 set "OPENCLAW_SUPERVISOR_MODE=external"

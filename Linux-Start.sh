@@ -142,7 +142,7 @@ export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 export OPENCLAW_DISABLE_BONJOUR=1
 # Zero-copy bundled skills dir (survives openclaw reinstalls; enables
 # true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
-export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/skills-zh"
+export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/system/skills-zh"
 # OpenClaw 2.0: keep its native service supervisor out of the way -
 # the portable wrapper manages the gateway process itself.
 export OPENCLAW_SUPERVISOR_MODE=external

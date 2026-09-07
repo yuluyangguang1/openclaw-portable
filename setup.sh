@@ -292,7 +292,7 @@ fi
 # natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
 # Zero-copy survives openclaw reinstalls/upgrades and enables true
 # hot-reload on 2.0 (the skills watcher ignores node_modules).
-if [ -d "$SCRIPT_DIR/skills-zh" ]; then
+if [ -d "$SCRIPT_DIR/system/skills-zh" ]; then
     echo -e "  ${GREEN}[ok]${NC} skills-zh 就绪 (零拷贝，启动器经 OPENCLAW_BUNDLED_SKILLS_DIR 加载)"
 fi
 
