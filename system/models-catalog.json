@@ -1,6 +1,6 @@
 {
   "version": "2026.09.08",
-  "updatedAt": "2026-09-08T11:00:00.000Z",
+  "updatedAt": "2026-09-08T15:00:00.000Z",
   "providers": [
     {
       "id": "minimax",
@@ -311,8 +311,6 @@
         "gpt-5.5-pro",
         "gpt-5.5",
         "gpt-5.5-mini",
-        "gpt-5.4",
-        "gpt-5.4-mini",
         "gpt-5.4-nano",
         "gpt-5.3-codex",
         "gpt-5.2",
@@ -368,14 +366,13 @@
         "gemini-3.7-flash",
         "gemini-3.6-flash",
         "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
         "gemini-3.1-pro-preview",
-        "gemini-3.1-flash-lite-preview",
+        "gemini-3.1-flash-lite",
         "gemini-3-flash-preview",
-        "gemini-3-pro-image-preview",
         "gemini-2.5-pro",
         "gemini-2.5-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-flash-image-preview"
+        "gemini-2.5-flash-lite"
       ],
       "link": "https://aistudio.google.com/"
     },
@@ -721,9 +718,7 @@
         "gpt-5.6-luna",
         "gpt-5.6-sol",
         "gpt-5.6-terra",
-        "raptor-mini",
-        "gpt-4o",
-        "gpt-4o-mini"
+        "raptor-mini"
       ],
       "link": "https://github.com/features/copilot"
     },
@@ -1022,5 +1017,5 @@
       "link": "https://vercel.ai/"
     }
   ],
-  "syncNote": "对齐 openclaw 2026.9.2 官方 modelCatalog/suppressions（copilot/nvidia/huggingface 刷新，openai/anthropic/together 增量，xai 移除上游禁用的 grok-4.20-multi-agent）"
+  "syncNote": "对齐 openclaw 2026.9.3 官方 modelCatalog/suppressions（gemini 增 3.1/3.5-flash-lite、删 3 个被抑制的 image/preview 型号；openai 删被抑制的 gpt-5.4/gpt-5.4-mini；copilot 删上游已弃的 gpt-4o/4o-mini；nvidia/huggingface 无变化）"
 }

@@ -20,7 +20,7 @@ NODE_MIRROR="https://npmmirror.com/mirrors/node"
 # Node 24 LTS (active LTS until 2026-10, maintenance until 2028-04).
 # Upgraded from v22.22.1 to match hermes-portable and get full
 # hermes-web-ui v0.5.x compatibility if users share the same USB.
-NODE_VERSION="v24.15.0"
+NODE_VERSION="v24.20.0"
 ALL_PLATFORMS=false
 [ "$1" = "--all-platforms" ] && ALL_PLATFORMS=true
 
@@ -172,7 +172,7 @@ fi
 # already-installed AND the version matches.
 mkdir -p "$CORE_DIR"
 OPENCLAW_VERSION_FILE="$(dirname "$0")/system/OPENCLAW_VERSION"
-OPENCLAW_VERSION="2026.9.2"
+OPENCLAW_VERSION="2026.9.3"
 if [ -f "$OPENCLAW_VERSION_FILE" ]; then
     OPENCLAW_VERSION="$(tr -d '[:space:]' < "$OPENCLAW_VERSION_FILE")"
 fi
@@ -231,7 +231,18 @@ if [ "$NEED_INSTALL" = "true" ]; then
     # Install with China mirror
     NODE_BIN="$NODE_TARGET/bin/node"
     NPM_BIN="$NODE_TARGET/bin/npm"
-    "$NODE_BIN" "$NPM_BIN" install --prefix "$CORE_DIR" --registry="$MIRROR"
+    if ! "$NODE_BIN" "$NPM_BIN" install --prefix "$CORE_DIR" --registry="$MIRROR"; then
+        # npmmirror can lag upstream releases (provider pkgs missing for
+        # hours — broke beta.5 with ETARGET, and tencent/xiaomi lagged
+        # 2026.9.3). Retry once on the official registry before giving
+        # up. Skipped when the user pinned NPM_REGISTRY explicitly.
+        if [ -z "$NPM_REGISTRY" ]; then
+            echo -e "  ${YELLOW}[!]${NC} 镜像安装失败（可能未同步最新版本），改用官方源重试..."
+            "$NODE_BIN" "$NPM_BIN" install --prefix "$CORE_DIR" --registry="https://registry.npmjs.org"
+        else
+            exit 1
+        fi
+    fi
 
     echo -e "  ${GREEN}[ok]${NC} OpenClaw 安装完成"
 fi

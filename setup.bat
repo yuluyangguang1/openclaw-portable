@@ -9,10 +9,14 @@ set "CORE_DIR=%APP_DIR%\core"
 set "RUNTIME_DIR=%APP_DIR%\runtime"
 REM npm registry. Default: China mirror. CI overrides via NPM_REGISTRY env
 REM (npmmirror can lag upstream releases by hours and break npm install).
-if not defined NPM_REGISTRY set "NPM_REGISTRY=https://registry.npmmirror.com"
+set "NPM_EXPLICIT=1"
+if not defined NPM_REGISTRY (
+    set "NPM_EXPLICIT="
+    set "NPM_REGISTRY=https://registry.npmmirror.com"
+)
 set "MIRROR=%NPM_REGISTRY%"
 set "NODE_MIRROR=https://npmmirror.com/mirrors/node"
-set "NODE_VERSION=v24.15.0"
+set "NODE_VERSION=v24.20.0"
 set "ALL_PLATFORMS=false"
 if "%~1"=="--all-platforms" set "ALL_PLATFORMS=true"
 
@@ -123,7 +127,7 @@ if not exist "%CORE_DIR%" mkdir "%CORE_DIR%" 2>nul
 
 REM Read pinned OpenClaw version from system\
 set "OPENCLAW_VERSION_FILE=%~dp0system\OPENCLAW_VERSION"
-set "OPENCLAW_VERSION=2026.9.2"
+set "OPENCLAW_VERSION=2026.9.3"
 if exist "%OPENCLAW_VERSION_FILE%" (
     for /f "usebackq delims=" %%v in ("%OPENCLAW_VERSION_FILE%") do set "OPENCLAW_VERSION=%%v"
 )
@@ -161,6 +165,15 @@ if "!NEED_INSTALL!"=="1" (
     echo   [INSTALL] Installing OpenClaw !OPENCLAW_VERSION!...
     cd /d "%CORE_DIR%"
     call "%NPM_BIN%" install --prefix "%CORE_DIR%" --registry="%MIRROR%"
+    REM npmmirror can lag upstream releases (provider pkgs missing for hours,
+    REM broke beta.5 with ETARGET and tencent/xiaomi lagged 2026.9.3).
+    REM Retry once on the official registry when the mirror lacks a version.
+    if not exist "%CORE_DIR%\node_modules\openclaw" (
+        if not defined NPM_EXPLICIT (
+            echo   [WARN] Mirror install failed, retrying with official registry...
+            call "%NPM_BIN%" install --prefix "%CORE_DIR%" --registry=https://registry.npmjs.org
+        )
+    )
     echo   [OK] OpenClaw installed
 )
 

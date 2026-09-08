@@ -13,7 +13,7 @@ $runtimeDir = Join-Path $appDir "runtime"
 # (npmmirror can lag upstream releases by hours and break npm install).
 $mirror = if ($env:NPM_REGISTRY) { $env:NPM_REGISTRY } else { "https://registry.npmmirror.com" }
 $nodeMirror = "https://npmmirror.com/mirrors/node"
-$nodeVersion = "v24.15.0"
+$nodeVersion = "v24.20.0"
 
 function Write-Step {
     param(
@@ -211,7 +211,7 @@ $packageJsonPath = Join-Path $coreDir "package.json"
 # OPENCLAW_VERSION. Previously the file was git-tracked with a stale
 # version and the "if not exists" guard meant changes never took effect.
 $openclawVersionFile = Join-Path $PSScriptRoot "system\OPENCLAW_VERSION"
-$openclawVersion = "2026.9.2"
+$openclawVersion = "2026.9.3"
 if (Test-Path -Path $openclawVersionFile -PathType Leaf) {
     $openclawVersion = (Get-Content -Path $openclawVersionFile -Raw).Trim()
 }
@@ -272,6 +272,13 @@ if ($needInstall) {
     Push-Location $coreDir
     try {
         & $npmCmd install --prefix $coreDir --registry=$mirror
+        if (-not (Test-Path -Path (Join-Path $coreDir "node_modules\openclaw") -PathType Container) -and -not $env:NPM_REGISTRY) {
+            # npmmirror can lag upstream releases (provider pkgs missing for
+            # hours — broke beta.5 with ETARGET, and tencent/xiaomi lagged
+            # 2026.9.3). Retry once on the official registry.
+            Write-Step "!!" "Mirror install failed (registry may lag latest release), retrying with official registry..." "Yellow"
+            & $npmCmd install --prefix $coreDir --registry="https://registry.npmjs.org"
+        }
     }
     finally {
         Pop-Location
