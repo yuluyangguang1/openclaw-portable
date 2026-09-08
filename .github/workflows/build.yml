@@ -95,6 +95,19 @@ jobs:
             echo "WARNING: Patch did not apply cleanly"
           fi
 
+      - name: Patch fs-safe strict file identity for exFAT/FAT32
+        run: |
+          set -e
+          # @openclaw/fs-safe 0.8.5 verifies file identity via stat dev/ino
+          # (bigint) and requires ino != 0n on win32. exFAT/FAT32 report a
+          # zero file index → "FsSafeError: file identity changed or could
+          # not be verified" on first boot from a USB stick (beta.7 field
+          # report). The checks exist in 4 shapes across formatted and
+          # minified chunks (see system/patch-exfat-identity.js); the
+          # script neutralises them only for the ino===0n case, so
+          # NTFS/APFS behaviour is unchanged.
+          node system/patch-exfat-identity.js
+
       - name: Lift app shells to zip root
         run: |
           set -e
