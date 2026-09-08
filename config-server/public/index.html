@@ -770,14 +770,18 @@
  .input:focus { border-color: var(--accent); outline: none; }
 
  /* Command grid — borderless cards, label/icon style */
- .cmd-grid { gap: 0 !important; border: 1px solid var(--border); margin: 24px 0; }
+ .cmd-grid { gap: 0 !important; border: 1px solid var(--border); margin: 16px 0; }
  .cmd-card {
  border-radius: 0 !important;
  border: none !important;
  border-right: 1px solid var(--border) !important;
  background: transparent !important;
- padding: 18px 14px;
- text-align: center;
+ padding: 10px 12px;
+ text-align: left;
+ display: flex;
+ align-items: center;
+ gap: 10px;
+ cursor: pointer;
  }
  .cmd-grid > .cmd-card:last-child { border-right: none !important; }
  .cmd-card { will-change: transform; }
@@ -785,19 +789,28 @@
  .cmd-card .cmd-icon {
  font-family: var(--font-mono);
  color: var(--accent);
- font-size: 1.2rem;
- margin-bottom: 8px;
+ font-size: 1rem;
+ line-height: 1;
+ margin: 0;
+ flex: none;
  }
+ .cmd-card .cmd-icon svg { width: 16px; height: 16px; }
+ .cmd-card .cmd-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
  .cmd-card .cmd-name {
  font-family: var(--font-serif);
- font-size: 0.95rem;
+ font-size: 0.78rem;
  font-weight: 600;
+ line-height: 1.2;
  }
  .cmd-card .cmd-desc {
  font-family: var(--font-mono);
- font-size: 0.65rem;
+ font-size: 0.6rem;
  letter-spacing: 0.05em;
  opacity: 0.5;
+ line-height: 1.2;
+ white-space: nowrap;
+ overflow: hidden;
+ text-overflow: ellipsis;
  }
  /* Phones: 4-across is too cramped (~85px/card) — 2×2 with a row
     separator. Must sit AFTER the !important override layer above to win. */
@@ -1348,19 +1361,19 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div class="cmd-grid">
  <div class="cmd-card" onclick="runCmd('update')">
   <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 13V18.585L14.8284 16.7574L16.2426 18.1716L12 22.4142L7.75736 18.1716L9.17157 16.7574L11 18.585V13H13ZM12 2C15.5934 2 18.5544 4.70761 18.9541 8.19395C21.2858 8.83154 23 10.9656 23 13.5C23 16.3688 20.8036 18.7246 18.0006 18.9776L18.0009 16.9644C19.6966 16.7214 21 15.2629 21 13.5C21 11.567 19.433 10 17.5 10C17.2912 10 17.0867 10.0183 16.8887 10.054C16.9616 9.7142 17 9.36158 17 9C17 6.23858 14.7614 4 12 4C9.23858 4 7 6.23858 7 9C7 9.36158 7.03838 9.7142 7.11205 10.0533C6.91331 10.0183 6.70879 10 6.5 10C4.567 10 3 11.567 3 13.5C3 15.2003 4.21241 16.6174 5.81986 16.934L6.00005 16.9646L6.00039 18.9776C3.19696 18.7252 1 16.3692 1 13.5C1 10.9656 2.71424 8.83154 5.04648 8.19411C5.44561 4.70761 8.40661 2 12 2Z"/></svg></div>
-  <div class="cmd-name">更新</div><div class="cmd-desc">升级到最新版</div>
+  <div class="cmd-text"><div class="cmd-name">更新</div><div class="cmd-desc">升级到最新版</div></div>
 </div>
 <div class="cmd-card" onclick="runCmd('doctor')">
   <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9 7.53861L15 21.5386L18.6594 13H23V11H17.3406L15 16.4614L9 2.46143L5.3406 11H1V13H6.6594L9 7.53861Z"/></svg></div>
-  <div class="cmd-name">诊断</div><div class="cmd-desc">检查运行环境</div>
+  <div class="cmd-text"><div class="cmd-name">诊断</div><div class="cmd-desc">检查运行环境</div></div>
 </div>
 <div class="cmd-card" onclick="runCmd('onboard')">
   <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM16.5 7.5L14 14L7.5 16.5L10 10L16.5 7.5ZM12 13C12.5523 13 13 12.5523 13 12C13 11.4477 12.5523 11 12 11C11.4477 11 11 11.4477 11 12C11 12.5523 11.4477 13 12 13Z"/></svg></div>
-  <div class="cmd-name">引导</div><div class="cmd-desc">初始化设置</div>
+  <div class="cmd-text"><div class="cmd-name">引导</div><div class="cmd-desc">初始化设置</div></div>
 </div>
 <div class="cmd-card" onclick="runCmd('restart')">
   <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.5374 19.5674C16.7844 21.0831 14.4993 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 14.1361 21.3302 16.1158 20.1892 17.7406L17 12H20C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20C14.1502 20 16.1022 19.1517 17.5398 17.7716L18.5374 19.5674Z"/></svg></div>
-  <div class="cmd-name">重启</div><div class="cmd-desc">使配置生效</div>
+  <div class="cmd-text"><div class="cmd-name">重启</div><div class="cmd-desc">使配置生效</div></div>
 </div>
  </div>
 
