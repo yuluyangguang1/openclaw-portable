@@ -518,12 +518,7 @@
  /* Test result */
  .test-result { font-size: 0.78em; margin-top: 6px; min-height: 16px; font-family: var(--font-mono); }
 
- /* Footer */
- footer {
- text-align: center; padding: 40px 20px;
- font-size: 11px; color: var(--fg-muted);
- letter-spacing: 2px; font-family: var(--font-mono);
- }
+ /* Footer — legacy centered rule superseded by .y-footer info bar */
 
  /* Scrollbar */
  ::-webkit-scrollbar { width: 6px; }
@@ -594,8 +589,14 @@
  /* Terminal line clickable when gateway is up — turn cursor on */
  .y-term-b a { color: var(--accent); text-decoration: underline; }
 
- .y-footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; font-family: var(--font-mono); font-size: .7rem; letter-spacing: .08em; opacity: .5; }
- .y-footer .c { display: flex; align-items: center; }
+ .y-footer { margin-top: 72px; padding: 28px 0 10px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px 24px; }
+ .y-footer .c { display: flex; align-items: baseline; }
+ .y-poem { font-family: var(--font-serif); font-size: 0.88rem; color: var(--fg); letter-spacing: 0.02em; min-width: 0; }
+ .y-poem .poem-mark { display: inline-block; width: 7px; height: 7px; background: var(--accent); border-radius: 1px; margin-right: 10px; }
+ .y-poem .poem-src { font-family: var(--font-mono); font-size: 0.62rem; color: var(--fg-muted); margin-left: 12px; letter-spacing: 0.08em; }
+ .y-trust { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--fg-muted); }
+ .y-site { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--fg); opacity: 0.75; text-decoration: none; margin-right: 20px; transition: opacity 0.2s, color 0.2s; }
+ .y-site:hover, .y-site:focus-visible { opacity: 1; color: var(--accent); }
  
 
  .y-theme-toggle { background: none; border: none; cursor: pointer; color: var(--fg); opacity: 0.5; padding: 8px; line-height: 0; transition: opacity 0.2s; display: flex; align-items: center; border-radius: 4px; }
@@ -1451,12 +1452,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </main>
 </div>
 
-<footer class="y-footer">
- <div class="c"><span class="y-label y-op-7">yu.ai</span></div>
- <div class="c"><a class="y-label" href="https://yuai-r.cn/" style="opacity:.7;color:inherit;text-decoration:none">home ↗</a></div>
- 
- <div class="c"><span class="y-label y-op-5" id="footer-year">openclaw v1.0.0</span></div>
- <div class="c"><span class="y-label y-op-5" style="color:var(--accent)">openclaw config</span></div>
+ <footer class="y-footer">
+ <div class="c y-poem"><span class="poem-mark"></span><span id="daily-poem"></span><span class="poem-src" id="daily-poem-src"></span></div>
+ <div class="c"><a class="y-site" href="https://yuai-r.cn/" target="_blank" rel="noopener">yuai-r.cn ↗</a><span class="y-trust">密钥仅保存在本机</span></div>
 </footer>
 
 </div>
@@ -3022,18 +3020,55 @@ function refreshLogs() {
 }
 
 // ===== VERSION =====
-function loadVersion() {
- apiFetch('/api/version').then(function(r){return r.json();}).then(function(data){
- if (data.portable) {
- // Update the version cell in the structured footer.
- // (The hero #hero-version element was removed in the hero
- // simplification pass — version now lives in the footer only.)
- // textContent on the whole <footer> would wipe the y-footer
- // grid (links, labels, theme toggle).
- var footYear = document.getElementById('footer-year');
- if (footYear) footYear.textContent = 'openclaw v' + data.portable;
- }
- }).catch(function(){});
+function loadDailyPoem() {
+ // 离线每日诗词：按 UTC 日期确定性轮换，无网络依赖。
+ // 38 句经典名句（均为公版古籍），每天固定一句，同一天内刷新不变。
+ var poems=[
+ ["大漠孤烟直，长河落日圆","唐 · 王维《使至塞上》"],
+ ["海上生明月，天涯共此时","唐 · 张九龄《望月怀远》"],
+ ["会当凌绝顶，一览众山小","唐 · 杜甫《望岳》"],
+ ["长风破浪会有时，直挂云帆济沧海","唐 · 李白《行路难》"],
+ ["落霞与孤鹜齐飞，秋水共长天一色","唐 · 王勃《滕王阁序》"],
+ ["采菊东篱下，悠然见南山","晋 · 陶渊明《饮酒·其五》"],
+ ["明月几时有，把酒问青天","宋 · 苏轼《水调歌头》"],
+ ["不识庐山真面目，只缘身在此山中","宋 · 苏轼《题西林壁》"],
+ ["山重水复疑无路，柳暗花明又一村","宋 · 陆游《游山西村》"],
+ ["沉舟侧畔千帆过，病树前头万木春","唐 · 刘禹锡《酬乐天扬州初逢席上见赠》"],
+ ["纸上得来终觉浅，绝知此事要躬行","宋 · 陆游《冬夜读书示子聿》"],
+ ["问渠那得清如许？为有源头活水来","宋 · 朱熹《观书有感》"],
+ ["等闲识得东风面，万紫千红总是春","宋 · 朱熹《春日》"],
+ ["春江潮水连海平，海上明月共潮生","唐 · 张若虚《春江花月夜》"],
+ ["忽如一夜春风来，千树万树梨花开","唐 · 岑参《白雪歌送武判官归京》"],
+ ["随风潜入夜，润物细无声","唐 · 杜甫《春夜喜雨》"],
+ ["晚来天欲雪，能饮一杯无","唐 · 白居易《问刘十九》"],
+ ["月落乌啼霜满天，江枫渔火对愁眠","唐 · 张继《枫桥夜泊》"],
+ ["孤舟蓑笠翁，独钓寒江雪","唐 · 柳宗元《江雪》"],
+ ["野旷天低树，江清月近人","唐 · 孟浩然《宿建德江》"],
+ ["行到水穷处，坐看云起时","唐 · 王维《终南别业》"],
+ ["江流天地外，山色有无中","唐 · 王维《汉江临眺》"],
+ ["星垂平野阔，月涌大江流","唐 · 杜甫《旅夜书怀》"],
+ ["无边落木萧萧下，不尽长江滚滚来","唐 · 杜甫《登高》"],
+ ["晴空一鹤排云上，便引诗情到碧霄","唐 · 刘禹锡《秋词》"],
+ ["天接云涛连晓雾，星河欲转千帆舞","宋 · 李清照《渔家傲》"],
+ ["众里寻他千百度，蓦然回首，那人却在灯火阑珊处","宋 · 辛弃疾《青玉案·元夕》"],
+ ["小荷才露尖尖角，早有蜻蜓立上头","宋 · 杨万里《小池》"],
+ ["接天莲叶无穷碧，映日荷花别样红","宋 · 杨万里《晓出净慈寺送林子方》"],
+ ["东边日出西边雨，道是无晴却有晴","唐 · 刘禹锡《竹枝词》"],
+ ["天生我材必有用，千金散尽还复来","唐 · 李白《将进酒》"],
+ ["醉后不知天在水，满船清梦压星河","元 · 唐温如《题龙阳县青草湖》"],
+ ["疏影横斜水清浅，暗香浮动月黄昏","宋 · 林逋《山园小梅》"],
+ ["删繁就简三秋树，领异标新二月花","清 · 郑板桥 楹联"],
+ ["海纳百川，有容乃大","清 · 林则徐 楹联"],
+ ["路漫漫其修远兮，吾将上下而求索","战国 · 屈原《离骚》"],
+ ["非淡泊无以明志，非宁静无以致远","三国 · 诸葛亮《诫子书》"],
+ ["近水楼台先得月，向阳花木易为春","宋 · 苏麟《断句》"]
+ ];
+ var idx = Math.floor(Date.now() / 86400000) % poems.length;
+ var p = poems[idx];
+ var el = document.getElementById('daily-poem');
+ if (el) el.textContent = '「' + p[0] + '」';
+ var src = document.getElementById('daily-poem-src');
+ if (src) src.textContent = '—— ' + p[1];
 }
 
 // ===== UTILS =====
@@ -3211,7 +3246,7 @@ function showLocalModelHints() {
  console.warn('[auth] bootstrap failed, write operations will be rejected');
  });
 
- loadVersion();
+ loadDailyPoem();
  // Hot-updatable model catalog: apply local cache (or shipped copy)
  // immediately; auto-refresh in background if stale (>7d).
  loadCatalog(true);
