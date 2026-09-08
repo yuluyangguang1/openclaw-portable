@@ -2129,6 +2129,284 @@ if (req.url === '/api/models/reset' && req.method === 'POST') {
   return;
 }
 
+// ---------- Skills management (9.2 hot-reload aware) ----------
+// OpenClaw 9.2 ships a chokidar-based skills watcher that watches, among
+// others, <state>/skills (source "openclaw-managed") and the bundled dir
+// injected via OPENCLAW_BUNDLED_SKILLS_DIR. Writing a skill folder into
+// the managed dir is picked up automatically — no gateway restart.
+// The managed dir lives under data/, which the updater skips, so
+// user-installed skills survive upgrades. The bundled dir (system/skills-zh)
+// is release payload: read-only here, refreshed only by shipping a new zip.
+const SKILLS_MANAGED_DIR = path.join(__dirname, '..', 'data', '.openclaw', 'skills');
+const SKILLS_BUNDLED_DIR = path.join(__dirname, '..', 'system', 'skills-zh');
+const SKILLS_OPTIONAL_DIR = path.join(__dirname, '..', 'system', 'skills-zh-optional');
+// Skill dir names: no path separators, no leading dot, no '..' anywhere.
+const SKILL_NAME_RE = /^[^.][^\/\\:*?"<>|\r\n]{0,63}$/;
+const SKILL_ARCHIVE_MAX = 50 * 1024 * 1024;
+
+function readSkillMeta(dirPath, dirName) {
+  let text;
+  try { text = fs.readFileSync(path.join(dirPath, 'SKILL.md'), 'utf8'); } catch (_) { return null; }
+  const head = text.slice(0, 4096);
+  const fm = head.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  let name = null, description = '';
+  if (fm) {
+    for (const line of fm[1].split(/\r?\n/)) {
+      const km = line.match(/^name:\s*(.+)$/);
+      if (km) name = km[1].trim().replace(/^["']|["']$/g, '');
+      const dm = line.match(/^description:\s*(.+)$/);
+      if (dm) description = dm[1].trim().replace(/^["']|["']$/g, '');
+    }
+  }
+  return { id: name || dirName, dirName, description: description.slice(0, 200) };
+}
+
+function listSkillsInDir(root, source, managed) {
+  const out = [];
+  let entries;
+  try { entries = fs.readdirSync(root, { withFileTypes: true }); } catch (_) { return out; }
+  for (const e of entries) {
+    if (!e.isDirectory() || e.name.startsWith('.')) continue;
+    const meta = readSkillMeta(path.join(root, e.name), e.name);
+    if (meta) out.push(Object.assign(meta, { source, managed }));
+  }
+  return out;
+}
+
+function skillEnabledState(id) {
+  try {
+    const cfg = safeReadConfig();
+    const v = cfg && cfg.skills && cfg.skills.entries && cfg.skills.entries[id];
+    if (v && typeof v === 'object' && 'enabled' in v) return v.enabled !== false;
+  } catch (_) {}
+  return true; // OpenClaw default: skills are enabled unless explicitly disabled
+}
+
+// Download to file with ≤3 https redirects and a hard size cap. Returns
+// bytes written; rejects on non-200, non-https redirect, or oversize.
+function downloadSkillArchive(url, dest, redirects) {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https:') ? require('https') : require('http');
+    const request = mod.get(url, {
+      headers: { 'User-Agent': 'openclaw-portable-config-server', 'Accept': 'application/zip, */*' },
+      timeout: 30000
+    }, (response) => {
+      if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
+        response.resume();
+        if (redirects <= 0) return reject(new Error('Too many redirects'));
+        let next;
+        try { next = new URL(response.headers.location, url).toString(); } catch (_) { return reject(new Error('Bad redirect target')); }
+        if (!next.startsWith('https:')) return reject(new Error('Redirect to non-https URL refused'));
+        return resolve(downloadSkillArchive(next, dest, redirects - 1));
+      }
+      if (response.statusCode !== 200) {
+        response.resume();
+        return reject(new Error('HTTP ' + response.statusCode + ' from ' + new URL(url).host));
+      }
+      const file = fs.createWriteStream(dest);
+      let size = 0;
+      response.on('data', (c) => {
+        size += c.length;
+        if (size > SKILL_ARCHIVE_MAX) {
+          request.destroy();
+          file.close();
+          try { fs.unlinkSync(dest); } catch (_) {}
+          reject(new Error('Archive exceeds ' + Math.round(SKILL_ARCHIVE_MAX / 1048576) + 'MB limit'));
+        }
+      });
+      const { pipeline } = require('stream/promises');
+      pipeline(response, file).then(() => resolve(size)).catch((err) => {
+        try { fs.unlinkSync(dest); } catch (_) {}
+        reject(err);
+      });
+    });
+    request.on('timeout', () => request.destroy(new Error('Download timed out')));
+    request.on('error', reject);
+  });
+}
+
+function extractSkillArchive(zipPath, destDir) {
+  const cp = require('child_process');
+  if (process.platform === 'win32') {
+    const q = (p) => p.replace(/'/g, "''");
+    const r = cp.spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command',
+      "Expand-Archive -LiteralPath '" + q(zipPath) + "' -DestinationPath '" + q(destDir) + "' -Force"], { timeout: 120000 });
+    if (r.status === 0) return null;
+    return 'Expand-Archive failed: ' + (r.stderr && r.stderr.toString().slice(0, 300) || ('exit ' + r.status));
+  }
+  let r = cp.spawnSync('unzip', ['-o', zipPath, '-d', destDir], { timeout: 120000 });
+  if (r.status === 0) return null;
+  r = cp.spawnSync('tar', ['-xf', zipPath, '-C', destDir], { timeout: 120000 });
+  if (r.status === 0) return null;
+  return 'Extraction failed (unzip/tar missing or archive invalid)';
+}
+
+// Locate skill roots: nearest dirs containing SKILL.md, up to depth 3.
+// Once a dir qualifies we do not descend further (nested SKILL.md files
+// inside a skill are resources, not separate skills).
+function findSkillRoots(baseDir) {
+  const found = [];
+  const walk = (dir, depth) => {
+    if (depth > 3 || found.length >= 40) return;
+    let items;
+    try { items = fs.readdirSync(dir, { withFileTypes: true }); } catch (_) { return; }
+    for (const it of items) {
+      if (it.isFile() && it.name === 'SKILL.md') { found.push(dir); return; }
+    }
+    for (const it of items) {
+      if (it.isDirectory() && !it.name.startsWith('.')) walk(path.join(dir, it.name), depth + 1);
+    }
+  };
+  walk(baseDir, 0);
+  return found;
+}
+
+// Copy src into managed/<id> atomically-ish: stage inside the managed dir
+// (same volume → rename is atomic), then rename. The 9.2 watcher only
+// scans for <dir>/SKILL.md, so a dot-prefixed staging dir is invisible.
+function installSkillDir(srcDir, id, overwrite) {
+  if (!SKILL_NAME_RE.test(id) || id.includes('..')) return { error: 'Invalid skill name: ' + id };
+  const target = path.join(SKILLS_MANAGED_DIR, id);
+  if (fs.existsSync(target) && !overwrite) return { skipped: id, reason: 'already installed' };
+  fs.mkdirSync(SKILLS_MANAGED_DIR, { recursive: true });
+  const staging = path.join(SKILLS_MANAGED_DIR, '.incoming-' + Date.now() + '-' + id.replace(/[^a-zA-Z0-9._-]/g, '_'));
+  try {
+    fs.cpSync(srcDir, staging, { recursive: true });
+    if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
+    fs.renameSync(staging, target);
+  } catch (err) {
+    try { fs.rmSync(staging, { recursive: true, force: true }); } catch (_) {}
+    return { error: 'Install failed: ' + err.message };
+  }
+  return { installed: id };
+}
+
+if (req.url === '/api/skills' && req.method === 'GET') {
+  try {
+    const managed = listSkillsInDir(SKILLS_MANAGED_DIR, 'managed', true);
+    const bundled = listSkillsInDir(SKILLS_BUNDLED_DIR, 'bundled', false);
+    const optional = listSkillsInDir(SKILLS_OPTIONAL_DIR, 'optional', false);
+    const managedIds = new Set(managed.map((s) => s.id));
+    for (const s of managed) s.enabled = skillEnabledState(s.id);
+    for (const s of bundled) s.enabled = skillEnabledState(s.id);
+    for (const s of optional) { s.enabled = null; s.installed = managedIds.has(s.id); }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true, managedDir: SKILLS_MANAGED_DIR, skills: managed.concat(bundled, optional) }));
+  } catch (err) {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: false, error: err.message }));
+  }
+  return;
+}
+
+if (req.url === '/api/skills/install' && req.method === 'POST') {
+  readBoundedJsonBody(req, res, 10_000).then(async (body) => {
+    if (body === null) return;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    try {
+      // (a) Enable a bundled-optional skill by copying it into managed/
+      if (body.from === 'optional') {
+        const name = String(body.name || '');
+        if (!SKILL_NAME_RE.test(name) || name.includes('..')) {
+          res.end(JSON.stringify({ ok: false, error: 'Invalid skill name' }));
+          return;
+        }
+        const src = path.join(SKILLS_OPTIONAL_DIR, name);
+        if (!fs.existsSync(path.join(src, 'SKILL.md'))) {
+          res.end(JSON.stringify({ ok: false, error: 'Optional skill not found: ' + name }));
+          return;
+        }
+        const r = installSkillDir(src, name, false);
+        res.end(JSON.stringify(r.error ? { ok: false, error: r.error } : { ok: true, installed: [r.installed], skipped: [] }));
+        return;
+      }
+      // (b) Download + install from a zip URL or a GitHub repo shorthand
+      let url = String(body.url || '').trim();
+      if (!url) { res.end(JSON.stringify({ ok: false, error: 'Missing url' })); return; }
+      const repoShorthand = url.match(/^([\w.-]+)\/([\w.-]+)$/);
+      if (repoShorthand && !/^https?:/i.test(url)) {
+        url = 'https://codeload.github.com/' + repoShorthand[1] + '/' + repoShorthand[2] + '/zip/refs/heads/main';
+      }
+      let parsed;
+      try { parsed = new URL(url); } catch (_) { res.end(JSON.stringify({ ok: false, error: 'Invalid URL' })); return; }
+      if (parsed.protocol !== 'https:') {
+        res.end(JSON.stringify({ ok: false, error: 'Only https:// URLs are supported' }));
+        return;
+      }
+      const tmpRoot = fs.mkdtempSync(path.join(require('os').tmpdir(), 'openclaw-skill-'));
+      try {
+        const zipPath = path.join(tmpRoot, 'skill.zip');
+        const extractDir = path.join(tmpRoot, 'extract');
+        fs.mkdirSync(extractDir);
+        try {
+          await downloadSkillArchive(url, zipPath, 3);
+        } catch (err) {
+          res.end(JSON.stringify({ ok: false, error: 'Download failed: ' + err.message }));
+          return;
+        }
+        const extractErr = extractSkillArchive(zipPath, extractDir);
+        if (extractErr) { res.end(JSON.stringify({ ok: false, error: extractErr })); return; }
+        const roots = findSkillRoots(extractDir);
+        if (roots.length === 0) {
+          res.end(JSON.stringify({ ok: false, error: 'No SKILL.md found in archive (not a skill package?)' }));
+          return;
+        }
+        const installed = [], skipped = [], errors = [];
+        for (const root of roots.slice(0, 20)) {
+          const meta = readSkillMeta(root, path.basename(root));
+          const id = meta ? meta.id : path.basename(root);
+          const r = installSkillDir(root, id, body.overwrite === true);
+          if (r.error) errors.push(r.error);
+          else if (r.skipped) skipped.push({ id: r.skipped, reason: r.reason });
+          else installed.push(r.installed);
+        }
+        res.end(JSON.stringify({ ok: errors.length === 0 || installed.length > 0, installed, skipped, errors }));
+      } finally {
+        try { fs.rmSync(tmpRoot, { recursive: true, force: true }); } catch (_) {}
+      }
+    } catch (err) {
+      if (!res.headersSent) res.end(JSON.stringify({ ok: false, error: err.message }));
+    }
+  });
+  return;
+}
+
+if (req.url === '/api/skills/delete' && req.method === 'POST') {
+  readBoundedJsonBody(req, res, 10_000).then((body) => {
+    if (body === null) return;
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    try {
+      const name = String((body && body.name) || '');
+      if (!SKILL_NAME_RE.test(name) || name.includes('..')) {
+        res.end(JSON.stringify({ ok: false, error: 'Invalid skill name' }));
+        return;
+      }
+      const target = path.join(SKILLS_MANAGED_DIR, name);
+      // Symlink defence: only delete real dirs whose realpath stays inside
+      // the managed dir. A planted symlink pointing at user documents must
+      // never survive this check.
+      let st;
+      try { st = fs.lstatSync(target); } catch (_) {
+        res.end(JSON.stringify({ ok: false, error: 'Skill not found: ' + name }));
+        return;
+      }
+      if (!st.isDirectory() || st.isSymbolicLink()) {
+        res.end(JSON.stringify({ ok: false, error: 'Refusing to delete: not a regular directory' }));
+        return;
+      }
+      if (!path.resolve(fs.realpathSync(target)).startsWith(path.resolve(SKILLS_MANAGED_DIR) + path.sep)) {
+        res.end(JSON.stringify({ ok: false, error: 'Refusing to delete: path escapes managed dir' }));
+        return;
+      }
+      fs.rmSync(target, { recursive: true, force: true });
+      res.end(JSON.stringify({ ok: true, deleted: name }));
+    } catch (err) {
+      res.end(JSON.stringify({ ok: false, error: err.message }));
+    }
+  });
+  return;
+}
+
 // Serve static files. Strip query string and fragment first;
   // fs treats them as part of the filename which leads to confusing
   // 404s. Also reject URL bytes that could canonicalize differently

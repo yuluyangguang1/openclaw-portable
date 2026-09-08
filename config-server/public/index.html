@@ -1311,6 +1311,22 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </details>
  </div>
 
+<div id="skillsPanel" style="display:none;margin-bottom:16px;">
+ <details open>
+ <summary style="cursor:pointer;font-size:0.78em;color:var(--fg-muted);font-family:var(--font-mono);user-select:none;padding:4px 0;">技能管理（安装 / 删除 / 启停，9.2 自动热加载）</summary>
+ <div style="margin-top:10px;padding:12px 14px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;">
+ <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+ <input type="text" id="skillUrl" placeholder="技能 zip 直链 或 GitHub 仓库 (owner/repo)，回车安装" style="flex:1;min-width:220px;padding:8px 10px;background:var(--bg);color:var(--fg);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.8em;" onkeydown="if(event.key==='Enter')installSkillUrl();">
+ <button onclick="installSkillUrl()" style="padding:8px 14px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-family:var(--font-mono);font-size:0.8em;cursor:pointer;">下载安装</button>
+ <button onclick="loadSkills()" style="padding:8px 14px;background:transparent;color:var(--fg-muted);border:1px solid var(--border);border-radius:6px;font-family:var(--font-mono);font-size:0.8em;cursor:pointer;">刷新</button>
+ </div>
+ <div id="skillsMsg" style="font-size:0.75em;color:var(--fg-muted);margin-bottom:8px;display:none;"></div>
+ <div id="skillsList" style="display:flex;flex-direction:column;gap:6px;font-size:0.8em;"><span style="color:var(--fg-muted);">加载中…</span></div>
+ <div style="font-size:0.7em;color:var(--fg-muted);margin-top:8px;">安装位置 data/.openclaw/skills/（升级保留）；预置技能随包分发只读；备选技能一键启用后同样自动热加载。</div>
+ </div>
+ </details>
+</div>
+
  <div id="kSave" style="display:none;margin:18px 0 6px;"><div class="kprog" id="kSaveBar"><div class="kfill"></div><div class="ksweep"></div><div class="kticks"></div></div><div class="klabel" id="kSaveLabel">准备写入…</div></div>
  <button class="btn-launch" onclick="openGateway()" tabindex="0"><span class="yi" style="margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5018 20.0048C14.8432 21.5841 13.5794 22.848 12 23.5066C10.4206 22.848 9.15679 21.5841 8.49816 20.0048H10.7575C11.0838 20.4934 11.5051 20.9171 12 21.248C12.4949 20.9171 12.9162 20.4934 13.2425 20.0048H15.5018ZM18 14.8095L20 17.0777V19.0048H4V17.0777L6 14.8095V9.00478C6 5.52153 8.50442 2.55822 12 1.45999C15.4956 2.55822 18 5.52153 18 9.00478V14.8095ZM17.2692 17.0048L16 15.5653V9.00478C16 6.68694 14.4292 4.57431 12 3.58384C9.57078 4.57431 8 6.68694 8 9.00478V15.5653L6.73076 17.0048H17.2692ZM12 11.0048C10.8954 11.0048 10 10.1093 10 9.00478C10 7.90021 10.8954 7.00478 12 7.00478C13.1046 7.00478 14 7.90021 14 9.00478C14 10.1093 13.1046 11.0048 12 11.0048Z"/></svg></span>打开聊天界面 →</button>
 
@@ -2142,6 +2158,8 @@ function showConfigSummary(cfg) {
   el.style.display = 'block';
  var _adv = document.getElementById('advSettings');
  if (_adv) { _adv.style.display = 'block'; loadAdvancedSettings(); }
+ var _skp = document.getElementById('skillsPanel');
+ if (_skp) { _skp.style.display = 'block'; loadSkills(); }
  // Build with DOM nodes (not innerHTML) — provider/model come from the
  // user's openclaw.json which they may have imported from anywhere. A
  // string like "<img onerror=...>" would otherwise execute.
@@ -2244,6 +2262,173 @@ function saveAdvancedSettings() {
  if (res && res.ok) showToast('\u9ad8\u7ea7\u8bbe\u7f6e\u5df2\u4fdd\u5b58\uff0c\u7f51\u5173\u5c06\u81ea\u52a8\u70ed\u52a0\u8f7d', 'success');
  else showToast('\u274c ' + ((res && res.error) || '\u4fdd\u5b58\u5931\u8d25'), 'error');
  }).catch(function(err){ showToast('\u4fdd\u5b58\u5931\u8d25: ' + err.message, 'error'); });
+}
+
+// ---------- Skills management panel ----------
+// Descriptions/names come from SKILL.md files (user-installable = untrusted),
+// so everything is inserted via textContent, never innerHTML.
+function _skillRow(label, badge, desc, actions) {
+ var row = document.createElement('div');
+ row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;flex-wrap:wrap;';
+ var nameEl = document.createElement('span');
+ nameEl.style.cssText = 'font-family:var(--font-mono);font-weight:500;word-break:break-all;';
+ nameEl.textContent = label;
+ row.appendChild(nameEl);
+ if (badge) {
+ var b = document.createElement('span');
+ b.style.cssText = 'font-size:0.7em;padding:2px 8px;border-radius:10px;border:1px solid var(--border);color:var(--fg-muted);white-space:nowrap;';
+ b.textContent = badge;
+ row.appendChild(b);
+ }
+ var d = document.createElement('span');
+ d.style.cssText = 'flex:1;min-width:160px;color:var(--fg-muted);font-size:0.9em;';
+ d.textContent = desc || '';
+ row.appendChild(d);
+ if (actions) for (var i = 0; i < actions.length; i++) row.appendChild(actions[i]);
+ return row;
+}
+function _skillButton(text, fn, danger) {
+ var btn = document.createElement('button');
+ btn.textContent = text;
+ btn.style.cssText = 'padding:5px 12px;border-radius:6px;font-family:var(--font-mono);font-size:0.85em;cursor:pointer;' +
+ (danger ? 'background:transparent;color:#ff6b6b;border:1px solid rgba(255,107,107,0.4);'
+ : 'background:var(--accent);color:var(--bg);border:none;');
+ btn.addEventListener('click', fn);
+ return btn;
+}
+function _skillGroup(title) {
+ var t = document.createElement('div');
+ t.style.cssText = 'font-size:0.75em;color:var(--fg-muted);font-family:var(--font-mono);margin-top:6px;';
+ t.textContent = title;
+ return t;
+}
+function renderSkills(skills) {
+ var list = document.getElementById('skillsList');
+ if (!list) return;
+ list.textContent = '';
+ var groups = [
+ { key: 'managed', title: '已安装（data/.openclaw/skills，可删可禁用）', items: skills.filter(function(s){return s.source==='managed';}) },
+ { key: 'bundled', title: '预置（skills-zh，随包分发）', items: skills.filter(function(s){return s.source==='bundled';}) },
+ { key: 'optional', title: '备选（skills-zh-optional，一键启用）', items: skills.filter(function(s){return s.source==='optional';}) }
+ ];
+ var any = false;
+ for (var g = 0; g < groups.length; g++) {
+ var grp = groups[g];
+ if (!grp.items.length) continue;
+ any = true;
+ list.appendChild(_skillGroup(grp.title));
+ for (var i = 0; i < grp.items.length; i++) {
+ var s = grp.items[i];
+ var actions = [];
+ if (s.source === 'managed') {
+ var cb = document.createElement('input');
+ cb.type = 'checkbox'; cb.checked = s.enabled !== false; cb.style.cursor = 'pointer';
+ cb.title = s.enabled === false ? '已禁用（点击启用）' : '已启用（点击禁用）';
+ cb.addEventListener('change', function(id, el){ return function(){ toggleSkillEnabled(id, el); }; }(s.id, cb));
+ var cbWrap = document.createElement('label');
+ cbWrap.style.cssText = 'display:flex;align-items:center;gap:4px;font-size:0.75em;color:var(--fg-muted);cursor:pointer;';
+ cbWrap.appendChild(cb);
+ var cbText = document.createElement('span'); cbText.textContent = '启用';
+ cbWrap.appendChild(cbText);
+ actions.push(cbWrap);
+ actions.push(_skillButton('删除', function(n){ return function(){ deleteManagedSkill(n); }; }(s.dirName), true));
+ } else if (s.source === 'optional') {
+ if (s.installed) {
+ var note = document.createElement('span');
+ note.style.cssText = 'font-size:0.75em;color:var(--fg-muted);';
+ note.textContent = '已启用（在"已安装"区管理）';
+ actions.push(note);
+ } else {
+ actions.push(_skillButton('启用', function(n){ return function(){ enableOptionalSkill(n); }; }(s.dirName)));
+ }
+ }
+ var badge = s.source === 'managed' ? null : (s.source === 'bundled' ? '预置' : '备选');
+ if (s.source !== 'managed' && s.enabled === false) badge = (badge || '') + ' · 已禁用';
+ list.appendChild(_skillRow(s.id, badge, s.description, actions));
+ }
+ }
+ if (!any) {
+ list.textContent = '未发现任何技能目录（system/skills-zh 与 data/.openclaw/skills 均为空）';
+ }
+}
+function skillsMsg(text, isError) {
+ var el = document.getElementById('skillsMsg');
+ if (!el) return;
+ el.textContent = text || '';
+ el.style.display = text ? 'block' : 'none';
+ el.style.color = isError ? '#ff6b6b' : 'var(--fg-muted)';
+}
+function loadSkills() {
+ skillsMsg('');
+ apiFetch('/api/skills').then(function(r){ return r.json(); }).then(function(d){
+ if (!d.ok) { skillsMsg('加载失败: ' + (d.error || '未知错误'), true); return; }
+ renderSkills(d.skills || []);
+ }).catch(function(e){ skillsMsg('加载失败: ' + e, true); });
+}
+function installSkillUrl() {
+ var input = document.getElementById('skillUrl');
+ var url = input ? input.value.trim() : '';
+ if (!url) { skillsMsg('请输入技能 zip 直链或 GitHub 仓库（owner/repo）', true); return; }
+ skillsMsg('下载安装中…');
+ apiFetch('/api/skills/install', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ url: url }) })
+ .then(function(r){ return r.json(); })
+ .then(function(d){
+ if (!d.ok) { skillsMsg('❌ ' + (d.error || '安装失败'), true); return; }
+ var parts = [];
+ if (d.installed && d.installed.length) parts.push('已安装: ' + d.installed.join(', '));
+ if (d.skipped && d.skipped.length) parts.push('跳过: ' + d.skipped.map(function(s){ return s.id + '（' + s.reason + '）'; }).join(', '));
+ if (d.errors && d.errors.length) parts.push('错误: ' + d.errors.join('; '));
+ skillsMsg(parts.join('　') || '完成');
+ if (input) input.value = '';
+ loadSkills();
+ })
+ .catch(function(e){ skillsMsg('❌ ' + e, true); });
+}
+function enableOptionalSkill(name) {
+ skillsMsg('启用 ' + name + ' …');
+ apiFetch('/api/skills/install', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ from:'optional', name: name }) })
+ .then(function(r){ return r.json(); })
+ .then(function(d){
+ if (!d.ok) { skillsMsg('❌ ' + (d.error || '启用失败'), true); return; }
+ showToast('已启用 ' + name + '，网关将自动热加载', 'success');
+ loadSkills();
+ })
+ .catch(function(e){ skillsMsg('❌ ' + e, true); });
+}
+function deleteManagedSkill(name) {
+ if (!window.confirm('确定删除技能 "' + name + '"？此操作不可恢复（网关将自动卸载该技能）。')) return;
+ skillsMsg('删除 ' + name + ' …');
+ apiFetch('/api/skills/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name: name }) })
+ .then(function(r){ return r.json(); })
+ .then(function(d){
+ if (!d.ok) { skillsMsg('❌ ' + (d.error || '删除失败'), true); return; }
+ showToast('已删除 ' + name, 'success');
+ loadSkills();
+ })
+ .catch(function(e){ skillsMsg('❌ ' + e, true); });
+}
+function toggleSkillEnabled(id, checkbox) {
+ apiFetch('/api/config').then(function(r){ return r.json(); }).then(function(cfg){
+ if (!cfg || typeof cfg !== 'object') cfg = {};
+ if (!cfg.skills) cfg.skills = {};
+ if (!cfg.skills.entries) cfg.skills.entries = {};
+ if (!cfg.skills.entries[id]) cfg.skills.entries[id] = {};
+ if (!checkbox.checked) {
+ cfg.skills.entries[id].enabled = false; // explicit opt-out
+ } else {
+ delete cfg.skills.entries[id].enabled; // follow upstream default
+ if (!Object.keys(cfg.skills.entries[id]).length) delete cfg.skills.entries[id];
+ }
+ return apiFetch('/api/config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(cfg) })
+ .then(function(r2){ return r2.json(); });
+ }).then(function(d){
+ if (d && d.ok) {
+ showToast(checkbox.checked ? ('已启用 ' + id + '，热加载生效') : ('已禁用 ' + id), 'success');
+ } else {
+ skillsMsg('❌ ' + ((d && d.error) || '保存失败'), true);
+ }
+ loadSkills();
+ }).catch(function(e){ skillsMsg('❌ ' + e, true); });
 }
 
 function highlightCurrentProvider(cfg) {
