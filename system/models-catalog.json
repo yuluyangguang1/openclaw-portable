@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.07",
-  "updatedAt": "2026-09-07T08:20:00.000Z",
+  "version": "2026.09.08",
+  "updatedAt": "2026-09-08T11:00:00.000Z",
   "providers": [
     {
       "id": "minimax",
@@ -324,7 +324,8 @@
         "o4-mini",
         "o4-mini-high",
         "gpt-4.1",
-        "gpt-4.1-mini"
+        "gpt-4.1-mini",
+        "gpt-5.4-pro"
       ],
       "link": "https://platform.openai.com/"
     },
@@ -348,7 +349,9 @@
         "claude-sonnet-4-6",
         "claude-haiku-4-5",
         "claude-3-7-sonnet-latest",
-        "claude-3-5-haiku-latest"
+        "claude-3-5-haiku-latest",
+        "claude-fable-5-1",
+        "claude-mythos-5"
       ],
       "link": "https://console.anthropic.com/"
     },
@@ -406,8 +409,7 @@
         "grok-4.6",
         "grok-4.5",
         "grok-4.3",
-        "grok-4.20",
-        "grok-4.20-multi-agent"
+        "grok-4.20"
       ],
       "link": "https://console.x.ai/"
     },
@@ -503,6 +505,8 @@
       "desc": "开源模型托管",
       "base": "https://api.together.xyz/v1",
       "models": [
+        "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+        "zai-org/GLM-5.2",
         "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8",
         "deepseek-ai/DeepSeek-V4-Pro",
         "Qwen/Qwen3-Coder-480B-A35B-Instruct",
@@ -646,10 +650,18 @@
       "desc": "NVIDIA 推理平台",
       "base": "https://integrate.api.nvidia.com/v1",
       "models": [
-        "nemotron-3-super-120b-a12b",
-        "nemotron-3-ultra-550b-a55b",
-        "llama-4-scout-17b-16e-instruct",
-        "llama-4-maverick-17b-128e-instruct"
+        "deepseek-ai/deepseek-v4-pro",
+        "minimaxai/minimax-m2.7",
+        "minimaxai/minimax-m3",
+        "moonshotai/kimi-k2.5",
+        "moonshotai/kimi-k2.6",
+        "nvidia/nemotron-3-super-120b-a12b",
+        "nvidia/nemotron-3-ultra-550b-a55b",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "qwen/qwen3.5-397b-a17b",
+        "z-ai/glm-5.1",
+        "z-ai/glm-5.2",
+        "z-ai/glm5"
       ],
       "link": "https://build.nvidia.com/"
     },
@@ -677,10 +689,9 @@
       "desc": "开源模型推理",
       "base": "https://api-inference.huggingface.co/v1",
       "models": [
-        "Qwen/Qwen3.5-72B-Instruct",
-        "deepseek-ai/DeepSeek-V3.2",
-        "meta-llama/Llama-4-Scout-17B-16E-Instruct",
-        "mistralai/Mistral-Small-3.2-24B-Instruct"
+        "deepseek-ai/DeepSeek-R1",
+        "deepseek-ai/DeepSeek-V3.1",
+        "openai/gpt-oss-120b"
       ],
       "link": "https://huggingface.co/"
     },
@@ -693,10 +704,26 @@
       "desc": "GitHub Copilot",
       "base": "https://api.githubcopilot.com/v1",
       "models": [
+        "claude-fable-5",
+        "claude-haiku-4.5",
+        "claude-opus-4.8",
+        "claude-opus-5",
+        "claude-sonnet-4.6",
+        "claude-sonnet-5",
+        "gemini-2.5-pro",
+        "gemini-3.1-pro-preview",
+        "gemini-3.5-flash",
+        "gemini-3.6-flash",
+        "gpt-5.3-codex",
+        "gpt-5.4",
+        "gpt-5.4-mini",
+        "gpt-5.5",
+        "gpt-5.6-luna",
+        "gpt-5.6-sol",
+        "gpt-5.6-terra",
+        "raptor-mini",
         "gpt-4o",
-        "gpt-4o-mini",
-        "claude-sonnet-4",
-        "o3-mini"
+        "gpt-4o-mini"
       ],
       "link": "https://github.com/features/copilot"
     },
@@ -994,5 +1021,6 @@
       ],
       "link": "https://vercel.ai/"
     }
-  ]
+  ],
+  "syncNote": "对齐 openclaw 2026.9.2 官方 modelCatalog/suppressions（copilot/nvidia/huggingface 刷新，openai/anthropic/together 增量，xai 移除上游禁用的 grok-4.20-multi-agent）"
 }
