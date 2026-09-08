@@ -397,20 +397,23 @@
  }
  .channel-card .btn-sm:hover { border-color: var(--fg); }
 
- /* IO bar */
- .io-bar { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; justify-content: center; }
+ /* IO bar — equal-width grid so every action button is identical */
+ .io-bar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+ .io-bar.two-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
  .io-btn {
- padding: 6px 14px;
+ padding: 10px 12px;
  border: 1px solid var(--border);
- border-radius: 8px;
+ border-radius: 0;
  background: transparent;
  color: var(--fg-muted);
  cursor: pointer;
- font-size: 0.78em;
+ font-size: 0.72rem;
  transition: all 0.2s;
  font-family: var(--font-mono);
- letter-spacing: 0.5px;
+ letter-spacing: 0.1em;
+ text-transform: uppercase;
  }
+ .io-bar .io-btn { width: 100%; padding: 10px 8px; }
  .io-btn:hover { border-color: var(--fg); color: var(--fg); }
  .io-btn.danger { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
  .io-btn.danger:hover { color: var(--warning); border-color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, transparent); }
@@ -728,8 +731,8 @@
  color: var(--accent);
  background: transparent;
  transition: all 0.2s;
- padding: 14px 28px;
- font-size: 0.78rem;
+ padding: 10px 28px;
+ font-size: 0.72rem;
  }
  .btn-launch:hover {
  background: var(--accent);
@@ -752,7 +755,6 @@
  border: 1px solid var(--border);
  background: transparent;
  color: var(--fg);
- font-size: 0.7rem;
  }
  .io-btn:hover { border-color: var(--accent); color: var(--accent); }
  .btn-icon { border-radius: 0; }
@@ -803,6 +805,7 @@
  .cmd-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
  .cmd-grid > .cmd-card:nth-child(even) { border-right: none !important; }
  .cmd-grid > .cmd-card:nth-child(-n+2) { border-bottom: 1px solid var(--border) !important; }
+ .io-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
  }
 
  /* Container = no extra max-width inside y-page (y-page already has 1100) */
@@ -1243,18 +1246,18 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div id="catalogBar" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px;padding:8px 12px;background:var(--secondary);border:1px solid var(--border);border-radius:6px;">
  <span id="catalogInfo" style="color:var(--fg-muted);font-size:0.72rem;font-family:var(--font-mono);">模型目录：内置版本</span>
  <span style="flex:1;"></span>
- <button class="io-btn" onclick="refreshCatalog(false)" style="font-size:0.72rem;" tabindex="0" title="从 GitHub 拉取最新模型列表">⟳ 更新目录</button>
- <button class="io-btn" onclick="document.getElementById('catalogFile').click()" style="font-size:0.72rem;" tabindex="0" title="导入本地 JSON 目录文件（离线可用）">导入</button>
- <button class="io-btn" onclick="exportCatalog()" style="font-size:0.72rem;" tabindex="0" title="导出当前目录为 JSON">导出</button>
- <button class="io-btn" onclick="resetCatalog()" style="font-size:0.72rem;" tabindex="0" title="放弃已拉取的目录，恢复安装包内置版本">恢复内置</button>
+ <button class="io-btn" onclick="refreshCatalog(false)" tabindex="0" title="从 GitHub 拉取最新模型列表">⟳ 更新目录</button>
+ <button class="io-btn" onclick="document.getElementById('catalogFile').click()" tabindex="0" title="导入本地 JSON 目录文件（离线可用）">导入</button>
+ <button class="io-btn" onclick="exportCatalog()" tabindex="0" title="导出当前目录为 JSON">导出</button>
+ <button class="io-btn" onclick="resetCatalog()" tabindex="0" title="放弃已拉取的目录，恢复安装包内置版本">恢复内置</button>
  <input type="file" id="catalogFile" accept=".json,application/json" style="display:none;" onchange="onCatalogFile(this)">
  </div>
 
  <!-- 一键预设 (推荐配置快速入口) -->
  <div id="presetArea" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
- <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" style="font-size:0.75rem;" tabindex="0">一键 DeepSeek</button>
- <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" style="font-size:0.75rem;" tabindex="0">一键 OpenRouter</button>
- <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" style="font-size:0.75rem;" tabindex="0">一键 Gemini (免费)</button>
+ <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" tabindex="0">一键 DeepSeek</button>
+ <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" tabindex="0">一键 OpenRouter</button>
+ <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" tabindex="0">一键 Gemini (免费)</button>
  </div>
 
  <!-- 本地模型自动检测 (auto-discovery) -->
@@ -1366,11 +1369,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <!-- 手机连接 -->
  <div style="margin-top:0;">
  <button id="mobileToggleBtn" onclick="toggleMobilePanel()"
- style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:var(--font-mono);font-size:0.88em;cursor:pointer;text-align:left;">
+ style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:10px 18px;background:transparent;border:1px solid var(--border);border-radius:0;color:var(--fg-muted);font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;text-align:left;transition:all 0.2s;">
  <span> 手机连接 (Android / iOS)</span>
  <span id="mobileToggleArrow" style="color:var(--fg-muted);transition:transform 0.2s;">v</span>
  </button>
- <div id="mobilePanel" style="display:none;margin-top:12px;padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;">
+ <div id="mobilePanel" style="display:none;margin-top:12px;padding:16px;background:var(--secondary);border:1px solid var(--border);border-radius:0;">
  <p style="color:var(--fg-muted);font-size:0.8em;margin-bottom:12px;">开启后 Gateway 将监听局域网，同一 WiFi 下的手机可直接连接。关闭后恢复仅本机访问。</p>
 
  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
