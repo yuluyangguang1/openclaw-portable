@@ -1,17 +1,17 @@
-ï»¿@echo off
+@echo off
 @setlocal EnableDelayedExpansion
-@chcp 65001 >nul 2>&1
+@chcp 936 >nul 2>&1
 @cls
 @echo off
 title OpenClaw Portable - Portable AI Agent
 
 REM Enable ANSI escape codes (Windows 10 1909+). On older builds the
-REM trick returns literal "$E" instead of the ESC char â€” detect and
+REM trick returns literal "$E" instead of the ESC char ¡ª detect and
 REM fall back to no-color output so the banner doesn't look garbled.
 set "ESC="
 for /F %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
 REM Validate: ESC should be exactly 1 byte (0x1B). If it's longer or
-REM empty, the trick failed â€” clear it so %ESC%[93m becomes just [93m
+REM empty, the trick failed ¡ª clear it so %ESC%[93m becomes just [93m
 REM which cmd prints harmlessly (no garbled $E[93m).
 if not defined ESC set "ESC="
 if defined ESC (
@@ -35,7 +35,7 @@ if /I "!_SCRIPT_PARENT!"=="system" (
 )
 
 REM Read version from OPENCLAW_VERSION in system\ (must run AFTER
-REM PORTABLE_DIR is resolved â€” in both layouts the version file now
+REM PORTABLE_DIR is resolved ¡ª in both layouts the version file now
 REM lives in system\ next to the .bat, at $PORTABLE_DIR\system\).
 set "OPENCLAW_VER=unknown"
 if exist "!PORTABLE_DIR!system\OPENCLAW_VERSION" (
@@ -44,12 +44,12 @@ if exist "!PORTABLE_DIR!system\OPENCLAW_VERSION" (
 
 echo.
 if defined ESC (
-    echo !ESC![93m  â–ˆâ–ˆâ•—   â–ˆâ–ˆâ•—â–ˆâ–ˆâ•—  â–ˆâ–ˆâ•—   â–ˆâ–ˆâ•— â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—!ESC![0m
-    echo !ESC![93m  â•šâ–ˆâ–ˆâ•— â–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•‘  â•šâ–ˆâ–ˆâ•— â–ˆâ–ˆâ•”â•â–ˆâ–ˆâ•”â•â•â•â•â•!ESC![0m
-    echo !ESC![33m   â•šâ–ˆâ–ˆâ–ˆâ–ˆâ•”â• â–ˆâ–ˆâ•‘   â•šâ–ˆâ–ˆâ–ˆâ–ˆâ•”â• â–ˆâ–ˆâ•‘  â–ˆâ–ˆâ–ˆâ•—!ESC![0m
-    echo !ESC![33m    â•šâ–ˆâ–ˆâ•”â•  â–ˆâ–ˆâ•‘    â•šâ–ˆâ–ˆâ•”â•  â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ•‘!ESC![0m
-    echo !ESC![33m     â–ˆâ–ˆâ•‘   â–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•—â–ˆâ–ˆâ•‘   â•šâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ–ˆâ•”â•!ESC![0m
-    echo !ESC![33m     â•šâ•â•   â•šâ•â•â•â•â•â•â•â•šâ•â•    â•šâ•â•â•â•â•â• !ESC![0m
+    echo !ESC![93m  ¨€¨€¨[   ¨€¨€¨[¨€¨€¨[  ¨€¨€¨[   ¨€¨€¨[ ¨€¨€¨€¨€¨€¨€¨[!ESC![0m
+    echo !ESC![93m  ¨^¨€¨€¨[ ¨€¨€¨X¨a¨€¨€¨U  ¨^¨€¨€¨[ ¨€¨€¨X¨a¨€¨€¨X¨T¨T¨T¨T¨a!ESC![0m
+    echo !ESC![33m   ¨^¨€¨€¨€¨€¨X¨a ¨€¨€¨U   ¨^¨€¨€¨€¨€¨X¨a ¨€¨€¨U  ¨€¨€¨€¨[!ESC![0m
+    echo !ESC![33m    ¨^¨€¨€¨X¨a  ¨€¨€¨U    ¨^¨€¨€¨X¨a  ¨€¨€¨U   ¨€¨€¨U!ESC![0m
+    echo !ESC![33m     ¨€¨€¨U   ¨€¨€¨€¨€¨€¨€¨€¨[¨€¨€¨U   ¨^¨€¨€¨€¨€¨€¨€¨X¨a!ESC![0m
+    echo !ESC![33m     ¨^¨T¨a   ¨^¨T¨T¨T¨T¨T¨T¨a¨^¨T¨a    ¨^¨T¨T¨T¨T¨T¨a !ESC![0m
     echo.
     echo !ESC![96m         OpenClaw Portable !OPENCLAW_VER!!ESC![0m
 ) else (
@@ -94,37 +94,37 @@ echo.
 
 set "PATH=!NODE_DIR!;!NODE_DIR!\node_modules\.bin;!PATH!"
 
-REM ---- Pre-flight self-check (Windows-native) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-REM Catches the same classes of "æ‰“ä¸å¼€" issues the macOS / Linux
+REM ---- Pre-flight self-check (Windows-native) ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
+REM Catches the same classes of "´ò²»¿ª" issues the macOS / Linux
 REM preflight catches: missing core, unwritable data dir, no free port.
 REM We collect failures into a counter and bail with a single dialog.
 set /a PRECHECK_FAILS=0
 
 if not exist "!CORE_DIR!\node_modules\openclaw\openclaw.mjs" (
-    echo   [PRECHECK] OpenClaw æ ¸å¿ƒç¼ºå¤±: !CORE_DIR!\node_modules\openclaw\openclaw.mjs
-    echo              é‡æ–°ä¸‹è½½å‘å¸ƒåŒ…æˆ–è¿è¡Œ setup.bat
+    echo   [PRECHECK] OpenClaw ºËÐÄÈ±Ê§: !CORE_DIR!\node_modules\openclaw\openclaw.mjs
+    echo              ÖØÐÂÏÂÔØ·¢²¼°ü»òÔËÐÐ setup.bat
     set /a PRECHECK_FAILS+=1
 )
 
 if not exist "!PORTABLE_DIR!config-server\server.js" (
-    echo   [PRECHECK] é…ç½®ä¸­å¿ƒç¼ºå¤±: !PORTABLE_DIR!config-server\server.js
-    echo              é‡æ–°ä¸‹è½½å‘å¸ƒåŒ…
+    echo   [PRECHECK] ÅäÖÃÖÐÐÄÈ±Ê§: !PORTABLE_DIR!config-server\server.js
+    echo              ÖØÐÂÏÂÔØ·¢²¼°ü
     set /a PRECHECK_FAILS+=1
 )
 
-REM Test data dir is writable. Create it first if it doesn't exist â€”
+REM Test data dir is writable. Create it first if it doesn't exist ¡ª
 REM on first launch DATA_DIR has never been created, so the touch test
 REM would always fail and the user sees a misleading 'unwritable' error.
 if not exist "!DATA_DIR!" mkdir "!DATA_DIR!" 2>nul
 if not exist "!DATA_DIR!" (
-    echo   [PRECHECK] æ— æ³•åˆ›å»ºæ•°æ®ç›®å½•: !DATA_DIR!
-    echo              æ£€æŸ¥ U ç›˜æ˜¯å¦è¢«é”å®šä¸ºåªè¯»ï¼Œæˆ–æƒé™ä¸è¶³
+    echo   [PRECHECK] ÎÞ·¨´´½¨Êý¾ÝÄ¿Â¼: !DATA_DIR!
+    echo              ¼ì²é U ÅÌÊÇ·ñ±»Ëø¶¨ÎªÖ»¶Á£¬»òÈ¨ÏÞ²»×ã
     set /a PRECHECK_FAILS+=1
 ) else (
     echo test > "!DATA_DIR!\.write_test" 2>nul
     if not exist "!DATA_DIR!\.write_test" (
-        echo   [PRECHECK] æ•°æ®ç›®å½•ä¸å¯å†™: !DATA_DIR!
-        echo              æ£€æŸ¥ U ç›˜æ˜¯å¦è¢«é”å®šä¸ºåªè¯»
+        echo   [PRECHECK] Êý¾ÝÄ¿Â¼²»¿ÉÐ´: !DATA_DIR!
+        echo              ¼ì²é U ÅÌÊÇ·ñ±»Ëø¶¨ÎªÖ»¶Á
         set /a PRECHECK_FAILS+=1
     ) else (
         del "!DATA_DIR!\.write_test" 2>nul
@@ -133,7 +133,7 @@ if not exist "!DATA_DIR!" (
 
 if !PRECHECK_FAILS! gtr 0 (
     echo.
-    echo   å¯åŠ¨å¤±è´¥ï¼šå‘çŽ° !PRECHECK_FAILS! ä¸ªé—®é¢˜ï¼Œè¯·æŒ‰ä¸Šæ–¹æç¤ºä¿®å¤
+    echo   Æô¶¯Ê§°Ü£º·¢ÏÖ !PRECHECK_FAILS! ¸öÎÊÌâ£¬Çë°´ÉÏ·½ÌáÊ¾ÐÞ¸´
     echo.
     pause
     exit /b 1
@@ -160,7 +160,7 @@ if not exist "!STATE_DIR!\openclaw.json" (
     echo.
 )
 
-REM Check dependencies â€” fail if npm install fails (W4 fix)
+REM Check dependencies ¡ª fail if npm install fails (W4 fix)
 if not exist "!CORE_DIR!\node_modules" (
     echo   ========================================
     echo   [WARN] node_modules not found
@@ -267,9 +267,9 @@ REM Two cmd quirks we deliberately work around here:
 REM   1. `||` and `&` are command separators even inside >> redirection,
 REM      so the embedded JS uses a ternary instead of x||fallback.
 REM   2. for /F backtick commands fail on paths with non-ASCII chars +
-REM      spaces (e.g. C:\Users\é«˜\Desktop\...). The cmd subshell
+REM      spaces (e.g. C:\Users\¸ß\Desktop\...). The cmd subshell
 REM      mangles UTF-8 multi-byte sequences. Write Node's stdout to a
-REM      temp file and read it with set /p â€” this is encoding-invariant.
+REM      temp file and read it with set /p ¡ª this is encoding-invariant.
 set "CONFIG_PORT=18750"
 set "_JS=%TEMP%\oc-read-port-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-read-port-%RANDOM%.out"
@@ -313,7 +313,7 @@ set "_JS=%TEMP%\oc-write-port-%RANDOM%.js"
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" !PORT! >nul 2>&1
 del "!_JS!" 2>nul
 
-REM Strip host provider credentials inherited from the host machine (é›·5):
+REM Strip host provider credentials inherited from the host machine (À×5):
 REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
 REM OpenClaw treat those providers as "configured" -> it tries a runtime plugin
 REM install (exFAT: node_modules link fails -> gateway never ready) and silently
@@ -338,13 +338,13 @@ if defined _STRIP_MJS (
 )
 set "_STRIP_MJS="
 
-REM â”€â”€ Gateway watchdog: auto-restart on crash, up to 3 times â”€â”€â”€â”€â”€â”€
+REM ©¤©¤ Gateway watchdog: auto-restart on crash, up to 3 times ©¤©¤©¤©¤©¤©¤
 REM cmd has no `wait` equivalent; we run gateway in foreground and
 REM check %errorlevel% afterwards. Stop conditions:
-REM   0          â€” clean exit
-REM   130, 143   â€” POSIX-style (rare on Windows, kept for safety)
-REM   -1073741510 (0xC000013A) â€” STATUS_CONTROL_C_EXIT (Ctrl+C from console)
-REM   1          â€” taskkill /F sets this; almost always means a deliberate
+REM   0          ¡ª clean exit
+REM   130, 143   ¡ª POSIX-style (rare on Windows, kept for safety)
+REM   -1073741510 (0xC000013A) ¡ª STATUS_CONTROL_C_EXIT (Ctrl+C from console)
+REM   1          ¡ª taskkill /F sets this; almost always means a deliberate
 REM                kill (e.g. /api/restart asked a sibling Node to spawn a
 REM                detached replacement). Restarting from here would race
 REM                the replacement and crash on port 18789 already in use.
@@ -360,23 +360,23 @@ if !GW_EXIT! equ -1073741510 goto gw_done
 REM Sanity: if our port is now busy (someone else is the gateway), don\'t fight
 netstat -an 2>nul | findstr ":!PORT! " | findstr "LISTENING" >nul 2>&1
 if !errorlevel!==0 (
-    echo   Gateway ç«¯å£ !PORT! å·²è¢«å…¶ä»–è¿›ç¨‹å ç”¨ï¼Œåœæ­¢è‡ªæ„ˆï¼ˆå¯èƒ½æ˜¯ /api/restart çš„å‰¯æœ¬^ï¼‰
+    echo   Gateway ¶Ë¿Ú !PORT! ÒÑ±»ÆäËû½ø³ÌÕ¼ÓÃ£¬Í£Ö¹×ÔÓú£¨¿ÉÄÜÊÇ /api/restart µÄ¸±±¾^£©
     goto gw_done
 )
 set /a GW_RESTARTS+=1
 if !GW_RESTARTS! geq 3 (
     echo.
-    echo   Gateway å·²é‡å¯ 3 æ¬¡ä»å¤±è´¥ ^(exit=!GW_EXIT!^)ï¼Œåœæ­¢è‡ªæ„ˆ
-    echo   è¯·æ£€æŸ¥ä¸Šæ–¹æ—¥å¿—æˆ–è¿è¡Œ Windows-Diagnose.bat
+    echo   Gateway ÒÑÖØÆô 3 ´ÎÈÔÊ§°Ü ^(exit=!GW_EXIT!^)£¬Í£Ö¹×ÔÓú
+    echo   Çë¼ì²éÉÏ·½ÈÕÖ¾»òÔËÐÐ Windows-Diagnose.bat
     goto gw_done
 )
 echo.
-echo   Gateway å¼‚å¸¸é€€å‡º ^(code=!GW_EXIT!^), 2 ç§’åŽç¬¬ !GW_RESTARTS! æ¬¡è‡ªåŠ¨é‡å¯...
+echo   Gateway Òì³£ÍË³ö ^(code=!GW_EXIT!^), 2 ÃëºóµÚ !GW_RESTARTS! ´Î×Ô¶¯ÖØÆô...
 timeout /t 2 /nobreak >nul
 goto gw_loop
 :gw_done
 
-REM â”€â”€ Restart hand-off â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+REM ©¤©¤ Restart hand-off ©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤
 REM If the gateway exited because /api/restart asked it to (taskkill
 REM produces exit code 1, Ctrl+C produces -1073741510), the
 REM config-server is in the middle of spawning a detached replacement.
@@ -388,18 +388,18 @@ goto stopconfig
 
 :handoff
 echo.
-echo   æ£€æµ‹åˆ° /api/restartï¼Œç­‰å¾…æ–° Gateway ä¸Šçº¿...
+echo   ¼ì²âµ½ /api/restart£¬µÈ´ýÐÂ Gateway ÉÏÏß...
 set /a HANDOFF_TRIES=0
 :handoff_wait
 ping -n 1 -w 500 127.0.0.1 >nul
 powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 1 -UseBasicParsing).StatusCode | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! equ 0 (
-    echo   æ–° Gateway å·²å°±ç»ªï¼Œç»§ç»­è¿è¡Œ
+    echo   ÐÂ Gateway ÒÑ¾ÍÐ÷£¬¼ÌÐøÔËÐÐ
     goto handoff_wait_config
 )
 set /a HANDOFF_TRIES+=1
 if !HANDOFF_TRIES! geq 60 (
-    echo   ç­‰å¾…æ–° Gateway è¶…æ—¶ï¼ˆ30sï¼‰ï¼Œåœæ­¢
+    echo   µÈ´ýÐÂ Gateway ³¬Ê±£¨30s£©£¬Í£Ö¹
     goto stopconfig
 )
 goto handoff_wait
@@ -412,7 +412,7 @@ netstat -an 2>nul | findstr ":!CONFIG_PORT! " | findstr "LISTENING" >nul 2>&1
 if !errorlevel! equ 0 goto handoff_wait_config
 
 :stopconfig
-REM Gateway exited â€” clean up config-server (W6 fix)
+REM Gateway exited ¡ª clean up config-server (W6 fix)
 echo.
 echo   Stopping Config Center...
 REM Find PIDs listening on CONFIG_PORT, but verify each is actually

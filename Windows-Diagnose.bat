@@ -1,6 +1,6 @@
-ï»¿@echo off
+@echo off
 setlocal EnableDelayedExpansion
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 title OpenClaw Portable - Diagnostic Tool
 
 set "_SCRIPT_DIR=%~dp0"
@@ -35,18 +35,18 @@ for /f "tokens=*" %%v in ('powershell -command "(Get-CimInstance Win32_Operating
 echo. >> "%LOG_FILE%"
 
 REM 1. Check Node.js
-echo [1/7] æ£€æŸ¥ Node.js è¿è¡ŒçŽ¯å¢ƒ...
+echo [1/7] ¼ì²é Node.js ÔËÐÐ»·¾³...
 set "NODE_BIN=%PORTABLE_DIR%app\runtime\node-win-x64\node.exe"
 set "ERROR_COUNT=0"
 if exist "%NODE_BIN%" (
     echo   [OK] Node.js found >> "%LOG_FILE%"
     for /f "tokens=*" %%v in ('"%NODE_BIN%" --version 2^>^&1') do (
         echo       Version: %%v >> "%LOG_FILE%"
-        echo   [ok] Node.js è¿è¡ŒçŽ¯å¢ƒ: %%v
+        echo   [ok] Node.js ÔËÐÐ»·¾³: %%v
     )
 ) else (
     echo   [ERROR] Node.js not found >> "%LOG_FILE%"
-    echo   [x] Node.js è¿è¡ŒçŽ¯å¢ƒ: ç¼ºå¤±
+    echo   [x] Node.js ÔËÐÐ»·¾³: È±Ê§
     echo       Path: %NODE_BIN% >> "%LOG_FILE%"
     set /a ERROR_COUNT+=1
 )
@@ -55,67 +55,67 @@ REM Migration shim: rename old core-win to core for existing USB users
 if exist "%PORTABLE_DIR%app\core-win" if not exist "%PORTABLE_DIR%app\core" ren "%PORTABLE_DIR%app\core-win" core
 
 REM 2. Check core directory
-echo [2/7] æ£€æŸ¥ä¾èµ–ç›®å½•...
+echo [2/7] ¼ì²éÒÀÀµÄ¿Â¼...
 set "CORE_DIR=%PORTABLE_DIR%app\core"
 if exist "%CORE_DIR%" (
     echo   [OK] core directory exists >> "%LOG_FILE%"
-    echo   [ok] ä¾èµ–ç›®å½•: æ­£å¸¸
+    echo   [ok] ÒÀÀµÄ¿Â¼: Õý³£
 ) else (
     echo   [ERROR] core directory not found >> "%LOG_FILE%"
-    echo   [x] ä¾èµ–ç›®å½•: ç¼ºå¤±
+    echo   [x] ÒÀÀµÄ¿Â¼: È±Ê§
     set /a ERROR_COUNT+=1
 )
 
 REM 3. Check node_modules
-echo [3/7] æ£€æŸ¥ npm ä¾èµ–åŒ…...
+echo [3/7] ¼ì²é npm ÒÀÀµ°ü...
 if exist "%CORE_DIR%\node_modules" (
     echo   [OK] node_modules exists >> "%LOG_FILE%"
-    echo   [ok] npm ä¾èµ–åŒ…: å·²å®‰è£…
+    echo   [ok] npm ÒÀÀµ°ü: ÒÑ°²×°
 ) else (
     echo   [ERROR] node_modules not found >> "%LOG_FILE%"
-    echo   [x] npm ä¾èµ–åŒ…: æœªå®‰è£…
+    echo   [x] npm ÒÀÀµ°ü: Î´°²×°
     set /a ERROR_COUNT+=1
 )
 
 REM 4. Check OpenClaw
-echo [4/7] æ£€æŸ¥ OpenClaw æ ¸å¿ƒæ–‡ä»¶...
+echo [4/7] ¼ì²é OpenClaw ºËÐÄÎÄ¼þ...
 set "OPENCLAW_MJS=%CORE_DIR%\node_modules\openclaw\openclaw.mjs"
 if exist "%OPENCLAW_MJS%" (
     echo   [OK] openclaw.mjs found >> "%LOG_FILE%"
-    echo   [ok] OpenClaw æ ¸å¿ƒ: æ­£å¸¸
+    echo   [ok] OpenClaw ºËÐÄ: Õý³£
 ) else (
     echo   [ERROR] openclaw.mjs not found >> "%LOG_FILE%"
-    echo   [x] OpenClaw æ ¸å¿ƒ: ç¼ºå¤±
+    echo   [x] OpenClaw ºËÐÄ: È±Ê§
     echo       Path: %OPENCLAW_MJS% >> "%LOG_FILE%"
     set /a ERROR_COUNT+=1
 )
 
 REM 5. Check config
-echo [5/7] æ£€æŸ¥é…ç½®æ–‡ä»¶...
+echo [5/7] ¼ì²éÅäÖÃÎÄ¼þ...
 set "STATE_DIR=%PORTABLE_DIR%data\.openclaw"
 if exist "%STATE_DIR%\openclaw.json" (
     echo   [OK] Config file exists >> "%LOG_FILE%"
-    echo   [ok] é…ç½®æ–‡ä»¶: æ­£å¸¸
+    echo   [ok] ÅäÖÃÎÄ¼þ: Õý³£
     REM Check if model is configured
     findstr /c:"model" "%STATE_DIR%\openclaw.json" >nul 2>&1
     if !errorlevel!==0 (
-        echo   [ok] AI æ¨¡åž‹: å·²é…ç½®
+        echo   [ok] AI Ä£ÐÍ: ÒÑÅäÖÃ
     ) else (
-        echo   [!] AI æ¨¡åž‹: æœªé…ç½®ï¼ˆé¦–æ¬¡ä½¿ç”¨è¯·å…ˆé…ç½®ï¼‰
+        echo   [!] AI Ä£ÐÍ: Î´ÅäÖÃ£¨Ê×´ÎÊ¹ÓÃÇëÏÈÅäÖÃ£©
     )
 ) else (
     echo   [WARNING] Config not found >> "%LOG_FILE%"
-    echo   [!] é…ç½®æ–‡ä»¶: æœªåˆ›å»ºï¼ˆé¦–æ¬¡å¯åŠ¨ä¼šè‡ªåŠ¨åˆ›å»ºï¼‰
+    echo   [!] ÅäÖÃÎÄ¼þ: Î´´´½¨£¨Ê×´ÎÆô¶¯»á×Ô¶¯´´½¨£©
 )
 
 REM 6. Check port availability
-echo [6/7] æ£€æŸ¥ç«¯å£å ç”¨...
+echo [6/7] ¼ì²é¶Ë¿ÚÕ¼ÓÃ...
 set "PORT_ISSUE=0"
 for /l %%p in (18789,1,18799) do (
     netstat -an | findstr ":%%p " | findstr "LISTENING" >nul 2>&1
     if !errorlevel!==0 (
         echo   [WARNING] Port %%p is in use >> "%LOG_FILE%"
-        echo   [!] ç«¯å£ %%p: å·²è¢«å ç”¨
+        echo   [!] ¶Ë¿Ú %%p: ÒÑ±»Õ¼ÓÃ
         for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":%%p " ^| findstr "LISTENING"') do (
             echo       PID: %%a >> "%LOG_FILE%"
         )
@@ -124,11 +124,11 @@ for /l %%p in (18789,1,18799) do (
 )
 if "!PORT_ISSUE!"=="0" (
     echo   [OK] Ports 18789-18799 available >> "%LOG_FILE%"
-    echo   [ok] ç«¯å£ 18789-18799: å…¨éƒ¨å¯ç”¨
+    echo   [ok] ¶Ë¿Ú 18789-18799: È«²¿¿ÉÓÃ
 )
 
 REM 7. Test OpenClaw startup
-echo [7/7] æµ‹è¯• OpenClaw å¯åŠ¨...
+echo [7/7] ²âÊÔ OpenClaw Æô¶¯...
 echo. >> "%LOG_FILE%"
 echo Testing OpenClaw startup: >> "%LOG_FILE%"
 echo ---------------------------------------- >> "%LOG_FILE%"
@@ -141,15 +141,15 @@ if exist "%NODE_BIN%" if exist "%OPENCLAW_MJS%" (
     cd /d "%CORE_DIR%"
     for /f "tokens=*" %%v in ('"%NODE_BIN%" "%OPENCLAW_MJS%" --version 2^>^&1') do (
         echo   %%v >> "%LOG_FILE%"
-        echo   [ok] OpenClaw å¯åŠ¨æµ‹è¯•: é€šè¿‡ (%%v^)
+        echo   [ok] OpenClaw Æô¶¯²âÊÔ: Í¨¹ý (%%v^)
     )
     if !errorlevel! neq 0 (
-        echo   [x] OpenClaw å¯åŠ¨æµ‹è¯•: å¤±è´¥
+        echo   [x] OpenClaw Æô¶¯²âÊÔ: Ê§°Ü
         echo   [ERROR] OpenClaw failed to start >> "%LOG_FILE%"
         set /a ERROR_COUNT+=1
     )
 ) else (
-    echo   [!] OpenClaw å¯åŠ¨æµ‹è¯•: è·³è¿‡ï¼ˆæ–‡ä»¶ç¼ºå¤±ï¼‰
+    echo   [!] OpenClaw Æô¶¯²âÊÔ: Ìø¹ý£¨ÎÄ¼þÈ±Ê§£©
     echo   [SKIP] Cannot test - required files missing >> "%LOG_FILE%"
 )
 
@@ -167,28 +167,28 @@ echo Diagnostic complete. >> "%LOG_FILE%"
 echo Error count: !ERROR_COUNT! >> "%LOG_FILE%"
 
 echo   ========================================
-echo     è¯Šæ–­å®Œæˆ
+echo     Õï¶ÏÍê³É
 echo   ========================================
 echo.
 
 if !ERROR_COUNT!==0 (
-    echo   âœ… æ£€æŸ¥ç»“æžœ: å…¨éƒ¨æ­£å¸¸ï¼
-    echo   æ‰€æœ‰å¿…éœ€çš„ç»„ä»¶éƒ½å·²å°±ç»ªï¼Œå¯ä»¥æ­£å¸¸ä½¿ç”¨ã€‚
+    echo   [OK] ¼ì²é½á¹û: È«²¿Õý³££¡
+    echo   ËùÓÐ±ØÐèµÄ×é¼þ¶¼ÒÑ¾ÍÐ÷£¬¿ÉÒÔÕý³£Ê¹ÓÃ¡£
     echo.
-    echo   ä¸‹ä¸€æ­¥:
-    echo   - åŒå‡» Windows-Start.bat å¯åŠ¨æœåŠ¡
-    echo   - æˆ–åŒå‡» Config.html é…ç½® AI æ¨¡åž‹
+    echo   ÏÂÒ»²½:
+    echo   - Ë«»÷ Windows-Start.bat Æô¶¯·þÎñ
+    echo   - »òË«»÷ Config.html ÅäÖÃ AI Ä£ÐÍ
 ) else (
-    echo   âŒ æ£€æŸ¥ç»“æžœ: å‘çŽ° !ERROR_COUNT! ä¸ªé—®é¢˜
+    echo   [X] ¼ì²é½á¹û: ·¢ÏÖ !ERROR_COUNT! ¸öÎÊÌâ
     echo.
-    echo   è§£å†³æ–¹æ¡ˆ:
-    echo   1. æŸ¥çœ‹ diagnostic-log.txt äº†è§£è¯¦ç»†é”™è¯¯
-    echo   2. å°è¯•é‡æ–°è¿è¡Œ Windows-Start.bat
-    echo      ï¼ˆä¼šè‡ªåŠ¨å®‰è£…ç¼ºå¤±çš„ä¾èµ–ï¼‰
-    echo   3. å¦‚é—®é¢˜ä»ç„¶å­˜åœ¨ï¼Œè®¿é—® GitHub Issues åé¦ˆ:
+    echo   ½â¾ö·½°¸:
+    echo   1. ²é¿´ diagnostic-log.txt ÁË½âÏêÏ¸´íÎó
+    echo   2. ³¢ÊÔÖØÐÂÔËÐÐ Windows-Start.bat
+    echo      £¨»á×Ô¶¯°²×°È±Ê§µÄÒÀÀµ£©
+    echo   3. ÈçÎÊÌâÈÔÈ»´æÔÚ£¬·ÃÎÊ GitHub Issues ·´À¡:
     echo      https://github.com/yuluyangguang1/openclaw-portable/issues
 )
 echo.
-echo   è¯Šæ–­æ—¥å¿—å·²ä¿å­˜: diagnostic-log.txt
+echo   Õï¶ÏÈÕÖ¾ÒÑ±£´æ: diagnostic-log.txt
 echo.
 pause

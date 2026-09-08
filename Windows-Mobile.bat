@@ -1,13 +1,13 @@
 @echo off
 @setlocal EnableDelayedExpansion
-@chcp 65001 >nul 2>&1
+@chcp 936 >nul 2>&1
 @cls
 title OpenClaw Portable - Mobile Connect
 
 REM ============================================================
-REM OpenClaw Portable - æ‰‹æœºè¿žæŽ¥æ¨¡å¼ (Windows)
-REM åŒå‡»å¯åŠ¨ï¼Œä»¥ LAN æ¨¡å¼è¿è¡Œ Gatewayï¼Œè®©æ‰‹æœºè¿žæŽ¥ã€‚
-REM é€€å‡ºåŽè‡ªåŠ¨æ¢å¤åŽŸå§‹é…ç½®ã€‚
+REM OpenClaw Portable - ÊÖ»úÁ¬½ÓÄ£Ê½ (Windows)
+REM Ë«»÷Æô¶¯£¬ÒÔ LAN Ä£Ê½ÔËÐÐ Gateway£¬ÈÃÊÖ»úÁ¬½Ó¡£
+REM ÍË³öºó×Ô¶¯»Ö¸´Ô­Ê¼ÅäÖÃ¡£
 REM ============================================================
 
 REM Enable ANSI
@@ -42,7 +42,7 @@ set "RUNTIME_JSON=!STATE_DIR!\runtime.json"
 
 set "OPENCLAW_HOME=!DATA_DIR!"
 set "OPENCLAW_STATE_DIR=!STATE_DIR!"
-REM ä¸è®¾ OPENCLAW_DISABLE_BONJOUR â€” è®©æ‰‹æœº App è‡ªåŠ¨å‘çŽ°
+REM ²»Éè OPENCLAW_DISABLE_BONJOUR ¡ª ÈÃÊÖ»ú App ×Ô¶¯·¢ÏÖ
 REM OpenClaw 2.0: keep its native service supervisor out of the way -
 REM the portable wrapper manages the gateway process itself.
 set "OPENCLAW_SUPERVISOR_MODE=external"
@@ -55,10 +55,10 @@ if exist "!PORTABLE_DIR!system\OPENCLAW_VERSION" (
 
 echo.
 if defined ESC (
-    echo !ESC![96m  â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—!ESC![0m
-    echo !ESC![96m  â•‘   OpenClaw Portable â€” æ‰‹æœºè¿žæŽ¥     â•‘!ESC![0m
-    echo !ESC![96m  â•‘     Mobile Connect Mode !OPENCLAW_VER!  â•‘!ESC![0m
-    echo !ESC![96m  â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•!ESC![0m
+    echo !ESC![96m  ¨X¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨[!ESC![0m
+    echo !ESC![96m  ¨U   OpenClaw Portable ¡ª ÊÖ»úÁ¬½Ó     ¨U!ESC![0m
+    echo !ESC![96m  ¨U     Mobile Connect Mode !OPENCLAW_VER!  ¨U!ESC![0m
+    echo !ESC![96m  ¨^¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨T¨a!ESC![0m
 ) else (
     echo   OpenClaw Portable - Mobile Connect !OPENCLAW_VER!
 )
@@ -134,29 +134,29 @@ REM Write runtime info
 "!NODE_BIN!" -e "var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.mobileMode=true;fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}" "!RUNTIME_JSON!" "!PORT!" 2>nul
 
 echo.
-echo   â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-echo   â”‚          æ‰‹æœºè¿žæŽ¥ä¿¡æ¯                          â”‚
-echo   â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¤
-echo   â”‚                                                 â”‚
-echo   â”‚  æ–¹å¼ä¸€ï¼šæ‰‹æœºæµè§ˆå™¨ï¼ˆæŽ¨èï¼Œé›¶å®‰è£…ï¼‰             â”‚
-echo   â”‚  Android / iOS å‡å¯ï¼Œæ‰“å¼€ä»¥ä¸‹åœ°å€ï¼š             â”‚
+echo   ©°©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©´
+echo   ©¦          ÊÖ»úÁ¬½ÓÐÅÏ¢                          ©¦
+echo   ©À©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©È
+echo   ©¦                                                 ©¦
+echo   ©¦  ·½Ê½Ò»£ºÊÖ»úä¯ÀÀÆ÷£¨ÍÆ¼ö£¬Áã°²×°£©             ©¦
+echo   ©¦  Android / iOS ¾ù¿É£¬´ò¿ªÒÔÏÂµØÖ·£º             ©¦
 if defined LAN_IP (
-    echo   â”‚    http://!LAN_IP!:!PORT!/#token=!TOKEN!
+    echo   ©¦    http://!LAN_IP!:!PORT!/#token=!TOKEN!
 )
-echo   â”‚    ï¼ˆç¡®ä¿æ‰‹æœºå’Œç”µè„‘åœ¨åŒä¸€ WiFiï¼‰                â”‚
-echo   â”‚                                                 â”‚
-echo   â”‚  æ–¹å¼äºŒï¼šå®˜æ–¹ App                               â”‚
-echo   â”‚  Gateway åœ°å€: !LAN_IP!:!PORT!
-echo   â”‚  Token: !TOKEN!
-echo   â”‚  é…å¯¹: åŒä¸€ WiFi ä¸‹è‡ªåŠ¨æ‰¹å‡†                     â”‚
-echo   â”‚                                                 â”‚
-echo   â”‚  æ–¹å¼ä¸‰ï¼šç¬¬ä¸‰æ–¹ App (andClaw / AnyClaw)         â”‚
-echo   â”‚  æ‰‹åŠ¨è¾“å…¥: ws://!LAN_IP!:!PORT!
-echo   â”‚                                                 â”‚
-echo   â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+echo   ©¦    £¨È·±£ÊÖ»úºÍµçÄÔÔÚÍ¬Ò» WiFi£©                ©¦
+echo   ©¦                                                 ©¦
+echo   ©¦  ·½Ê½¶þ£º¹Ù·½ App                               ©¦
+echo   ©¦  Gateway µØÖ·: !LAN_IP!:!PORT!
+echo   ©¦  Token: !TOKEN!
+echo   ©¦  Åä¶Ô: Í¬Ò» WiFi ÏÂ×Ô¶¯Åú×¼                     ©¦
+echo   ©¦                                                 ©¦
+echo   ©¦  ·½Ê½Èý£ºµÚÈý·½ App (andClaw / AnyClaw)         ©¦
+echo   ©¦  ÊÖ¶¯ÊäÈë: ws://!LAN_IP!:!PORT!
+echo   ©¦                                                 ©¦
+echo   ©¸©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¤©¼
 echo.
 
-REM Strip host provider credentials inherited from the host machine (é›·5):
+REM Strip host provider credentials inherited from the host machine (À×5):
 REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
 REM OpenClaw treat those providers as configured -> runtime plugin install
 REM (exFAT brick) + silently burns the host owner's quota.
@@ -186,5 +186,5 @@ REM Cleanup on exit
 echo.
 echo   Cleaning up mobile config...
 if exist "!MOBILE_CONFIG!" del /f /q "!MOBILE_CONFIG!" 2>nul
-echo   æ‰‹æœºè¿žæŽ¥æ¨¡å¼å·²åœæ­¢ï¼Œé…ç½®å·²æ¢å¤ã€‚
+echo   ÊÖ»úÁ¬½ÓÄ£Ê½ÒÑÍ£Ö¹£¬ÅäÖÃÒÑ»Ö¸´¡£
 pause

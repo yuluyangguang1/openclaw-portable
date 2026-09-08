@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 title OpenClaw Portable Menu
 
 set "_SCRIPT_DIR=%~dp0"
@@ -151,7 +151,7 @@ if exist "%STATE_DIR%\openclaw.json" (
     del "!_OUT!" 2>nul
 )
 
-REM Strip host provider credentials inherited from the host machine (é›·5):
+REM Strip host provider credentials inherited from the host machine (À×5):
 REM leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
 REM OpenClaw treat those providers as configured -> runtime plugin install
 REM (exFAT brick) + silently burns the host owner's quota.

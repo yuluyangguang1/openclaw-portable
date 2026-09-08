@@ -1,6 +1,6 @@
-ï»¿@echo off
+@echo off
 setlocal EnableDelayedExpansion
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 title OpenClaw Portable Setup
 
 set "SCRIPT_DIR=%~dp0"
@@ -22,7 +22,7 @@ echo     OpenClaw Portable Setup
 echo   ========================================
 echo.
 
-echo   ç³»ç»Ÿ: Windows x64
+echo   ÏµÍ³: Windows x64
 echo.
 
 REM ---- 1. Download Node.js (Current Platform - Windows) ----
@@ -127,10 +127,7 @@ set "OPENCLAW_VERSION=2026.9.2"
 if exist "%OPENCLAW_VERSION_FILE%" (
     for /f "usebackq delims=" %%v in ("%OPENCLAW_VERSION_FILE%") do set "OPENCLAW_VERSION=%%v"
 )
-REM Strip UTF-8 BOM if present (CI sometimes writes OPENCLAW_VERSION with BOM)
-if defined OPENCLAW_VERSION (
-    if "!OPENCLAW_VERSION:~0,1!"=="Ã¯" set "OPENCLAW_VERSION=!OPENCLAW_VERSION:~3!"
-)
+REM NOTE: OPENCLAW_VERSION must stay BOM-free ASCII (repo-controlled); no BOM strip needed under GBK console
 REM Always regenerate package.json so OPENCLAW_VERSION takes effect
 REM even on re-run / upgrade. Include both deps so the file matches
 REM the post-install state and avoids dropping qqbot.
@@ -146,7 +143,7 @@ if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     set "_OUT=%TEMP%\oc-ver-%RANDOM%.out"
     >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}
     "%NODE_TARGET%\node.exe" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
-    REM Clear before set /p â€” if _OUT is empty (node failed), set /p
+    REM Clear before set /p ¡ª if _OUT is empty (node failed), set /p
     REM leaves INSTALLED_VER unchanged, which would make a stale value
     REM from a previous run silently compare equal.
     set "INSTALLED_VER="
@@ -171,7 +168,7 @@ REM ---- 2c. Promote official provider plugins to bundled ----
 REM Must run AFTER npm install: promoted files are merged into openclaw's
 REM postinstall inventory (dist/postinstall-inventory.json) so lifecycle
 REM re-runs never prune them; origin=bundled also skips capability consent.
-REM å‘å¸ƒåŒ…é‡Œ lib/ åœ¨ system\lib\ï¼Œå¼€å‘æ ‘åœ¨ .\lib\ï¼Œä¸¤å¤„éƒ½æ‰¾
+REM ·¢²¼°üÀï lib/ ÔÚ system\lib\£¬¿ª·¢Ê÷ÔÚ .\lib\£¬Á½´¦¶¼ÕÒ
 set "_PROMOTE_MJS=%~dp0system\lib\promote-official-providers.mjs"
 if not exist "!_PROMOTE_MJS!" set "_PROMOTE_MJS=%~dp0lib\promote-official-providers.mjs"
 if exist "!_PROMOTE_MJS!" (
