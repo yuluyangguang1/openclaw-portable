@@ -412,6 +412,17 @@
  letter-spacing: 0.5px;
  }
  .io-btn:hover { border-color: var(--fg); color: var(--fg); }
+ .io-btn.danger { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 45%, transparent); }
+ .io-btn.danger:hover { color: var(--warning); border-color: var(--warning); background: color-mix(in srgb, var(--warning) 8%, transparent); }
+
+ /* Step-2 section labels */
+ .step-label {
+ display: flex; align-items: center; gap: 10px;
+ margin: 26px 0 12px;
+ font-family: var(--font-mono); font-size: 0.68em; letter-spacing: 2px;
+ color: var(--fg-muted); text-transform: uppercase;
+ }
+ .step-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
  /* Hint */
  .hint { color: var(--fg-muted); font-size: 0.78em; margin-top: 6px; line-height: 1.5; font-family: var(--font-mono); }
@@ -1330,6 +1341,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <div id="kSave" style="display:none;margin:18px 0 6px;"><div class="kprog" id="kSaveBar"><div class="kfill"></div><div class="ksweep"></div><div class="kticks"></div></div><div class="klabel" id="kSaveLabel">准备写入…</div></div>
  <button class="btn-launch" onclick="openGateway()" tabindex="0"><span class="yi" style="margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5018 20.0048C14.8432 21.5841 13.5794 22.848 12 23.5066C10.4206 22.848 9.15679 21.5841 8.49816 20.0048H10.7575C11.0838 20.4934 11.5051 20.9171 12 21.248C12.4949 20.9171 12.9162 20.4934 13.2425 20.0048H15.5018ZM18 14.8095L20 17.0777V19.0048H4V17.0777L6 14.8095V9.00478C6 5.52153 8.50442 2.55822 12 1.45999C15.4956 2.55822 18 5.52153 18 9.00478V14.8095ZM17.2692 17.0048L16 15.5653V9.00478C16 6.68694 14.4292 4.57431 12 3.58384C9.57078 4.57431 8 6.68694 8 9.00478V15.5653L6.73076 17.0048H17.2692ZM12 11.0048C10.8954 11.0048 10 10.1093 10 9.00478C10 7.90021 10.8954 7.00478 12 7.00478C13.1046 7.00478 14 7.90021 14 9.00478C14 10.1093 13.1046 11.0048 12 11.0048Z"/></svg></span>打开聊天界面 →</button>
 
+ <div class="step-label">网关操作</div>
  <div class="cmd-grid">
  <div class="cmd-card" onclick="runCmd('update')">
   <div class="cmd-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13 13V18.585L14.8284 16.7574L16.2426 18.1716L12 22.4142L7.75736 18.1716L9.17157 16.7574L11 18.585V13H13ZM12 2C15.5934 2 18.5544 4.70761 18.9541 8.19395C21.2858 8.83154 23 10.9656 23 13.5C23 16.3688 20.8036 18.7246 18.0006 18.9776L18.0009 16.9644C19.6966 16.7214 21 15.2629 21 13.5C21 11.567 19.433 10 17.5 10C17.2912 10 17.0867 10.0183 16.8887 10.054C16.9616 9.7142 17 9.36158 17 9C17 6.23858 14.7614 4 12 4C9.23858 4 7 6.23858 7 9C7 9.36158 7.03838 9.7142 7.11205 10.0533C6.91331 10.0183 6.70879 10 6.5 10C4.567 10 3 11.567 3 13.5C3 15.2003 4.21241 16.6174 5.81986 16.934L6.00005 16.9646L6.00039 18.9776C3.19696 18.7252 1 16.3692 1 13.5C1 10.9656 2.71424 8.83154 5.04648 8.19411C5.44561 4.70761 8.40661 2 12 2Z"/></svg></div>
@@ -1350,8 +1362,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
 
   
+<div class="step-label">连接</div>
  <!-- 手机连接 -->
- <div style="margin-top:28px;">
+ <div style="margin-top:0;">
  <button id="mobileToggleBtn" onclick="toggleMobilePanel()"
  style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 16px;background:var(--secondary);border:1px solid var(--border);border-radius:8px;color:var(--fg);font-family:var(--font-mono);font-size:0.88em;cursor:pointer;text-align:left;">
  <span> 手机连接 (Android / iOS)</span>
@@ -1392,12 +1405,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  </div>
  </div>
 
- <div class="io-bar" style="margin-top:24px;">
+<div class="step-label">配置管理</div>
+ <div class="io-bar" style="margin-top:0;justify-content:flex-start;">
  <button class="io-btn" onclick="exportConfig()">导出配置</button>
  <button class="io-btn" onclick="startImport()">导入配置</button>
  <button class="io-btn" onclick="viewConfig()">查看 JSON</button>
- <button class="io-btn" onclick="resetConfig()">重新配置</button>
  <button class="io-btn" onclick="toggleLogs()">查看日志</button>
+ <button class="io-btn danger" onclick="resetConfig()">重新配置</button>
  </div>
  <input type="file" id="importFileInput" accept=".json" onchange="doImport(event)" style="display:none;">
 
