@@ -1460,6 +1460,10 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 // to prevent CSRF and local-process abuse. We fetch the token once at
 // page load from /api/bootstrap (which only responds to same-origin).
 var _serverToken = '';
+// Resolves once /api/bootstrap settles (token attached). API calls that
+// need the token (e.g. /api/skills) must wait on this — firing them in
+// parallel with bootstrap races it and 401s on first page load.
+var _bootReady = null;
 
 // Wrapper: automatically attaches the auth token to API calls and
 // applies a default 30s timeout via AbortController. A bare fetch
@@ -2360,7 +2364,7 @@ function skillsMsg(text, isError) {
 }
 function loadSkills() {
  skillsMsg('');
- apiFetch('/api/skills').then(function(r){ return r.json(); }).then(function(d){
+ (_bootReady || Promise.resolve()).then(function(){ return apiFetch('/api/skills'); }).then(function(r){ return r.json(); }).then(function(d){
  if (!d.ok) { skillsMsg('加载失败: ' + (d.error || '未知错误'), true); return; }
  renderSkills(d.skills || []);
  }).catch(function(e){ skillsMsg('加载失败: ' + e, true); });
@@ -3164,7 +3168,7 @@ function showLocalModelHints() {
  // calls succeed without a token (they're public anyway).
  var bootCtrl = new AbortController();
  var bootTimer = setTimeout(function(){ bootCtrl.abort(); }, 5000);
- fetch('/api/bootstrap', { signal: bootCtrl.signal }).then(function(r) {
+ _bootReady = fetch('/api/bootstrap', { signal: bootCtrl.signal }).then(function(r) {
  clearTimeout(bootTimer);
  return r.ok ? r.json() : {};
  }).then(function(data) {
