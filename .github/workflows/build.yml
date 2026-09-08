@@ -129,16 +129,20 @@ jobs:
           du -sh .
           du -sh app/runtime/*/
 
-      - name: Enforce UTF-8 BOM + CRLF on .bat files
+      - name: Enforce GBK + CRLF (no BOM) on .bat files
         run: |
           # cmd.exe on CN Windows parses .bat source as CP936 (system
-          # ANSI), not UTF-8. Without a BOM, our Chinese strings get
-          # mangled into garbage commands. Enforce BOM + CRLF for any
-          # .bat that contains non-ASCII bytes; pure-ASCII .bat files
-          # don't need it.
+          # ANSI). UTF-8 Chinese bytes misalign cmd's DBCS byte
+          # accounting -> leading chars of following lines get
+          # swallowed ("et" for "set") and block parsing corrupts.
+          # chcp 65001 does NOT fix this reliably (verified on real
+          # machines); a UTF-8 BOM only breaks the first line. The
+          # only parse-safe encoding for Chinese .bat is GBK + CRLF
+          # + no BOM (report §二十五). Repo files are already GBK;
+          # this step is a safety net that converts any UTF-8 strays
+          # and normalizes EOL.
           python3 - <<'PY'
-          import os, glob, sys
-          BOM = b"\xef\xbb\xbf"
+          import glob
           changed = []
           for p in sorted(glob.glob("*.bat")):
               data = open(p, "rb").read()
@@ -147,14 +151,19 @@ jobs:
                   continue  # pure ASCII, skip
               except UnicodeDecodeError:
                   pass
-              body = data[3:] if data.startswith(BOM) else data
-              text = body.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n")
-              out = BOM + text.encode("utf-8")
+              try:
+                  # UTF-8 source (BOM optional) -> convert to GBK
+                  text = data.decode("utf-8-sig")
+              except UnicodeDecodeError:
+                  # already GBK -> re-decode as GBK
+                  text = data.decode("gbk")
+              text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\r\n")
+              out = text.encode("gbk")
               if out != data:
                   open(p, "wb").write(out)
                   changed.append(p)
           for p in changed:
-              print(f"Normalized: {p}")
+              print(f"Normalized to GBK+CRLF: {p}")
           PY
 
       - name: Restore exec bits
