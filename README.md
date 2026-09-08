@@ -1,93 +1,48 @@
 # OpenClaw Portable
 
-把 [OpenClaw](https://github.com/openclaw/openclaw)（开源 AI 助手）打包成便携版。插上 U 盘即可在任意电脑上运行，无需安装任何依赖。
+**English** | [简体中文](README.zh-CN.md)
 
-Pack [OpenClaw](https://github.com/openclaw/openclaw) into a portable edition. Plug in a USB drive and run on any computer with zero dependencies.
+Pack [OpenClaw](https://github.com/openclaw/openclaw) — the open-source AI assistant / gateway — into a fully self-contained portable edition. Plug a USB drive into any computer and run with zero installation and zero host pollution.
 
----
-
-## 特性
-
-- 零安装 — 自带 Node.js 运行时，双击启动
-- 跨平台 — macOS (ARM/Intel)、Linux (x64/ARM64)、Windows x64
-- 可视化配置中心 — 选模型、填 Key、保存、打开聊天，两步完成
-- 32 个模型平台 — 国产 15 + 国际 8 + 聚合 5 + 加速 1 + 自定义中转 1 + 本地 2（Ollama / LM Studio 自动检测）
-- 12 个聊天渠道 — Telegram / QQ / 飞书 / 企微 / Discord / Slack / WhatsApp / Signal / LINE / Google Chat / MS Teams / 微信
-- 手机连接 — 同一 WiFi 下手机浏览器零安装访问，也支持官方 App 和第三方 App
-- 自动更新 — 从 GitHub Releases 一键下载更新，带备份回滚
-- 数据本地 — API Key 和聊天记录只存在 U 盘上，不上传
-- 中文技能包 — 内置搜索、翻译、天气、小红书/知乎/微博/B站等写作助手
+![Config Center overview](docs/screenshots/config-center-main.png)
 
 ## Features
 
-- Zero install — bundled Node.js runtime, double-click to start
-- Cross-platform — macOS (ARM/Intel), Linux (x64/ARM64), Windows x64
-- Visual Config Center — pick a model, enter Key, save, open chat
-- 32 model platforms — 15 domestic + 8 international + 5 aggregators + 1 accelerator + 1 custom relay + 2 local (Ollama / LM Studio auto-detected)
-- 12 chat channels — Telegram / QQ / Feishu / WeCom / Discord / Slack / WhatsApp / Signal / LINE / Google Chat / MS Teams / WeChat
-- Mobile Connect — phones on the same WiFi access via browser (zero install), official app, or third-party apps
-- Auto update — one-click update from GitHub Releases with backup and rollback
-- Data stays local — API keys and chat history live only on the USB drive, never uploaded
-- Chinese skill pack — built-in search, translate, weather, Xiaohongshu/Zhihu/Weibo/Bilibili writing assistants
+- **Zero install** — bundled Node.js runtime, double-click to start
+- **Cross-platform** — Windows x64, macOS (Apple Silicon / Intel), Linux (x64 / ARM64)
+- **Visual Config Center** — pick a model platform, paste your API key, save, open chat. Two steps, no CLI
+- **32 model platforms** — 15 Chinese + 8 international + 5 aggregators + 1 accelerator + 1 custom relay + 2 local (Ollama / LM Studio auto-detected)
+- **12 chat channels** — Telegram / QQ / Feishu / WeCom / Discord / Slack / WhatsApp / Signal / LINE / Google Chat / MS Teams / WeChat
+- **Skill manager** — install skills from a zip URL or GitHub repo, enable/disable/delete right in the Config Center; OpenClaw 2026.9.2+ hot-reloads them automatically
+- **Advanced settings** — Swarm sub-agent concurrency, session visibility, config hot-reload mode — saved live without restarting the gateway
+- **Mobile Connect** — phones on the same WiFi use the gateway via browser (zero install), the official app, or third-party apps
+- **Auto update** — one-click update from GitHub Releases with backup and rollback
+- **Data stays local** — API keys and chat history live only on the USB drive, never uploaded
+- **Chinese skill pack** — built-in search, translate, weather, and Xiaohongshu / Zhihu / Weibo / Bilibili writing assistants
 
----
+## Screenshots
 
-## 快速开始
-
-### 使用发布包（推荐）
-
-从 [Releases](https://github.com/yuluyangguang1/openclaw-portable/releases) 下载 zip，解压到 U 盘或任意目录。
-
-| 平台 | 启动方式 |
-|------|----------|
-| macOS | 双击 `OpenClaw.app` |
-| Windows | 双击 `OpenClaw.vbs` |
-| Linux | 双击 `OpenClaw.desktop` |
-
-启动后浏览器自动打开配置页面。选择模型平台 → 填写 API Key → 保存 → 打开聊天。
-
-所有数据跟随 U 盘走，不污染主机。
-
-### macOS 首次启动
-
-macOS 可能提示"无法验证开发者"。解决方法（任选其一）：
-
-1. 右键点击 `OpenClaw.app` → 选择"打开" → 弹窗中点"打开"
-2. 终端执行：`xattr -cr /path/to/OpenClawPortable`
-3. 系统设置 → 隐私与安全性 → 底部点"仍要打开"
-
-### 从源码构建
-
-```bash
-git clone https://github.com/yuluyangguang1/openclaw-portable.git
-cd openclaw-portable
-
-# 当前平台
-bash setup.sh
-
-# 全平台 U 盘
-bash setup.sh --all-platforms
-```
-
-Windows 用户用 `setup.bat` 或 `setup.ps1`。
-
----
+| Model platforms (41 built-in) | Skills manager & advanced settings |
+|---|---|
+| ![Model platforms](docs/screenshots/config-center-platforms.png) | ![Skills & advanced settings](docs/screenshots/config-center-advanced.png) |
 
 ## Quick Start
 
-### Use Release Package (Recommended)
+### Use a Release Package (Recommended)
 
 Download the zip from [Releases](https://github.com/yuluyangguang1/openclaw-portable/releases), extract to a USB drive or any directory.
 
 | Platform | How to Launch |
 |----------|---------------|
-| macOS | Double-click `OpenClaw.app` |
 | Windows | Double-click `OpenClaw.vbs` |
+| macOS | Double-click `OpenClaw.app` |
 | Linux | Double-click `OpenClaw.desktop` |
 
-After launch, the browser opens the config page automatically. Pick a model platform, enter API Key, save, open chat.
+A browser opens the Config Center automatically. Pick a model platform → paste API key → save → open chat.
 
 All data travels with the USB drive — nothing pollutes the host machine.
+
+> **Upgrading**: download the new zip and extract over the old folder — your `data/` directory (keys, history, installed skills) is preserved by the updater.
 
 ### macOS First Launch
 
@@ -102,150 +57,156 @@ macOS may show "cannot verify developer". Fix (pick one):
 ```bash
 git clone https://github.com/yuluyangguang1/openclaw-portable.git
 cd openclaw-portable
-bash setup.sh # current platform
-bash setup.sh --all-platforms # all platforms for USB
+bash setup.sh                 # current platform
+bash setup.sh --all-platforms # all platforms, for a USB drive
 ```
 
 Windows: use `setup.bat` or `setup.ps1`.
 
----
+## Config Center
 
-## 手机连接 / Mobile Connect
+Opens at `http://127.0.0.1:18750` after launch.
 
-让同一 WiFi 下的手机连接到 OpenClaw Gateway，无需在手机上安装任何东西。
+**Step 1 — Configure a model**
+- Click a platform card to expand it
+- Pick a concrete model
+- Paste your API key
+- Local runtimes: LM Studio (port 1234) / Ollama (port 11434) are auto-detected
 
-| 平台 | 启动器 |
-|------|--------|
+**Step 2 — Launch**
+- Click "Open Chat" to enter the gateway web UI
+
+Other features: update (with rollback), `openclaw doctor` diagnostics, gateway restart, config export/import/reset, 12-channel onboarding, Mobile Connect toggle, live gateway logs.
+
+### Model Catalog Hot Update
+
+The platform/model list doesn't wait for full package upgrades — users can pull the latest catalog on demand:
+
+- **User side**: the "pick a platform" page has a catalog toolbar (`Update / Import / Export / Restore built-in`). "Update" pulls the latest list from this repo; caches older than 7 days refresh automatically in the background. Offline users can download `models-catalog.json` on another device and click "Import".
+- **Cache location**: `data/.openclaw/models-catalog.json` — the `data/` directory survives package upgrades.
+- **Maintainer side**: edit [`system/models-catalog.json`](system/models-catalog.json) (use a date for `version`, e.g. `2026.08.22`) and push — users can pull it right away. Fetch order: jsDelivr → raw.githubusercontent → ghproxy mirror, all reachable from mainland China.
+- **Custom sources**: power users can put a URL array in `data/.openclaw/catalog-sources.json` to override the defaults.
+- Saved model configs are untouched by catalog updates — the catalog only affects dropdown options.
+
+### Skill Manager
+
+![Skill manager](docs/screenshots/config-center-skills.png)
+
+Three skill sources, all managed from the Config Center:
+
+| Source | Location | Behavior |
+|--------|----------|----------|
+| Bundled (shipped) | `system/skills-zh/` | Read-only, loaded at startup |
+| Optional library | `system/skills-zh-optional/` | One-click enable → copied into managed area |
+| Managed (installed) | `data/.openclaw/skills/` | Install / disable / delete; survives upgrades |
+
+- **Install**: paste a zip direct link or a GitHub `owner/repo` and press Enter — the server downloads, unpacks, validates `SKILL.md`, and atomically installs (50 MB / 20 skills per batch caps).
+- **Hot reload**: OpenClaw 2026.9.2+ watches these directories — installs, enables, and deletes take effect immediately, no gateway restart.
+
+### Advanced Settings
+
+OpenClaw 2026.9.2+ specific knobs, saved live (no gateway restart):
+
+- **Swarm sub-agents** — enabled / max concurrency (default 8)
+- **Session visibility** — `all` (9.2 default) / `agent` / `self`
+- **Config hot-reload** — `hybrid` (default) / `off`
+
+## Mobile Connect
+
+Let phones on the same WiFi reach the OpenClaw gateway without installing anything.
+
+| Platform | Launcher |
+|----------|----------|
 | macOS | `system/Mac-Mobile.command` |
 | Linux | `system/Linux-Mobile.sh` |
 | Windows | `system/Windows-Mobile.bat` |
 
-双击启动器，以 LAN 模式临时启动 Gateway。退出后自动恢复原始配置。
+Double-click to start the gateway in temporary LAN mode; the original config is restored on exit.
 
-连接方式：
+- **Phone browser**: open `http://<PC-LAN-IP>:<port>` — Android and iOS both work
+- **Official app**: build `apps/android` / `apps/ios` from the openclaw repo
+- **Third-party apps**: andClaw / AnyClaw / FlutterClaw etc., enter the WebSocket address and token manually
 
-- 手机浏览器：打开 `http://<电脑局域网IP>:<端口>`，Android / iOS 均可
-- 官方 App：编译 openclaw 仓库的 `apps/android` 或 `apps/ios`
-- 第三方 App：andClaw / AnyClaw / FlutterClaw 等，手动输入 WebSocket 地址和 Token
+You can also toggle Mobile Connect mode directly in the Config Center web UI.
 
-也可以在配置中心 Web UI 中直接开启手机连接模式，无需使用独立启动器。
+Security: only private network ranges auto-approve pairing; public IPs never pair automatically. Temporary config is deleted on exit.
 
-安全性：仅私有网段自动批准配对，公网 IP 不会被自动配对。临时配置退出后自动删除。
+## Directory Layout
 
----
-
-## 目录结构
-
-发布包解压后（用户视角）：
+After extracting a release package (user view):
 
 ```
 OpenClawPortable/
- OpenClaw.app macOS 启动器
- OpenClaw.vbs Windows 启动器
- OpenClawPortable使用说明.html 用户手册
- data/ 用户数据（API Key、对话历史等）
- app/ Node.js 运行时 + OpenClaw 核心
- config-server/ 配置中心 Web UI + API
- system/ 底层脚本 + 配置 + 技能包：
-  ├─ OPENCLAW_VERSION 上游版本号
-  ├─ PORTABLE_VERSION Portable 版本号
-  ├─ default-config.json 默认配置
-  ├─ models-catalog.json 模型目录（维护者单源）
-  ├─ skills-zh-manifest.json 中文技能清单
-  ├─ verify-skills-zh.py 技能清单校验脚本
-  ├─ skills-zh/ 中文技能包（内置）
-  ├─ skills-zh-optional/ 中文技能包（可选，手动安装）
-  ├─ OpenClaw.desktop Linux 启动器
-  ├─ README.md 离线文档
+ OpenClaw.vbs                    Windows launcher
+ OpenClaw.app                    macOS launcher
+ OpenClawPortable使用说明.html    User manual (Chinese)
+ data/                           User data (API keys, history, installed skills)
+ app/                            Node.js runtime + OpenClaw core
+ config-server/                  Config Center web UI + API
+ system/                         Scripts + config + skill packs:
+  ├─ OPENCLAW_VERSION            Upstream version
+  ├─ PORTABLE_VERSION            Portable version
+  ├─ default-config.json         Default config
+  ├─ models-catalog.json         Model catalog (maintainer single source)
+  ├─ skills-zh-manifest.json     Chinese skill manifest
+  ├─ verify-skills-zh.py         Manifest verification script
+  ├─ skills-zh/                  Chinese skill pack (built-in)
+  ├─ skills-zh-optional/         Chinese skill pack (optional)
+  ├─ OpenClaw.desktop            Linux launcher
+  ├─ README.md                   Offline docs
   ├─ Mac-Start/Menu/Mobile/Diagnose.command
   ├─ Linux-Start/Menu/Mobile/Diagnose.sh
   ├─ Windows-Start/Menu/Mobile/Diagnose.bat
-  └─ lib/ preflight / maintain / mobile 帮助库
+  └─ lib/                        preflight / maintain / mobile helper libs
 ```
 
-源码仓库与发布包布局一致：除 `OpenClaw.app` / `OpenClaw.vbs` 双击入口和 `app/`、`config-server/`、`data/` 外，其余脚本与配置全部位于 `system/`（CI 打包时再把启动器从仓库根移入 `system/`）。
+The source repo mirrors this layout: everything except the double-click entrypoints and `app/` / `config-server/` / `data/` lives in `system/` (CI moves launchers from the repo root into `system/` at package time).
 
----
+## Built-in Skills
 
-## 配置中心
+| Skill | Description |
+|-------|-------------|
+| china-search | Chinese search engines |
+| china-translate | Chinese–English translation |
+| china-weather | Weather lookup |
+| xiaohongshu-writer | Xiaohongshu copywriting |
+| zhihu-writer | Zhihu answers |
+| weibo-poster | Weibo posts |
+| wechat-article | WeChat official-account articles |
+| bilibili-helper | Bilibili content |
+| douyin-script | Douyin scripts |
+| deepseek-helper | DeepSeek enhancements |
 
-启动后在 `http://127.0.0.1:18750` 打开。
+Skills live in `system/skills-zh/` and load at startup. More are in `system/skills-zh-optional/` — enable them from the Config Center's skill manager.
 
-步骤一 — 配置模型：
-- 点击模型平台卡片展开
-- 选择具体模型
-- 填写 API Key
-- 本地模型：LM Studio (1234) / Ollama (11434) 自动检测
+## Platform Support
 
-步骤二 — 启动：
-- 点击"打开聊天界面"进入 Gateway
+| Platform | Architecture | Status |
+|----------|--------------|--------|
+| Windows | x64 | Supported |
+| macOS | Apple Silicon (M1–M4) | Supported |
+| macOS | Intel x64 | Supported |
+| Linux | x64 | Supported |
+| Linux | ARM64 | Supported |
+| Android / iOS | via Mobile Connect | Supported |
 
-其他功能：
-- 更新：从 GitHub Releases 下载新版（带回滚）
-- 诊断：openclaw doctor
-- 重启：重启 Gateway
-- 配置管理：导出 / 导入 / 查看 JSON / 重置
-- 渠道接入：12 个聊天平台一站式配置
-- 手机连接：开启/关闭 LAN 模式
-- 运行日志：实时查看 Gateway 日志
+macOS note: Node.js 24 officially requires macOS 13.5 (Ventura); macOS 12+ works in practice. If launch fails, upgrade macOS.
 
-### 模型目录热更新
+## For Maintainers
 
-配置中心的平台/模型列表无需等整包升级，用户可自行拉取最新目录：
+- **Bumping the upstream kernel**: prefer `maintain.sh` → upgrade — it re-runs `lib/promote-official-providers.mjs` automatically after `npm install openclaw@latest` (a fresh install wipes the promoted official provider plugins; promote is idempotent). If you upgrade manually, re-run `node lib/promote-official-providers.mjs <core-dir>` afterwards.
+- **Releases**: push a tag like `v2.0.0-beta.6`; CI (Build & Release) builds all platforms and attaches the zip to a GitHub Release automatically. Pre-release flags (`alpha`/`beta`/`rc`) in the tag mark it as a prerelease.
+- **Windows launchers are GBK-encoded**: all `.bat` files with Chinese text must stay **GBK + CRLF, no BOM** (cmd.exe on Chinese Windows misparses UTF-8). CI enforces this at package time — don't "fix" the encoding back to UTF-8.
 
-- **用户侧**：配置中心"选择模型平台"页顶部有目录工具栏（`更新目录 / 导入 / 导出 / 恢复内置`）。点击"更新目录"即从本仓库拉取最新列表；缓存超过 7 天会在打开页面时自动后台刷新。离线用户可先在其他设备下载 `models-catalog.json`，再点"导入"。
-- **缓存位置**：`data/.openclaw/models-catalog.json`（data/ 目录在整包升级时保留，升级不丢）。
-- **维护者侧**：只需修改仓库 `system/` 目录下的 [`models-catalog.json`](system/models-catalog.json)（`version` 字段建议用日期如 `2026.08.22`），提交后用户即可拉到。拉取源依次为 jsDelivr → raw.githubusercontent → ghproxy 镜像，国内网络可达。
-- **自定义源**：高级用户可在 `data/.openclaw/catalog-sources.json` 写入 URL 数组覆盖默认源（如自建镜像）。
-- 已保存的模型配置不受目录更新影响——目录只影响下拉选项，配置里的模型名原样保留。
+## Upstream Project
 
----
+Built on [OpenClaw](https://github.com/openclaw/openclaw) — an open-source AI assistant framework with multi-model, multi-channel, and plugin support.
 
-## 内置技能
-
-| 技能 | 说明 |
-|------|------|
-| china-search | 国内搜索引擎 |
-| china-translate | 中英翻译 |
-| china-weather | 天气查询 |
-| xiaohongshu-writer | 小红书文案 |
-| zhihu-writer | 知乎回答 |
-| weibo-poster | 微博文案 |
-| wechat-article | 公众号文章 |
-| bilibili-helper | B站内容 |
-| douyin-script | 抖音脚本 |
-| deepseek-helper | DeepSeek 增强 |
-
-技能在 `skills-zh/` 目录下，启动时自动加载。
-
----
-
-## 平台支持
-
-| 平台 | 架构 | 状态 |
-|------|------|------|
-| macOS | Apple Silicon (M1-M4) | 支持 |
-| macOS | Intel x64 | 支持 |
-| Linux | x64 | 支持 |
-| Linux | ARM64 | 支持 |
-| Windows | x64 | 支持 |
-| Android / iOS | 通过 Mobile Connect | 支持 |
-
-macOS 版本说明：Node.js 24 官方标注最低 macOS 13.5（Ventura），实测 macOS 12+ 可正常运行。如遇启动失败请升级 macOS。
-
----
-
-## 上游项目
-
-基于 [OpenClaw](https://github.com/nicepkg/openclaw) 构建。OpenClaw 是开源 AI 助手框架，支持多模型、多渠道、插件扩展。
-
-Portable 版本的工作：
-- 打包 Node.js 运行时实现零安装
-- 提供可视化配置中心替代命令行配置
-- 内置中文优化技能包
-- 适配 U 盘便携场景（相对路径、数据隔离、exFAT 兼容）
-
----
+The Portable edition adds:
+- Bundled Node.js runtime for zero install
+- A visual Config Center replacing CLI configuration
+- Bundled Chinese-optimized skill packs
+- USB-drive ergonomics (relative paths, data isolation, exFAT compatibility)
 
 ## License
 
