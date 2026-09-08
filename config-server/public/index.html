@@ -3219,6 +3219,12 @@ function showLocalModelHints() {
  else goStep(1);
  }).catch(function() { goStep(1); });
 
+ // Skills panel is config-independent — surface it in wizard state too.
+ // Previously it only un-hid inside showConfigSummary(), so a fresh
+ // install (no model configured yet) never showed the entry at all.
+ var _skp = document.getElementById('skillsPanel');
+ if (_skp && typeof loadSkills === 'function') { _skp.style.display = 'block'; loadSkills(); }
+
  // Heartbeat — show disconnect overlay after 3 consecutive failures.
  // Previously the failure check was synchronous (ran before fetch
  // settled), so it always reflected the *previous* iteration's count.
