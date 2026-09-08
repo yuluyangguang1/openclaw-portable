@@ -13,23 +13,31 @@
 <title>OpenClaw Portable — 配置中心</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%23170d02'/%3E%3Cg fill='none' stroke='%23f5f0e8' stroke-width='4.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M 28 32 L 42 60 M 56 32 L 42 60 L 36 78'/%3E%3Cpath d='M 64 32 L 64 60 Q 64 72 76 72 L 76 32'/%3E%3C/g%3E%3C/svg%3E">
 <meta name="theme-color" content="#170d02" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f5f5f5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#f6f3ec" media="(prefers-color-scheme: light)">
 <style>
+ /* ===== Palette (yuai-r paper-ink design language) =====
+    ONE brand accent per theme — 朱砂 (dark) / 印泥红 (light), same hue family.
+    Every color reference MUST go through these variables; --emerald and
+    --emerald-dim are kept as compatibility aliases of the accent. */
  :root {
  /* Existing OpenClaw variables (preserved for class compatibility) */
- --bg: #170d02;
+ --bg: #170d02;                 /* 纸墨黑 */
  --card: rgba(23,13,2,0.6);
  --secondary: rgba(23,13,2,0.8);
  --muted: rgba(23,13,2,0.4);
- --fg: #f5f0e8;
- --fg-muted: #9a968e;
+ --fg: #f5f0e8;                 /* 宣纸白 */
+ --fg-muted: #9a968e;           /* 淡墨 */
  --border: rgba(245,240,232,0.12);
- --accent: #edff45;
- --emerald: #edff45;
- --emerald-dim: rgba(237,255,69,0.8);
- --warning: #ffbd38;
- --success: #4ade80;
- --destructive: #ff8a6b;
+ --accent: #f2634e;             /* 朱砂 — the ONE dark-theme brand color */
+ --accent-dim: color-mix(in srgb, var(--accent) 80%, transparent);
+ --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--bg));
+ --pulse-rgb: 242 99 78;
+ --emerald: var(--accent);      /* legacy alias — do NOT use in new code */
+ --emerald-dim: var(--accent-dim);
+ --warning: #ebb252;            /* 藤黄 */
+ --success: #7fae8f;            /* 竹青 */
+ --destructive: #eb705c;        /* 胭脂 */
+ --purple: #a98ab8;             /* 青莲 (was referenced but never defined) */
  /* yu.ai-aligned aliases */
  --mid: var(--fg);
  --dim: var(--fg-muted);
@@ -38,31 +46,45 @@
  --font-serif: 'LXGW WenKai', Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif;
  --font-mono: 'Courier New', 'Menlo', monospace;
  }
- /* Light theme — invert dark colors, keep accent recognizable */
+ /* Light theme — 宣纸 paper base, 印泥红 accent (same hue family as 朱砂) */
  [data-theme="light"] {
- --bg: #f5f5f5;
- --card: rgba(245,245,245,0.8);
- --secondary: rgba(245,245,245,0.6);
- --muted: rgba(245,245,245,0.4);
- --fg: #170d02;
- --fg-muted: #8a7e6a;
- --border: rgba(23,13,2,0.14);
- --accent: #0000c8;
- --emerald: #0000c8;
- --emerald-dim: rgba(0,0,200,0.8);
+ --bg: #f6f3ec;
+ --card: rgba(246,243,236,0.85);
+ --secondary: rgba(255,253,247,0.75);
+ --muted: rgba(246,243,236,0.4);
+ --fg: #211b13;                 /* 浓墨 */
+ --fg-muted: #80715e;           /* 褐墨 — 4.5:1 on paper */
+ --border: rgba(33,27,19,0.16);
+ --accent: #bb3424;             /* 印泥红 — the ONE light-theme brand color */
+ --accent-dim: color-mix(in srgb, var(--accent) 80%, transparent);
+ --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--bg));
+ --pulse-rgb: 187 52 36;
+ --emerald: var(--accent);
+ --emerald-dim: var(--accent-dim);
+ --warning: #a87410;
+ --success: #4d7d5f;
+ --destructive: #b23a28;
+ --purple: #6e5480;
  }
  @media (prefers-color-scheme: light) {
  :root:not([data-theme="dark"]) {
- --bg: #f5f5f5;
- --card: rgba(245,245,245,0.8);
- --secondary: rgba(245,245,245,0.6);
- --muted: rgba(245,245,245,0.4);
- --fg: #170d02;
- --fg-muted: #8a7e6a;
- --border: rgba(23,13,2,0.14);
- --accent: #0000c8;
- --emerald: #0000c8;
- --emerald-dim: rgba(0,0,200,0.8);
+ --bg: #f6f3ec;
+ --card: rgba(246,243,236,0.85);
+ --secondary: rgba(255,253,247,0.75);
+ --muted: rgba(246,243,236,0.4);
+ --fg: #211b13;
+ --fg-muted: #80715e;
+ --border: rgba(33,27,19,0.16);
+ --accent: #bb3424;
+ --accent-dim: color-mix(in srgb, var(--accent) 80%, transparent);
+ --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--bg));
+ --pulse-rgb: 187 52 36;
+ --emerald: var(--accent);
+ --emerald-dim: var(--accent-dim);
+ --warning: #a87410;
+ --success: #4d7d5f;
+ --destructive: #b23a28;
+ --purple: #6e5480;
  }
  }
 
@@ -213,6 +235,10 @@
  /* Grid items default to min-width:auto — allow shrinking so wide OTP rows
     scroll inside the card instead of stretching the grid column. */
  .model-grid > .provider-card { min-width: 0; }
+ /* An expanded config form takes the WHOLE grid row — otherwise the open
+    card stretches its row partner (e.g. Kimi's form inflating DeepSeek's
+    card) and both look broken. :has() is baseline-supported since 2023. */
+ .model-grid > .provider-card:has(> .provider-expand.open) { grid-column: 1 / -1; }
  .provider-card {
  background: var(--secondary);
  border: 1px solid var(--border);
@@ -225,7 +251,7 @@
  .provider-card:hover { border-color: var(--fg-muted); }
  .provider-card.selected {
  border-color: var(--emerald-dim);
- background: oklch(0.18 0.02 170);
+ background: var(--accent-soft);
  }
  .provider-card .provider-header { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
  .provider-card .provider-name { color: var(--fg); font-size: 0.92em; font-weight: 500; }
@@ -332,30 +358,16 @@
  }
  .btn:hover { border-color: var(--fg); }
  .btn-primary {
- background: oklch(0.18 0.02 170);
+ background: var(--accent-soft);
  color: var(--emerald);
  border-color: var(--emerald-dim);
  }
- .btn-primary:hover { background: oklch(0.22 0.04 170); }
+ .btn-primary:hover { background: color-mix(in srgb, var(--accent) 18%, var(--bg)); }
  .btn-primary:disabled {
  background: var(--muted); color: var(--fg-muted);
  cursor: not-allowed; border-color: var(--border);
  }
  .btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; flex-wrap: wrap; }
-
- .btn-launch {
- display: block; width: 100%; padding: 18px 32px;
- border: 1px solid var(--emerald-dim);
- border-radius: 12px;
- font-size: 1.05em; cursor: pointer;
- font-weight: 500; font-family: var(--font-mono); text-align: center;
- background: oklch(0.18 0.02 170); color: var(--emerald);
- transition: all 0.2s; letter-spacing: 2px;
- }
- .btn-launch:hover {
- background: oklch(0.22 0.04 170);
- transform: translateY(-1px);
- }
 
  /* Command grid — horizontal segmented action bar (4 across).
    The grid definition used to live here but was lost in an earlier
@@ -378,7 +390,7 @@
  transition: all 0.15s;
  }
  .channel-card:hover { border-color: var(--fg-muted); }
- .channel-card.selected { border-color: var(--emerald-dim); background: oklch(0.18 0.02 170); }
+ .channel-card.selected { border-color: var(--emerald-dim); background: var(--accent-soft); }
  .channel-card .channel-name { color: var(--fg); font-size: 0.9em; font-weight: 500; }
  .channel-card .input-group { position: relative; display: flex; align-items: center; margin-bottom: 10px; }
  .channel-card 
@@ -480,7 +492,7 @@
  font-size: 0.85em; font-family: var(--font-mono); letter-spacing: 1px;
  }
  .modal-btn-cancel { background: var(--secondary); color: var(--fg); }
- .modal-btn-ok { background: oklch(0.18 0.02 170); color: var(--emerald); border-color: var(--emerald-dim); }
+ .modal-btn-ok { background: var(--accent-soft); color: var(--emerald); border-color: var(--emerald-dim); }
 
  /* Tooltip */
  .field-help {
@@ -682,7 +694,7 @@
  }
  .provider-card.selected, .channel-card.selected {
  border-color: var(--accent);
- background: rgba(0,255,200,0.04);
+ background: rgba(var(--pulse-rgb),0.05);
  }
  .provider-card .provider-name, .channel-card .channel-name {
  font-family: var(--font-serif);
@@ -719,24 +731,12 @@
  }
 
  /* Buttons — primary CTA mirrors the y-hero CTA pattern */
- .btn, .btn-primary, .io-btn, .btn-launch {
+ .btn, .btn-primary, .io-btn {
  border-radius: 0 !important;
  font-family: var(--font-mono);
  letter-spacing: 0.1em;
  text-transform: uppercase;
  font-weight: normal;
- }
- .btn-launch {
- border: 1px solid var(--accent);
- color: var(--accent);
- background: transparent;
- transition: all 0.2s;
- padding: 10px 28px;
- font-size: 0.72rem;
- }
- .btn-launch:hover {
- background: var(--accent);
- color: var(--bg);
  }
  .btn-primary {
  border: 1px solid var(--accent);
@@ -768,6 +768,11 @@
  border-color: var(--border);
  }
  .input:focus { border-color: var(--accent); outline: none; }
+
+ /* Skip link: fully off-screen at ANY font scale (the old top:-40px hack
+    peeked out as a colored strip at large Windows font scaling), slides
+    in only on keyboard focus. !important beats its inline style. */
+ .skip-link:focus { transform: translateY(0) !important; }
 
  /* Command grid — borderless cards, label/icon style */
  .cmd-grid { gap: 0 !important; border: 1px solid var(--border); margin: 16px 0; }
@@ -804,9 +809,9 @@
  }
  .cmd-card .cmd-desc {
  font-family: var(--font-mono);
- font-size: 0.6rem;
+ font-size: 0.65rem;
  letter-spacing: 0.05em;
- opacity: 0.5;
+ opacity: 0.7;
  line-height: 1.2;
  white-space: nowrap;
  overflow: hidden;
@@ -936,7 +941,7 @@
     things that are round FOR A REASON are untouched: .dot / .y-td
     indicators, .mobile-slider switch, scrollbar thumb. */
  .provider-card, .channel-card, .filter-chip, .tag, .btn, .btn-primary,
- .btn-sm, .btn-icon, .io-btn, .btn-launch, .dc-card,
+ .btn-sm, .btn-icon, .io-btn, .dc-card,
  [style*="border-radius:6px"], [style*="border-radius: 6px"],
  [style*="border-radius:8px"], [style*="border-radius: 8px"],
  [style*="border-radius:10px"], [style*="border-radius: 10px"],
@@ -984,14 +989,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 
 /* Button hover effects */
-.btn, .btn-primary, .btn-launch, .io-btn {
+.btn, .btn-primary, .io-btn {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s, background 0.2s;
 }
-.btn:hover, .btn-primary:hover, .btn-launch:hover, .io-btn:hover {
+.btn:hover, .btn-primary:hover, .io-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
-.btn:active, .btn-primary:active, .btn-launch:active, .io-btn:active {
+.btn:active, .btn-primary:active, .io-btn:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -1002,7 +1007,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .input:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="url"]:focus, select:focus {
   border-color: var(--emerald);
-  box-shadow: 0 0 0 3px rgba(0,255,200,0.1);
+  box-shadow: 0 0 0 3px rgba(var(--pulse-rgb),0.12);
 }
 
 /* Filter chip animations */
@@ -1082,8 +1087,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   animation: pulse 2s infinite;
 }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,200,0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(0,255,200,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb),0.35); }
+  50% { box-shadow: 0 0 0 8px rgba(var(--pulse-rgb),0); }
 }
 
 /* yu.ai grid borders */
@@ -1166,7 +1171,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 <div class="bg-n" aria-hidden="true"></div>
 <div class="bg-g" aria-hidden="true"></div>
 
-<a href="#step1" class="skip-link" style="position:absolute;top:-40px;left:0;background:var(--accent);color:var(--bg);padding:8px 16px;z-index:1000;transition:top 0.2s;">跳到主要内容</a>
+<a href="#step1" class="skip-link" style="position:absolute;left:0;top:0;transform:translateY(-110%);background:var(--accent);color:var(--bg);padding:8px 16px;z-index:1000;transition:transform 0.2s;">跳到主要内容</a>
 <div class="y-page">
 <main role="main">
 
@@ -1355,7 +1360,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </div>
 
  <div id="kSave" style="display:none;margin:18px 0 6px;"><div class="kprog" id="kSaveBar"><div class="kfill"></div><div class="ksweep"></div><div class="kticks"></div></div><div class="klabel" id="kSaveLabel">准备写入…</div></div>
- <button class="btn-launch" onclick="openGateway()" tabindex="0"><span class="yi" style="margin-right:6px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5018 20.0048C14.8432 21.5841 13.5794 22.848 12 23.5066C10.4206 22.848 9.15679 21.5841 8.49816 20.0048H10.7575C11.0838 20.4934 11.5051 20.9171 12 21.248C12.4949 20.9171 12.9162 20.4934 13.2425 20.0048H15.5018ZM18 14.8095L20 17.0777V19.0048H4V17.0777L6 14.8095V9.00478C6 5.52153 8.50442 2.55822 12 1.45999C15.4956 2.55822 18 5.52153 18 9.00478V14.8095ZM17.2692 17.0048L16 15.5653V9.00478C16 6.68694 14.4292 4.57431 12 3.58384C9.57078 4.57431 8 6.68694 8 9.00478V15.5653L6.73076 17.0048H17.2692ZM12 11.0048C10.8954 11.0048 10 10.1093 10 9.00478C10 7.90021 10.8954 7.00478 12 7.00478C13.1046 7.00478 14 7.90021 14 9.00478C14 10.1093 13.1046 11.0048 12 11.0048Z"/></svg></span>打开聊天界面 →</button>
 
  <div class="step-label">网关操作</div>
  <div class="cmd-grid">
@@ -1440,7 +1444,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <button class="io-btn" onclick="document.getElementById('logPanel').style.display='none'">关闭</button>
  </div>
  </div>
- <pre id="logContent" style="background:#041c1c;color:#ffe6cb;padding:14px;border-radius:8px;font-family:'SF Mono','Menlo',monospace;font-size:11px;line-height:1.6;max-height:300px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(0,255,200,0.08);">点击「刷新」加载最近日志</pre>
+ <pre id="logContent" style="background:#140d05;color:#f5f0e8;padding:14px;border-radius:8px;font-family:'SF Mono','Menlo',monospace;font-size:11px;line-height:1.6;max-height:300px;overflow:auto;margin:0;white-space:pre-wrap;word-break:break-all;border:1px solid rgba(245,240,232,0.15);">点击「刷新」加载最近日志</pre>
  </div>
 </div></div>
 
@@ -1466,9 +1470,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 <div class="modal-overlay" id="modalOverlay" onclick="closeModal()" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
  <div class="modal-box" onclick="event.stopPropagation();"><h3 id="modalTitle"></h3><p id="modalBody"></p><div class="modal-btns" id="modalBtns"></div></div>
 </div>
-<div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#062424;border-top:1px solid rgba(0,255,200,0.15);padding:12px 24px;z-index:500;text-align:center;">
+<div id="restartBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1d1408;border-top:1px solid var(--warning);padding:12px 24px;z-index:500;text-align:center;">
  <span style="color:var(--fg-muted);font-size:0.85em;">配置已保存，网关将自动热加载（个别改动仍需重启）</span>
- <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(0,255,200,0.15);color:#ffe6cb;border:1px solid rgba(0,255,200,0.3);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">手动重启</button>
+ <button onclick="runCmd('restart')" style="margin-left:12px;padding:7px 18px;background:rgba(var(--pulse-rgb),0.12);color:var(--fg);border:1px solid rgba(var(--pulse-rgb),0.4);border-radius:6px;cursor:pointer;font-size:0.82em;font-weight:500;font-family:inherit;">手动重启</button>
 </div>
 <div id="disconnectOverlay" role="alertdialog" aria-labelledby="dcTitle" aria-describedby="dcDesc">
  <div class="dc-card">
@@ -2814,8 +2818,6 @@ async function checkGateway() {
  var _gn = document.getElementById('gateNotice'); if (_gn) _gn.style.display = 'none';
  dot.className = 'dot on';
  // 大按钮加在线指示
- var launchBtn = document.querySelector('.btn-launch');
- if (launchBtn) launchBtn.style.borderColor = 'var(--emerald)';
  var _t = (typeof _gatewayToken === 'string' && _gatewayToken) ? _gatewayToken : 'openclaw';
  text.innerHTML = 'Gateway \u8fd0\u884c\u4e2d (' + port + ') \u00b7 <a href="http://127.0.0.1:'+port+'/#token='+encodeURIComponent(_t)+'" target="_blank" rel="noopener">\u6253\u5f00\u804a\u5929</a>';
  _setLiveStatus('p', ' [ok] gateway running on :' + port);
@@ -2877,7 +2879,7 @@ function runCmd(cmd) {
  setTimeout(checkGateway, 4000);
  }).catch(function(e){ showToast('\u5931\u8d25: '+e.message, 'error'); });
  } else {
- showModal('openclaw ' + cmd, '<p>\u8bf7\u5728\u7ec8\u7aef\u4e2d\u8fd0\u884c\uff1a</p><code style="display:block;margin-top:8px;padding:10px 14px;background:#041c1c;border:1px solid rgba(0,255,200,0.1);border-radius:8px;font-size:0.88em;color:#ffe6cb;">openclaw ' + cmd + '</code>', [
+ showModal('openclaw ' + cmd, '<p>\u8bf7\u5728\u7ec8\u7aef\u4e2d\u8fd0\u884c\uff1a</p><code style="display:block;margin-top:8px;padding:10px 14px;background:#140d05;border:1px solid rgba(245,240,232,0.15);border-radius:8px;font-size:0.88em;color:#f5f0e8;">openclaw ' + cmd + '</code>', [
  {text:'\u597d', cls:'btn btn-primary', action:'closeModal()'}
  ]);
  }
