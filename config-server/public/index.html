@@ -544,7 +544,7 @@
  .y-cell.s2 { grid-column: span 2; }
  .y-cell.s4 { grid-column: span 4; }
  .y-cell.s6 { grid-column: 1 / -1; }
- @media (min-width: 1024px) { .y-row.nav-row { grid-template-columns: 1fr 2fr 1fr 1fr 1fr; } }
+ @media (min-width: 1024px) { .y-row.nav-row { grid-template-columns: 1fr 2fr 1fr; } }
 
  .y-label { font-size: 0.9375rem; letter-spacing: 0.1875rem; text-transform: uppercase; }
  .y-label-sm { font-size: 0.75rem; letter-spacing: 0.1875rem; text-transform: uppercase; }
@@ -589,14 +589,20 @@
  /* Terminal line clickable when gateway is up — turn cursor on */
  .y-term-b a { color: var(--accent); text-decoration: underline; }
 
- .y-footer { max-width: 860px; margin: 72px auto 0; padding: 28px 20px 10px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px 24px; }
- .y-footer .c { display: flex; align-items: baseline; }
- .y-poem { font-family: var(--font-serif); font-size: 0.88rem; color: var(--fg); letter-spacing: 0.02em; min-width: 0; }
- .y-poem .poem-mark { display: inline-block; width: 7px; height: 7px; background: var(--accent); border-radius: 1px; margin-right: 10px; }
- .y-poem .poem-src { font-family: var(--font-mono); font-size: 0.62rem; color: var(--fg-muted); margin-left: 12px; letter-spacing: 0.08em; }
+ .y-footer { max-width: 860px; margin: 72px auto 0; padding: 30px 20px 16px; border-top: 1px solid var(--border); }
+ .y-foot-main { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px 24px; }
+ .y-foot-main .c { display: flex; align-items: baseline; }
+ .y-poem { font-family: var(--font-serif); font-size: 1rem; color: var(--fg); letter-spacing: 0.01em; min-width: 0; }
+ .y-poem .poem-mark { display: inline-block; width: 8px; height: 8px; background: var(--accent); border-radius: 1px; margin-right: 12px; }
+ .y-poem .poem-src { font-family: var(--font-mono); font-size: 0.62rem; color: var(--fg-muted); margin-left: 14px; letter-spacing: 0.08em; }
  .y-trust { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--fg-muted); }
  .y-site { font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.12em; color: var(--fg); opacity: 0.75; text-decoration: none; margin-right: 20px; transition: opacity 0.2s, color 0.2s; }
  .y-site:hover, .y-site:focus-visible { opacity: 1; color: var(--accent); }
+ .y-almanac { margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border); display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.1em; color: var(--fg-muted); }
+ .y-almanac[hidden] { display: none; }
+ .y-almanac-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; align-self: center; flex: 0 0 auto; }
+ .y-almanac-link { color: inherit; opacity: 0.75; text-decoration: none; transition: opacity 0.2s, color 0.2s; }
+ .y-almanac-link:hover, .y-almanac-link:focus-visible { opacity: 1; color: var(--accent); }
  
 
  .y-theme-toggle { background: none; border: none; cursor: pointer; color: var(--fg); opacity: 0.5; padding: 8px; line-height: 0; transition: opacity 0.2s; display: flex; align-items: center; border-radius: 4px; }
@@ -1181,12 +1187,9 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 <nav class="y-row nav-row" aria-label="Primary">
  <div class="y-cell s1" style="justify-content:center;"><a href="https://yuai-r.cn/" class="y-title" style="text-decoration:none;color:inherit" aria-label="yu.ai 首页"><svg xmlns="http://www.w3.org/2000/svg" viewBox="10.99773 21.210212 41.919409 21.544615" role="img" aria-label="yu.ai" style="display:block;height:30px;width:auto;"><path d="M 45.733398 42.738164 L 41.73629 42.74254 L 41.737375285 40.707591021 A 8.837729855 8.837729855 0 0 1 35.033243 42.6925 A 9.740960697 9.740960697 0 0 1 28.51017967 39.031266945 A 9.54129909 9.54129909 0 0 0 30.574483343 34.572309406 A 5.656539538 5.656539538 0 0 0 40.949690312 35.859788125 A 5.731507417 5.731507417 0 1 0 30.36305225 31.811447406 A 20.573482539 20.573482539 0 0 0 29.939626863 34.753760946 A 10.585050681 10.585050681 0 0 1 25.033905315 41.358815686 A 9.119239881 9.119239881 0 0 1 16.170606141 41.798000109 A 10.358690137 10.358690137 0 0 1 10.99773 35.965116 L 15.334254529 35.967567318 A 5.681724582 5.681724582 0 0 0 22.398260797 38.369841547 A 5.794782642 5.794782642 0 0 0 26.224521625 33.410801625 A 11.676690311 11.676690311 0 0 1 30.222128469 25.429408656 A 8.710111368 8.710111368 0 0 1 39.623506 24.123591875 A 11.711448395 11.711448395 0 0 1 45.746694422 34.434553 L 45.733398 42.738164 Z M 30.094526056 21.213756042 A 16.078573443 16.078573443 0 0 1 29.91016646 24.94437708 A 10.408995195 10.408995195 0 0 0 26.508015877 29.654686048 A 9.313114857 9.313114857 0 0 1 19.702203 31.849336 A 9.502361152 9.502361152 0 0 1 11.081539 21.210212 L 15.117581783 21.218789633 A 8.087155192 8.087155192 0 0 0 15.266308403 24.200214629 A 5.433496857 5.433496857 0 0 0 23.713621493 26.905294666 A 5.999413958 5.999413958 0 0 0 26.125265219 21.222406323 L 30.094526056 21.213756042 Z M 45.724922 21.217266 L 45.721641413 29.955435791 A 10.838411147 10.838411147 0 0 0 41.754415729 24.702180989 L 41.733828 21.226262 L 45.724922 21.217266 Z M 52.91713917 40.191867166 A 2.466790171 2.466790171 0 0 1 47.983558828 40.191867166 A 2.466790171 2.466790171 0 0 1 52.91713917 40.191867166 Z" fill="currentColor" fill-rule="nonzero"/></svg></a></div>
  <div class="y-cell s2" style="padding:0">
- <a class="y-nav-link" href="https://yuai-r.cn/"><span class="y-label">openclaw config <span class="y-blink"></span></span></a>
+ <span class="y-label y-op-5">openclaw config</span>
  </div>
- <div class="y-cell s1" style="padding:0">
- <a class="y-nav-link" href="https://yuai-r.cn/#products"><span class="y-label">products <span class="y-blink"></span></span></a>
- </div>
- 
+
  <div class="y-cell" style="justify-content:space-between">
  <span class="y-label y-op-5">theme</span>
  <button id="y-theme-btn" aria-label="切换主题" class="y-theme-toggle" type="button"><svg class="y-theme-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg><svg class="y-theme-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></button>
@@ -1454,8 +1457,15 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </div>
 
  <footer class="y-footer">
+ <div class="y-foot-main">
  <div class="c y-poem"><span class="poem-mark"></span><span id="daily-poem"></span><span class="poem-src" id="daily-poem-src"></span></div>
  <div class="c"><a class="y-site" href="https://yuai-r.cn/" target="_blank" rel="noopener">yuai-r.cn ↗</a><span class="y-trust">密钥仅保存在本机</span></div>
+ </div>
+ <div class="y-almanac" id="almanac-line" hidden>
+ <span class="y-almanac-dot"></span>
+ <span id="almanac-text"></span>
+ <a class="y-almanac-link" href="https://yuai-r.cn/fortune/almanac/" target="_blank" rel="noopener">天机阁黄历 ↗</a>
+ </div>
 </footer>
 
 </div>
@@ -3021,6 +3031,35 @@ function refreshLogs() {
 }
 
 // ===== VERSION =====
+function loadAlmanac() {
+ // 每日黄历：与 yuai-r.cn 天机阁同源（lunar-javascript，MIT）。
+ // 引擎 vendor 在本机 public/vendor/lunar.js，零网络依赖；
+ // 加载失败时整行隐藏，不占版面。
+ var line = document.getElementById('almanac-line');
+ var txt = document.getElementById('almanac-text');
+ if (!line || !txt) return;
+ function render() {
+ try {
+ var L = window.Lunar;
+ if (!L) { line.hidden = true; return; }
+ var d = L.fromDate(new Date());
+ var yi = d.getDayYi() || [];
+ var ji = d.getDayJi() || [];
+ var yiS = yi.length ? yi.slice(0, 3).join(' · ') : '—';
+ var jiS = ji.length ? ji.slice(0, 2).join(' · ') : '—';
+ txt.textContent = '今日黄历 · ' + d.getYearInGanZhi() + '年 ' + d.getMonthInChinese() + '月' + d.getDayInChinese() + ' ' + d.getDayInGanZhi() + '日 · 宜 ' + yiS + ' · 忌 ' + jiS;
+ line.hidden = false;
+ } catch (e) { line.hidden = true; }
+ }
+ if (window.Lunar) { render(); return; }
+ var s = document.createElement('script');
+ s.src = 'vendor/lunar.js';
+ s.defer = true;
+ s.onload = render;
+ s.onerror = function(){ line.hidden = true; };
+ document.head.appendChild(s);
+}
+
 function loadDailyPoem() {
  // 离线每日诗词：按 UTC 日期确定性轮换，无网络依赖。
  // 38 句经典名句（均为公版古籍），每天固定一句，同一天内刷新不变。
@@ -3248,6 +3287,7 @@ function showLocalModelHints() {
  });
 
  loadDailyPoem();
+ loadAlmanac();
  // Hot-updatable model catalog: apply local cache (or shipped copy)
  // immediately; auto-refresh in background if stale (>7d).
  loadCatalog(true);
