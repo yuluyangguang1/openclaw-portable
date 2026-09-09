@@ -95,7 +95,7 @@ jobs:
             echo "WARNING: Patch did not apply cleanly"
           fi
 
-      - name: Patch fs-safe identity + setup detection timeout for slow disks
+      - name: Patch openclaw dist for slow disks (identity, worker timeouts, plugin skills)
         run: |
           set -e
           # Two field-tested fixes ship via system/patch-exfat-identity.js:
@@ -114,6 +114,17 @@ jobs:
           #    (SetupInferenceDetectionTimeoutError, beta.9 field report).
           #    Bumped to 180s; verified ~76s end-to-end success on the
           #    affected machine.
+          # 3) exFAT volumes support no reparse points at all: symlink
+          #    AND junction creation both fail with EISDIR (probe-
+          #    reproduced). publishPluginSkills therefore fails for every
+          #    plugin skill, hiding browser-automation/canvas skills from
+          #    the agent SDK. Patched to fall back to a recursive copy —
+          #    upstream already treats win32 real directories in
+          #    plugin-skills/ as managed entries (safe cleanup).
+          # 4) models.list runs through the prepared-model-catalog Worker
+          #    (same cold-reload cost); under concurrent setup.detect
+          #    workers on exFAT it exceeded the 180s budget once
+          #    (WorkerTaskError: worker task timed out). Bumped to 300s.
           node system/patch-exfat-identity.js
 
       - name: Lift app shells to zip root

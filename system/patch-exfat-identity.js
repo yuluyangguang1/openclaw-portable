@@ -74,6 +74,23 @@ const SUB_E2 = 'if($1[$2]!==void 0&&$1[$2]!==$3&&process.platform!=="win32")thro
 // 形态 F：setup 推断检测超时 30s → 180s（慢盘 Worker 线程需重载 ESM 全图，30s 必超时）
 const RE_F = /const\s+SETUP_INFERENCE_DETECTION_TIMEOUT_MS\s*=\s*3e4\s*;/;
 const SUB_F = "const SETUP_INFERENCE_DETECTION_TIMEOUT_MS = 18e4;";
+// 形态 G：plugin-skills 符号链接 → 复制兜底（exFAT 不支持 reparse point，EISDIR）。
+//   限定文件名 plugin-skills-*.mjs；调用点改为带兜底的 helper，helper 追加到文件尾。
+const G_FILE = /^plugin-skills-[\w-]*\.mjs$/;
+const RE_G = /fs\.symlinkSync\((\w+)\s*,\s*(\w+)\s*,\s*resolvePluginSkillLinkType\(\)\)/g;
+const G_HELPER = `
+function __ocPluginSkillLink(target, linkPath, type) {
+	try {
+		fs.symlinkSync(target, linkPath, type);
+		return;
+	} catch (e) {}
+	fs.cpSync(target, linkPath, { recursive: true });
+}
+`;
+// 形态 H：模型目录 Worker 超时 180s → 300s（exFAT 冷盘并发 Worker 场景 180s 不够）
+const H_FILE = /^prepared-model-catalog-worker-[\w-]*\.mjs$/;
+const RE_H = /const\s+PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS\s*=\s*18e4\s*;/;
+const SUB_H = "const PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS = 3e5;";
 
 function findDistRoots() {
   const roots = [];
@@ -141,11 +158,24 @@ for (const root of roots) {
     } catch {
       continue;
     }
-    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS")) continue;
+    const base = path.basename(f);
+    const isG = G_FILE.test(base) && text.includes("failed to create plugin skill symlink");
+    const isH = H_FILE.test(base) && text.includes("PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS");
+    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS") && !isG && !isH) continue;
     scanned++;
     let changed = false;
     if (RE_F.test(text)) {
       text = text.replace(RE_F, SUB_F);
+      changed = true;
+    }
+    if (isG && RE_G.test(text)) {
+      RE_G.lastIndex = 0;
+      text = text.replace(RE_G, "__ocPluginSkillLink($1, $2, resolvePluginSkillLinkType())");
+      if (!text.includes("__ocPluginSkillLink(target, linkPath, type)")) text += G_HELPER;
+      changed = true;
+    }
+    if (isH && RE_H.test(text)) {
+      text = text.replace(RE_H, SUB_H);
       changed = true;
     }
     if (RE_A.test(text) || text.includes(OLD)) {
