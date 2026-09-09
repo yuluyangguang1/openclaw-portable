@@ -201,7 +201,12 @@ do_factory_reset() {
     # Step 4: Restore default config
     echo -e "  ${CYAN}[4/4] 恢复默认配置...${NC}"
     mkdir -p "$STATE_DIR"
-    if [ -f "$DEFAULT_CONFIG" ]; then
+    # 通过 helper 恢复，而不是直接 cp 模板：模板里的 token 是占位符，
+    # 直接拷过去等于给每个恢复出厂设置的用户发同一个网关口令。
+    _ENSURECFG_MJS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ensure-config.mjs"
+    if [ -f "$_ENSURECFG_MJS" ]; then
+        "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_PATH" "$DEFAULT_CONFIG" --force
+    elif [ -f "$DEFAULT_CONFIG" ]; then
         cp "$DEFAULT_CONFIG" "$CONFIG_PATH"
     else
         cat > "$CONFIG_PATH" << 'CFGEOF'

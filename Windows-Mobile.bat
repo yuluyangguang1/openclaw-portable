@@ -83,7 +83,16 @@ if not exist "!DATA_DIR!\logs" mkdir "!DATA_DIR!\logs"
 
 REM Ensure base config
 if not exist "!CONFIG_FILE!" (
-    echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}} > "!CONFIG_FILE!"
+    set "_ENSURECFG_MJS="
+    if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
+    if not defined _ENSURECFG_MJS (
+        if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
+    )
+    if defined _ENSURECFG_MJS (
+        "!NODE_BIN!" "!_ENSURECFG_MJS!" "!CONFIG_FILE!" "!PORTABLE_DIR!system\default-config.json"
+    )
+    set "_ENSURECFG_MJS="
+    if not exist "!CONFIG_FILE!" echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}} > "!CONFIG_FILE!"
 )
 
 REM Generate mobile config (inject LAN mode + autoApprove)

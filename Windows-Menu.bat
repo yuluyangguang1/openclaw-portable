@@ -134,6 +134,14 @@ if !errorlevel!==0 (
 )
 cd /d "%CORE_DIR%"
 if not exist "%STATE_DIR%\openclaw.json" (
+    REM 随机网关口令，见 lib\ensure-config.mjs
+    if exist "%PORTABLE_DIR%lib\ensure-config.mjs" (
+        "%NODE_BIN%" "%PORTABLE_DIR%lib\ensure-config.mjs" "%STATE_DIR%\openclaw.json" "%PORTABLE_DIR%system\default-config.json"
+    ) else if exist "%PORTABLE_DIR%system\lib\ensure-config.mjs" (
+        "%NODE_BIN%" "%PORTABLE_DIR%system\lib\ensure-config.mjs" "%STATE_DIR%\openclaw.json" "%PORTABLE_DIR%system\default-config.json"
+    )
+)
+if not exist "%STATE_DIR%\openclaw.json" (
     (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )
 
@@ -470,11 +478,18 @@ echo   [3/4] Clearing memory...
 rmdir /s /q "%DATA_DIR%\memory" 2>nul
 mkdir "%DATA_DIR%\memory" 2>nul
 echo   [4/4] Restoring default config...
-if exist "%PORTABLE_DIR%system\default-config.json" (
+set "_ENSURECFG_MJS="
+if exist "%PORTABLE_DIR%lib\ensure-config.mjs" set "_ENSURECFG_MJS=%PORTABLE_DIR%lib\ensure-config.mjs"
+if not defined _ENSURECFG_MJS if exist "%PORTABLE_DIR%system\lib\ensure-config.mjs" set "_ENSURECFG_MJS=%PORTABLE_DIR%system\lib\ensure-config.mjs"
+if defined _ENSURECFG_MJS (
+    REM 模板里的 token 是占位符，直接 copy 等于所有人共用一个口令
+    "%NODE_BIN%" "%_ENSURECFG_MJS%" "%STATE_DIR%\openclaw.json" "%PORTABLE_DIR%system\default-config.json" --force
+) else if exist "%PORTABLE_DIR%system\default-config.json" (
     copy "%PORTABLE_DIR%system\default-config.json" "%STATE_DIR%\openclaw.json" >nul
 ) else (
     (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )
+set "_ENSURECFG_MJS="
 echo.
 echo   Factory reset complete! Run Setup wizard [1] to reconfigure.
 pause

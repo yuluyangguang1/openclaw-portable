@@ -2,7 +2,8 @@
   "gateway": {
     "mode": "local",
     "auth": {
-      "token": "openclaw"
+      "mode": "token",
+      "token": "__GENERATED_AT_FIRST_RUN__"
     }
   },
   "memory": {

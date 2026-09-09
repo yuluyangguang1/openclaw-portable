@@ -149,7 +149,21 @@ if [ ! -f "$CONFIG_FILE" ]; then
         echo -e "  ${GREEN}Config migrated${NC}"
     else
         echo -e "  ${YELLOW}First run - creating default config...${NC}"
-        cat > "$CONFIG_FILE" << 'CFGEOF'
+        # 网关口令随机生成，见 lib/ensure-config.mjs：固定的 "openclaw" 加上
+        # 一键局域网模式，等于把这台机器的 AI 代理交给同一个 WiFi 下的所有人。
+        # 已存在的配置不会被改动（老包照常工作，配过的手机也不用重配）。
+        _ENSURECFG_MJS=""
+        if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
+            _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
+        elif [ -f "$PORTABLE_DIR/lib/ensure-config.mjs" ]; then
+            _ENSURECFG_MJS="$PORTABLE_DIR/lib/ensure-config.mjs"
+        fi
+        if [ -n "$_ENSURECFG_MJS" ]; then
+            "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_FILE" "$PORTABLE_DIR/system/default-config.json"
+        fi
+        if [ ! -f "$CONFIG_FILE" ]; then
+            # 兜底：helper 缺失或 node 异常时也要有一个能用的配置
+            cat > "$CONFIG_FILE" << 'CFGEOF'
 {
   "gateway": {
     "mode": "local",
@@ -157,6 +171,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
   }
 }
 CFGEOF
+        fi
         echo -e "  ${GREEN}Config created${NC}"
     fi
     echo ""
