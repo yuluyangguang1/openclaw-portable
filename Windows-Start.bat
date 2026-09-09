@@ -73,9 +73,10 @@ set "OPENCLAW_HOME=!DATA_DIR!"
 set "OPENCLAW_STATE_DIR=!STATE_DIR!"
 set "OPENCLAW_DISABLE_BONJOUR=1"
 set "OPENCLAW_CONFIG_PATH=!STATE_DIR!\openclaw.json"
-rem Zero-copy bundled skills dir (survives openclaw reinstalls; enables
-rem true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
-set "OPENCLAW_BUNDLED_SKILLS_DIR=!PORTABLE_DIR!system\skills-zh"
+rem skills-zh is registered through skills.load.extraDirs (see
+rem lib\sync-skill-dirs.mjs below), NOT through OPENCLAW_BUNDLED_SKILLS_DIR:
+rem that env var replaces the kernel's own bundled skills dir instead of
+rem adding to it, which hid ~51 upstream skills.
 rem OpenClaw 2.0: keep its native service supervisor out of the way -
 rem the portable wrapper manages the gateway process itself.
 set "OPENCLAW_SUPERVISOR_MODE=external"
@@ -320,6 +321,20 @@ REM install (exFAT: node_modules link fails -> gateway never ready) and silently
 REM burns the host owner's API quota. Clear them before launching the gateway.
 REM Resolve the helper next to this script first (release zip puts scripts +
 REM lib/ under system/), then fall back to the portable-root layout.
+REM Register skills-zh in skills.load.extraDirs (additive, and a watch
+REM root). The absolute path changes with the drive letter, so re-sync
+REM on every start. Never fatal.
+set "_SKILLSYNC_MJS="
+if exist "!_SCRIPT_DIR!\lib\sync-skill-dirs.mjs" (
+    set "_SKILLSYNC_MJS=!_SCRIPT_DIR!\lib\sync-skill-dirs.mjs"
+) else (
+    if exist "!PORTABLE_DIR!lib\sync-skill-dirs.mjs" set "_SKILLSYNC_MJS=!PORTABLE_DIR!lib\sync-skill-dirs.mjs"
+)
+if defined _SKILLSYNC_MJS (
+    "!NODE_BIN!" "!_SKILLSYNC_MJS!" "!STATE_DIR!\openclaw.json" "!PORTABLE_DIR!system\skills-zh" 2>nul
+)
+set "_SKILLSYNC_MJS="
+
 set "_STRIP_MJS="
 if exist "!_SCRIPT_DIR!\lib\strip-provider-env.mjs" (
     set "_STRIP_MJS=!_SCRIPT_DIR!\lib\strip-provider-env.mjs"
