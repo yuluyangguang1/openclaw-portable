@@ -243,23 +243,38 @@ if exist "%CORE_DIR%\node_modules\acpx" if exist "%CORE_DIR%\node_modules\@zed-i
 )
 
 REM ---- 4. China-optimized skills (zero-copy) ----
-REM skills-zh\ is NOT copied into node_modules. The Start launchers inject
-REM OPENCLAW_BUNDLED_SKILLS_DIR=<portable>\skills-zh, which OpenClaw resolves
-REM natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
-REM Zero-copy survives openclaw reinstalls/upgrades and enables true
-REM hot-reload on 2.0 (the skills watcher ignores node_modules).
+REM skills-zh\ is NOT copied into node_modules. The Start launchers register
+REM it as skills.load.extraDirs (lib\sync-skill-dirs.mjs), which is additive
+REM to the kernel's own bundled skills and is a watch root. Zero-copy
+REM survives openclaw reinstalls/upgrades.
 if exist "%SCRIPT_DIR%system\skills-zh" (
-    echo   [OK] skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)
+    echo   [OK] skills-zh ready (zero-copy, registered in skills.load.extraDirs)
 )
 
 REM ---- 5. Post-install doctor --fix (non-blocking) ----
 REM OpenClaw 2.0 externalizes providers (byteplus/volcengine/deepseek/...)
 REM and migrates codex/* -> openai/* routes; doctor --fix heals both plus
 REM removes stale OpenProse config. Failure must not block setup.
+REM The env quartet is mandatory: without OPENCLAW_SUPERVISOR_MODE doctor
+REM refuses with "could not enter maintenance" (exit 1) on every run, and
+REM without HOME/STATE_DIR/CONFIG_PATH it repairs the host's global config
+REM instead of the portable one. --non-interactive skips shell-completion
+REM install, which would write outside the portable package.
 if exist "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" (
     echo   [RUN] openclaw doctor --fix (auto-migrate config, non-blocking^)...
-    "%NODE_TARGET%\node.exe" "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" doctor --fix >nul 2>&1
+    set "_DATA_DIR=%SCRIPT_DIR%data"
+    set "_STATE_DIR=%SCRIPT_DIR%data\.openclaw"
+    if not exist "!_STATE_DIR!" mkdir "!_STATE_DIR!" >nul 2>&1
+    set "OPENCLAW_HOME=!_DATA_DIR!"
+    set "OPENCLAW_STATE_DIR=!_STATE_DIR!"
+    set "OPENCLAW_CONFIG_PATH=!_STATE_DIR!\openclaw.json"
+    set "OPENCLAW_SUPERVISOR_MODE=external"
+    "%NODE_TARGET%\node.exe" "%CORE_DIR%\node_modules\openclaw\openclaw.mjs" doctor --fix --non-interactive >nul 2>&1
     if errorlevel 1 echo   [WARN] doctor --fix failed (ignored, can run manually later)
+    set "OPENCLAW_HOME="
+    set "OPENCLAW_STATE_DIR="
+    set "OPENCLAW_CONFIG_PATH="
+    set "OPENCLAW_SUPERVISOR_MODE="
 )
 
 REM ---- Done ----
