@@ -349,10 +349,38 @@ do_update() {
     # openclaw 升级 = 新的原厂发货清单 + 干净的 dist/extensions，
     # 提升的官方 provider 插件会被抹掉，必须重跑 promote（幂等）。
     # 用脚本自身位置定位（发布包在 system/lib/，开发树在 lib/，两处都对）
-    local _PROMOTE_MJS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/promote-official-providers.mjs"
+    local _LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local _PROMOTE_MJS="$_LIB_DIR/promote-official-providers.mjs"
     if [ -f "$_PROMOTE_MJS" ]; then
         echo -e "  ${CYAN}重新提升官方 provider 插件为 bundled...${NC}"
         "$NODE_BIN" "$_PROMOTE_MJS" "$CORE_DIR" 2>&1
+    fi
+
+    # exFAT/FAT32 补丁同理：它改的是 node_modules/openclaw/dist 与
+    # @openclaw/fs-safe 包本体，npm install 会把两者整体换新，补丁全部丢失。
+    # 之前只有 CI 构建期跑过一次，所以「菜单里升级内核」会让 U 盘用户的包
+    # 回到升级前的翻车状态（首启 identity 失败 / 目录权限判死 / 0 插件）。
+    # 幂等，非 exFAT 机器上命中同样的形态、行为不变。
+    local _EXFAT_JS="$_LIB_DIR/../patch-exfat-identity.js"
+    [ -f "$_EXFAT_JS" ] || _EXFAT_JS="$_LIB_DIR/../system/patch-exfat-identity.js"
+    if [ -f "$_EXFAT_JS" ]; then
+        echo -e "  ${CYAN}重新应用 exFAT/慢盘补丁...${NC}"
+        (cd "$PORTABLE_DIR" && "$NODE_BIN" "$_EXFAT_JS" 2>&1) \
+            || echo -e "  ${YELLOW}exFAT 补丁未应用（已忽略）${NC}"
+    fi
+
+    # 插件注册表会把「候选被拒」的判定持久化到 state/openclaw.sqlite，
+    # 补丁装上后不会自动重算——实测 exFAT 上补丁已生效但仍报 0 插件，
+    # 直到 registry --refresh 才恢复。失败不阻断。
+    if [ -f "$CORE_DIR/node_modules/openclaw/openclaw.mjs" ]; then
+        echo -e "  ${CYAN}重建插件注册表...${NC}"
+        env OPENCLAW_HOME="$DATA_DIR" \
+            OPENCLAW_STATE_DIR="$STATE_DIR" \
+            OPENCLAW_CONFIG_PATH="$CONFIG_PATH" \
+            OPENCLAW_SUPERVISOR_MODE=external \
+            "$NODE_BIN" "$CORE_DIR/node_modules/openclaw/openclaw.mjs" \
+            plugins registry --refresh >/dev/null 2>&1 \
+            || echo -e "  ${YELLOW}插件注册表重建未通过（已忽略）${NC}"
     fi
 
     # 内核升级会带来 provider 外部化与路由迁移（codex/* -> openai/*），

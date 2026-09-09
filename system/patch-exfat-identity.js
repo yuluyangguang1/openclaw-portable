@@ -14,7 +14,9 @@
  *   file index 为 0（或每次打开都变）→ 验证必然失败 → 网关启动中断。
  *   NTFS/APFS 不受影响（ino 永不为 0，走正常对比逻辑）。
  *
- * 修复（按作用域分平台，POSIX 全程不受影响）：
+ * 修复（A~J 按作用域分平台，POSIX 不受影响；K~M 是 POSIX 侧的
+ * exFAT/FAT 修复，只在「chmod 被文件系统静默忽略」时放行，
+ * ext4/APFS 上 chmod 生效因此行为完全不变）：
  *   A) identityCheck（捆绑 chunk 单行形态）：`if (platform === "win32" && value === 0n) complete = false;`
  *      → complete = true。
  *   A2) identityCheck（@openclaw/fs-safe 包内 tsc 多行形态）：同上翻转。
@@ -44,6 +46,16 @@
  *      4e4 → 2e5）：UI 侧 40s 即放弃并报 "gateway request timed out
  *      after 40000ms"，服务端 Worker 180s 能完成但 UI 等不到。提到 200s
  *      盖住服务端 180s + 余量（NTFS 毫秒级完成，此值无所谓）。
+ *   J) Control UI 资产清单重签（详见 fixControlUiManifest 注释）。
+ *   K) 目录模式强制（fs-safe directoryModeOwner.apply）：
+ *      "Gateway failed to start: directory final mode could not be verified"。
+ *   L) SQLite 状态协调器目录：
+ *      "... directory permissions are not private"。
+ *   M) 插件发现 path_world_writable：静默 0 插件（无任何日志）。
+ *      K/L/M 是 mac/Linux 挂载 exFAT/FAT 时的三道 win32 豁免门（Windows
+ *      因为整段跳过所以从来没暴露）。三处都改成「chmod 探针」语义：只有
+ *      在权限位完全没被 chmod 改动（= 文件系统不支持权限位）时才放行，
+ *      真 POSIX 卷上 chmod 生效，判死逻辑一字不变。详见各 applyK/L/M 注释。
  *
  * 覆盖范围：openclaw/dist 捆绑副本 + node_modules/@openclaw/fs-safe 包本体
  * （运行时真正的 atomic 写路径走包本体，beta.8 只补了捆绑副本所以仍翻车）。
@@ -108,6 +120,154 @@ const SUB_H = "const PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS = 3e5;";
 const I_FILE = /^model-setup-page-[\w-]*\.js$/;
 const RE_I = /(\w+)=4e4,(\w+)=15e4,(\w+)=48e4/;
 const SUB_I = "$1=2e5,$2=15e4,$3=48e4";
+// 形态 K：目录权限位强制 —— "directory final mode could not be verified"。
+//   @openclaw/fs-safe 的 directoryModeOwner.apply()：inspect 取 currentMode →
+//   chmod(0700) → 再 inspect 取 finalMode，finalMode !== mode 即抛。win32 靠
+//   ignoreChmodError 豁免，Linux/macOS 不豁免；而 exFAT/FAT 的 chmod 是 no-op
+//   （返回成功、模式一动不动，实测 want=700 got=777）→ 网关必然启动失败。
+//   修法：只有「chmod 确实改动过模式」才判死（finalMode !== currentMode）；
+//   模式完全没动说明该文件系统不支持权限位，容忍。真 POSIX 卷上 chmod 生效
+//   ⇒ finalMode === mode ⇒ 根本不进这个条件，行为完全不变。
+const RE_K1 = /if \(!(\w+)\.ignoreChmodError && (\w+) !== (\w+)\) \{\s*throw new FsSafeError\("path-mismatch", "directory final mode could not be verified"\);/;
+const RE_K2 = /if\((\w+)\.check\?\.\(\),!(\w+)\.ignoreChmodError&&(\w+)!==(\w+)\)throw new FsSafeError\(`path-mismatch`,`directory final mode could not be verified`\)/g;
+// 形态 L：SQLite 状态协调器目录 —— "directory permissions are not private"。
+//   ensurePrivateSqliteCoordinatorDirectory 在非 win32 上 chmod 到 0700 后要求
+//   (mode & 0o077) === 0，exFAT 上同样必败（0777）。修法同形态 K：模式与 chmod
+//   之前完全一致（(secured.mode & 4095) === (stats.mode & 4095)）时容忍。
+const RE_L1 = /if \(\((\w+)\.mode & 4095\) !== 448\) applyPrivateModeSync\((\w+), 448\);\s*const (\w+) = ([\w$]+)\.lstatSync\(\2\);\s*if \(\3\.isSymbolicLink\(\) \|\| !\3\.isDirectory\(\) \|\| \(\3\.mode & 63\) !== 0\)/g;
+const RE_L2 = /\((\w+)\.mode&4095\)!=448&&applyPrivateModeSync\((\w+),448\);let (\w+)=fs\.lstatSync\(\2\);if\(\3\.isSymbolicLink\(\)\|\|!\3\.isDirectory\(\)\|\|\3\.mode&63\)/g;
+const SUB_L2 =
+  "($1.mode&4095)!=448&&applyPrivateModeSync($2,448);let $3=fs.lstatSync($2);" +
+  "if($3.isSymbolicLink()||!$3.isDirectory()||$3.mode&63&&($3.mode&4095)!==($1.mode&4095))";
+const RE_L_DONE = /\(\w+\.mode ?& ?4095\) ?!== ?\(\w+\.mode ?& ?4095\)/;
+// 形态 M：插件发现 path_world_writable —— 静默 0 插件（无任何错误日志）。
+//   checkPathStatAndPermissions 对 win32 直接 return null；POSIX 下只要
+//   modeBits & 0o002 就把候选插件丢掉，exFAT 的 0777 目录全部命中，实测
+//   "http server listening (0 plugins)"，且不打印一行原因。
+//   修法：判死前跑一次 chmod 探针确认文件系统是否忽略权限位——收紧组/其他
+//   写位再 lstat，模式没动即容忍；模式动了立刻还原并维持判死（真 POSIX 卷
+//   上的世界可写目录照旧被拦）。探针不留下持久修改。
+const RE_M1 = /if \(\((\w+) & 2\) !== 0\) return \{\s*reason: "path_world_writable",/;
+const RE_M2 = /if\((\w+)&2\)return\{reason:`path_world_writable`,sourcePath:(\w+)\.source,rootPath:\2\.rootDir,targetPath:(\w+),modeBits:\1\}/g;
+const SUB_M2 =
+  "if($1&2&&!__ocChmodIgnored($3,$1))return{reason:`path_world_writable`," +
+  "sourcePath:$2.source,rootPath:$2.rootDir,targetPath:$3,modeBits:$1}";
+const M_HELPER = `
+function __ocChmodIgnored(targetPath, modeBits) {
+	try {
+		const want = modeBits & -19;
+		if (want === modeBits) return false;
+		fs.chmodSync(targetPath, want);
+		const after = fs.lstatSync(targetPath).mode & 511;
+		if (after === modeBits) return true;
+		try {
+			fs.chmodSync(targetPath, modeBits);
+		} catch {}
+		return false;
+	} catch {
+		return false;
+	}
+}
+`;
+
+// 形态 K：两种形态都要先拿到 currentMode 的变量名（压缩后名字不定），
+//   用「apply() 开头那次 inspect + 紧随的 currentMode === mode 判断」定位。
+function applyK(text) {
+  let changed = false;
+  const m1 = text.match(RE_K1);
+  if (m1) {
+    const [, params, finalMode, mode] = m1;
+    const cur = text.match(
+      new RegExp(`const (\\w+) = await ${params}\\.inspect\\(\\);[\\s\\S]{0,200}?\\1 === ${mode}`)
+    );
+    if (cur) {
+      text = text.replace(
+        m1[0],
+        m1[0].replace(
+          `!${params}.ignoreChmodError && ${finalMode} !== ${mode})`,
+          `!${params}.ignoreChmodError && ${finalMode} !== ${mode} && ${finalMode} !== ${cur[1]})`
+        )
+      );
+      changed = true;
+    } else {
+      console.warn("[patch] K1: 命中抛点但未定位 currentMode，跳过");
+    }
+  }
+  RE_K2.lastIndex = 0;
+  if (RE_K2.test(text)) {
+    RE_K2.lastIndex = 0;
+    text = text.replace(RE_K2, (match, checks, params, finalMode, mode, offset, whole) => {
+      const window = whole.slice(Math.max(0, offset - 3000), offset);
+      const cur = window.match(
+        new RegExp(
+          `let (\\w+)=await ${params}\\.inspect\\(\\);if\\(${checks}\\.check\\?\\.\\(\\),\\1===${mode}&&`
+        )
+      );
+      if (!cur) {
+        console.warn("[patch] K2: 命中抛点但未定位 currentMode，跳过");
+        return match;
+      }
+      changed = true;
+      return match.replace(`${finalMode}!==${mode})`, `${finalMode}!==${mode}&&${finalMode}!==${cur[1]})`);
+    });
+  }
+  return { text, changed };
+}
+
+function applyL(text) {
+  let changed = false;
+  if (RE_L_DONE.test(text)) return { text, changed };
+  RE_L1.lastIndex = 0;
+  if (RE_L1.test(text)) {
+    RE_L1.lastIndex = 0;
+    text = text.replace(
+      RE_L1,
+      (match, stats, dirPath, secured, fsns) =>
+        `if ((${stats}.mode & 4095) !== 448) applyPrivateModeSync(${dirPath}, 448);\n` +
+        `\t\tconst ${secured} = ${fsns}.lstatSync(${dirPath});\n` +
+        `\t\tif (${secured}.isSymbolicLink() || !${secured}.isDirectory() || ` +
+        `((${secured}.mode & 63) !== 0 && (${secured}.mode & 4095) !== (${stats}.mode & 4095)))`
+    );
+    changed = true;
+  }
+  RE_L2.lastIndex = 0;
+  if (RE_L2.test(text)) {
+    RE_L2.lastIndex = 0;
+    text = text.replace(RE_L2, SUB_L2);
+    changed = true;
+  }
+  return { text, changed };
+}
+
+function applyM(text) {
+  let changed = false;
+  if (text.includes("__ocChmodIgnored(")) return { text, changed };
+  const m1 = text.match(RE_M1);
+  if (m1) {
+    const modeBits = m1[1];
+    const anchor = text.match(new RegExp(`fs\\.chmodSync\\((\\w+), ${modeBits} & -19\\)`));
+    if (anchor) {
+      text = text.replace(
+        m1[0],
+        m1[0].replace(
+          `((${modeBits} & 2) !== 0)`,
+          `((${modeBits} & 2) !== 0 && !__ocChmodIgnored(${anchor[1]}, ${modeBits}))`
+        )
+      );
+      changed = true;
+    } else {
+      console.warn("[patch] M1: 命中判死点但未定位 targetPath，跳过");
+    }
+  }
+  RE_M2.lastIndex = 0;
+  if (RE_M2.test(text)) {
+    RE_M2.lastIndex = 0;
+    text = text.replace(RE_M2, SUB_M2);
+    changed = true;
+  }
+  if (changed && !text.includes("function __ocChmodIgnored(")) text += M_HELPER;
+  return { text, changed };
+}
 
 function findDistRoots() {
   const roots = [];
@@ -179,9 +339,33 @@ for (const root of roots) {
     const isG = G_FILE.test(base) && text.includes("failed to create plugin skill symlink");
     const isH = H_FILE.test(base) && text.includes("PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS");
     const isI = I_FILE.test(base) && /=4e4,/.test(text);
-    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS") && !isG && !isH && !isI) continue;
+    const isK = text.includes("directory final mode could not be verified");
+    const isL = text.includes("directory permissions are not private");
+    const isM = text.includes("path_world_writable");
+    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS") && !isG && !isH && !isI && !isK && !isL && !isM) continue;
     scanned++;
     let changed = false;
+    if (isK) {
+      const r = applyK(text);
+      if (r.changed) {
+        text = r.text;
+        changed = true;
+      }
+    }
+    if (isL) {
+      const r = applyL(text);
+      if (r.changed) {
+        text = r.text;
+        changed = true;
+      }
+    }
+    if (isM) {
+      const r = applyM(text);
+      if (r.changed) {
+        text = r.text;
+        changed = true;
+      }
+    }
     if (RE_F.test(text)) {
       text = text.replace(RE_F, SUB_F);
       changed = true;
