@@ -2175,8 +2175,8 @@ function listSkillsInDir(root, source, managed) {
 
 function skillEnabledState(id) {
   try {
-    const cfg = safeReadConfig();
-    const v = cfg && cfg.skills && cfg.skills.entries && cfg.skills.entries[id];
+    const { config } = safeReadConfig();
+    const v = config && config.skills && config.skills.entries && config.skills.entries[id];
     if (v && typeof v === 'object' && 'enabled' in v) return v.enabled !== false;
   } catch (_) {}
   return true; // OpenClaw default: skills are enabled unless explicitly disabled

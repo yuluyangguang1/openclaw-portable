@@ -127,8 +127,17 @@ preflight_run() {
     fi
 
     if [ ${#FAILS[@]} -gt 0 ]; then
+        # FAILS holds both problems and their indented "→" hint lines, so the
+        # array length is not the problem count. Count non-indented entries.
+        local PROBLEM_COUNT=0
+        for line in "${FAILS[@]}"; do
+            case "$line" in
+                "  "*) ;;
+                *) PROBLEM_COUNT=$((PROBLEM_COUNT + 1)) ;;
+            esac
+        done
         echo ""
-        echo -e "  ${RED}┌─ 启动失败：发现 ${#FAILS[@]} 个问题 ─────────${NC}"
+        echo -e "  ${RED}┌─ 启动失败：发现 ${PROBLEM_COUNT} 个问题 ─────────${NC}"
         for line in "${FAILS[@]}"; do
             echo -e "  ${RED}│${NC} $line"
         done
