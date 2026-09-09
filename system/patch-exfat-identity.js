@@ -237,6 +237,69 @@ for (const root of roots) {
       console.log("[patch] fixed: " + f);
     }
   }
+  // 形态 J：Control UI 资产清单重签（每 root 一次）
+  patched += fixControlUiManifest(root);
+}
+
+// 形态 J：形态 I 改了 control-ui/assets/model-setup-page-*.js 的内容（等长 4e4→2e5），
+//   但 asset-manifest.json 里的 sha256 与 .br/.gz 预压缩变体未同步，导致两个问题：
+//   ① 网关启动留存校验报 "Control UI asset changed while being retained"（warn，
+//      server-start-BB-IxTAg.mjs 的校验复制按清单 sha256 逐字节核对）；
+//   ② 浏览器可能加载未更新的 .br/..gz 变体——里面仍是旧的 40s 请求上限，
+//      形态 I 等于白打。此处重压缩两变体 + 重签三 entry 的 sha256/size + 重算
+//      generation（算法：sha256(path\0size\0sha256\n) 逐条拼接）。幂等。
+function fixControlUiManifest(root) {
+  const crypto = require("crypto");
+  const zlib = require("zlib");
+  const manifestPath = path.join(root, "control-ui", "asset-manifest.json");
+  const assetsDir = path.join(root, "control-ui", "assets");
+  if (!fs.existsSync(manifestPath) || !fs.existsSync(assetsDir)) return 0;
+  const JS_RE = /(\w+)=4e4,(\w+)=15e4,(\w+)=48e4/;
+  let targetBase = null;
+  for (const f of fs.readdirSync(assetsDir)) {
+    if (!/^model-setup-page-.*\.js$/.test(f)) continue;
+    const txt = fs.readFileSync(path.join(assetsDir, f), "utf8");
+    if (JS_RE.test(txt) || (/=2e5,/.test(txt) && /=15e4,/.test(txt))) { targetBase = f; break; }
+  }
+  if (!targetBase) return 0;
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const rawPath = path.join(assetsDir, targetBase);
+  let raw = fs.readFileSync(rawPath);
+  let touched = 0;
+  if (JS_RE.test(raw.toString("utf8"))) {
+    raw = Buffer.from(raw.toString("utf8").replace(JS_RE, "$1=2e5,$2=15e4,$3=48e4"), "utf8");
+    fs.writeFileSync(rawPath, raw);
+    console.log("[patch] J: patched raw js: " + targetBase);
+    touched++;
+  }
+  const gz = zlib.gzipSync(raw, { level: 9 });
+  const br = zlib.brotliCompressSync(raw, {
+    params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
+  });
+  fs.writeFileSync(rawPath + ".gz", gz);
+  fs.writeFileSync(rawPath + ".br", br);
+  const variants = {
+    ["assets/" + targetBase]: raw,
+    ["assets/" + targetBase + ".gz"]: gz,
+    ["assets/" + targetBase + ".br"]: br,
+  };
+  for (const entry of manifest.assets) {
+    const buf = variants[entry.path];
+    if (!buf) continue;
+    entry.sha256 = crypto.createHash("sha256").update(buf).digest("hex");
+    entry.size = buf.length;
+    touched++;
+  }
+  const h = crypto.createHash("sha256");
+  for (const entry of manifest.assets) {
+    h.update(entry.path); h.update("\0");
+    h.update(String(entry.size)); h.update("\0");
+    h.update(entry.sha256); h.update("\n");
+  }
+  manifest.generation = h.digest("hex");
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  console.log("[patch] J: control-ui manifest re-signed (" + targetBase + " raw/gz/br + generation)");
+  return touched;
 }
 
 console.log(
