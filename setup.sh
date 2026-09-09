@@ -247,6 +247,31 @@ if [ "$NEED_INSTALL" = "true" ]; then
     echo -e "  ${GREEN}[ok]${NC} OpenClaw 安装完成"
 fi
 
+# ---- 2a-2. Koffi native prebuilds for every bundled runtime ----
+# koffi 把各平台预编译二进制做成 @koromix/koffi-<os>-<arch> optionalDependencies，
+# npm 只物化「安装宿主」平台的那个。CI 在 Linux 上打包时 zip 里就会缺
+# win32/darwin 的 prebuild，9.3 网关启动要读 sqlite 快照（koffi FFI），
+# Windows U 盘首启直接死于 "Cannot find the native Koffi module"。
+# 这里按 koffi 自身版本强制补齐所有随包运行时对应的 prebuild。
+if [ -d "$CORE_DIR/node_modules/koffi" ]; then
+    KOFFI_VER=$("$NODE_TARGET/bin/node" -e "try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){}" "$CORE_DIR/node_modules/koffi/package.json" 2>/dev/null)
+    if [ -n "$KOFFI_VER" ]; then
+        _PREBUILD_PKGS=""
+        for _plat in win32-x64 win32-arm64 darwin-x64 darwin-arm64 linux-x64 linux-arm64; do
+            [ -d "$CORE_DIR/node_modules/@koromix/koffi-$_plat" ] || _PREBUILD_PKGS="$_PREBUILD_PKGS @koromix/koffi-$_plat@$KOFFI_VER"
+        done
+        if [ -n "$_PREBUILD_PKGS" ]; then
+            echo -e "  ${CYAN}[v]${NC} 补齐 koffi 原生 prebuild（$_PREBUILD_PKGS ）..."
+            # --force 跳过 os/cpu 平台检查（宿主非该平台也允许装）
+            if "$NODE_TARGET/bin/npm" install --prefix "$CORE_DIR" --no-save --force $_PREBUILD_PKGS >/dev/null 2>&1; then
+                echo -e "  ${GREEN}[ok]${NC} koffi prebuild 已补齐"
+            else
+                echo -e "  ${YELLOW}[!]${NC} koffi prebuild 补齐失败（离线？），Windows/macOS 启动可能报 Koffi 模块缺失"
+            fi
+        fi
+    fi
+fi
+
 # ---- 2b. Verify official provider plugins are present ----
 MISSING_PROVIDERS=""
 for _p in arcee cerebras cohere deepinfra deepseek fireworks gmi groq kilocode kimi \

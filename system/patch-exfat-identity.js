@@ -14,11 +14,22 @@
  *   file index 为 0（或每次打开都变）→ 验证必然失败 → 网关启动中断。
  *   NTFS/APFS 不受影响（ino 永不为 0，走正常对比逻辑）。
  *
- * 修复（两种形态，均只影响 ino/值为 0n 的场景，NTFS/APFS 不受影响）：
- *   A) identityCheck：`if (platform === "win32" && value === 0n) complete = false;`
- *      → 反转为 complete = true —— 文件系统提供不了身份时跳过对比，而不是判死。
- *   B) supervisor/native 锚定检查：`if (typeof value !== "bigint" || value === 0n) throw lastError(...)`
- *      → 去掉 `|| value === 0n` 条件。
+ * 修复（按作用域分平台，POSIX 全程不受影响）：
+ *   A) identityCheck（捆绑 chunk 单行形态）：`if (platform === "win32" && value === 0n) complete = false;`
+ *      → complete = true。
+ *   A2) identityCheck（@openclaw/fs-safe 包内 tsc 多行形态）：同上翻转。
+ *   B) supervisor/native 锚定（非压缩）：去掉 `|| value === 0n` 判死条件。
+ *   C) identityCheck（minified，变量名不定）：if(X===`win32`&&Y===0n)Z=!1; → Z=!0;
+ *   D) assertPath / 临时目录身份（minified）：`process.platform===`win32`&&(Y.dev===0n||Y.ino===0n)` → !1
+ *   E) 跨调用身份对比抛点（known[field] !== value → throw）：
+ *      exFAT/FAT32 的 file index 在 rename 后会变（index 源自目录项位置），
+ *      「fstat(旧句柄) vs lstat(rename 后路径)」必然失配。win32 上改为
+ *      仅记录新值、不判死（POSIX 保持严格）；真实内容一致性由原子写的
+ *      哈希校验兜底。实测堆栈：replaceFileAtomicSync → assertPublished →
+ *      assertCurrent → identityCheck（beta.8 U 盘现场，探针复现）。
+ *
+ * 覆盖范围：openclaw/dist 捆绑副本 + node_modules/@openclaw/fs-safe 包本体
+ * （运行时真正的 atomic 写路径走包本体，beta.8 只补了捆绑副本所以仍翻车）。
  *
  * 用法（在便携包根目录，或任意位置——脚本会自动上溯找 node_modules）：
  *   runtime\node-win-x64\node.exe system\patch-exfat-identity.js
@@ -43,18 +54,39 @@ const RE_C = /if\((\w+)===`win32`&&(\w+)===0n\)(\w+)=!1;/g;
 //   ...||process.platform===`win32`&&(Y.dev===0n||Y.ino===0n))throw → 条件恒 false
 const RE_D = /process\.platform===`win32`&&\((\w+)\.dev===0n\|\|\1\.ino===0n\)/g;
 const SUB_D = '!1';
+// 形态 A2：identityCheck（@openclaw/fs-safe 包内 tsc 多行形态）——0n 时跳过对比
+const RE_A2 = /if\s*\(\s*platform\s*===?\s*"win32"\s*&&\s*value\s*===?\s*0n\s*\)\s*\{\s*complete\s*=\s*false\s*;\s*\}/;
+const SUB_A2 = 'if (platform === "win32" && value === 0n) {\n                complete = true;\n            }';
+// 形态 E：跨调用身份对比抛点（known[field] !== value → throw identityMismatch()）。
+//   exFAT/FAT32 的 file index 跨 rename 必变，fstat(旧句柄) vs lstat(新路径) 必失配。
+//   win32 上改为仅记录新值不判死（platform 参数就在 identityCheck 作用域内）；
+//   POSIX 保持严格。兼容 formatted（undefined）与捆绑 chunk（void 0）两种写法。
+const RE_E = /if\s*\(\s*known\[field\]\s*!==?\s*(?:undefined|void 0)\s*&&\s*known\[field\]\s*!==?\s*value\s*\)\s*throw\s+identityMismatch\s*\(\s*\)\s*;/;
+const SUB_E = 'if (platform !== "win32" && known[field] !== undefined && known[field] !== value) throw identityMismatch();';
+// 形态 E2：同上（minified，变量名不定）—— if(X[Y]!==void 0&&X[Y]!==Z)throw identityMismatch();
+const RE_E2 = /if\((\w+)\[(\w+)\]!==void 0&&\1\[\2\]!==(\w+)\)throw identityMismatch\(\);/g;
+const SUB_E2 = 'if($1[$2]!==void 0&&$1[$2]!==$3&&process.platform!=="win32")throw identityMismatch();';
 
 function findDistRoots() {
   const roots = [];
-  // 1) 从脚本位置上溯（便携包布局：system/ 在包根，内核在 app/core/node_modules）
-  let dir = __dirname;
-  for (let i = 0; i < 5; i++) {
+  const addRoot = (dir) => {
     for (const rel of [
       path.join(dir, "app", "core", "node_modules", "openclaw", "dist"),
       path.join(dir, "node_modules", "openclaw", "dist"),
     ]) {
-      if (fs.existsSync(rel)) roots.push(rel);
+      if (fs.existsSync(rel) && !roots.includes(rel)) {
+        roots.push(rel);
+        // 运行时的 atomic 写路径走 @openclaw/fs-safe 包本体（beta.8 教训：
+        // 只补 openclaw/dist 捆绑副本，包本体不补照样翻车）。
+        const fsSafe = path.join(path.dirname(path.dirname(rel)), "@openclaw", "fs-safe", "dist");
+        if (fs.existsSync(fsSafe) && !roots.includes(fsSafe)) roots.push(fsSafe);
+      }
     }
+  };
+  // 1) 从脚本位置上溯（便携包布局：system/ 在包根，内核在 app/core/node_modules）
+  let dir = __dirname;
+  for (let i = 0; i < 5; i++) {
+    addRoot(dir);
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -62,12 +94,7 @@ function findDistRoots() {
   // 2) 当前工作目录
   dir = process.cwd();
   for (let i = 0; i < 5; i++) {
-    for (const rel of [
-      path.join(dir, "app", "core", "node_modules", "openclaw", "dist"),
-      path.join(dir, "node_modules", "openclaw", "dist"),
-    ]) {
-      if (fs.existsSync(rel) && !roots.includes(rel)) roots.push(rel);
-    }
+    addRoot(dir);
     const parent = path.dirname(dir);
     if (parent === dir) break;
     dir = parent;
@@ -106,11 +133,24 @@ for (const root of roots) {
     } catch {
       continue;
     }
-    if (!text.includes("value === 0n") && !/===0n/.test(text)) continue;
+    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text)) continue;
     scanned++;
     let changed = false;
     if (RE_A.test(text) || text.includes(OLD)) {
       text = text.replace(RE_A, SUB_A).split(OLD).join(NEW);
+      changed = true;
+    }
+    if (RE_A2.test(text)) {
+      text = text.replace(RE_A2, SUB_A2);
+      changed = true;
+    }
+    if (RE_E.test(text)) {
+      text = text.replace(RE_E, SUB_E);
+      changed = true;
+    }
+    if (RE_E2.test(text)) {
+      RE_E2.lastIndex = 0;
+      text = text.replace(RE_E2, SUB_E2);
       changed = true;
     }
     if (RE_B.test(text)) {
