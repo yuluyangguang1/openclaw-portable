@@ -130,6 +130,20 @@ jobs:
           #    Worker finishes within 180s but the UI already gave up
           #    ("gateway request timed out after 40000ms"). Bumped to
           #    200s in model-setup-page-*.js (no-op on fast disks).
+          # 6) Three POSIX permission gates are explicitly skipped on
+          #    win32 but not on Linux/macOS, and exFAT/FAT silently
+          #    ignores chmod, so a mac (or Linux) user running the same
+          #    USB stick hits, in order: "directory final mode could not
+          #    be verified" (gateway will not start), "coordinator
+          #    directory permissions are not private" (same), and
+          #    path_world_writable, which drops every plugin candidate
+          #    (measured: 0 plugins, no error in the gateway log).
+          #    macOS mounts exFAT noowners/0777 and mount_exfat has no
+          #    umask option, so there is no mount-side workaround.
+          #    All three now tolerate the mismatch only when chmod
+          #    provably did not move the mode; on ext4/APFS chmod works,
+          #    so the checks behave exactly as before (verified on a real
+          #    exFAT volume: 13 plugins, same as ext4).
           node system/patch-exfat-identity.js
 
       - name: Lift app shells to zip root
