@@ -146,7 +146,7 @@ jobs:
           echo "$R" | grep -q '"portable"' || { echo "FAIL: /api/version: $R"; exit 1; }
           echo "OK: /api/version"
 
-          R=$(curl -fsS http://127.0.0.1:18750/api/config)
+          R=$(curl -fsS -H "X-OpenClaw-Token: $TOKEN" http://127.0.0.1:18750/api/config)
           echo "$R" | grep -q '"gateway"' || { echo "FAIL: /api/config GET: $R"; exit 1; }
           echo "OK: /api/config GET"
 
@@ -155,7 +155,7 @@ jobs:
           echo "$R" | grep -q '"ok":true' || { echo "FAIL: /api/config POST: $R"; exit 1; }
           echo "OK: /api/config POST"
 
-          R=$(curl -fsS http://127.0.0.1:18750/api/config)
+          R=$(curl -fsS -H "X-OpenClaw-Token: $TOKEN" http://127.0.0.1:18750/api/config)
           echo "$R" | grep -q '"deepseek"' || { echo "FAIL: config not persisted: $R"; exit 1; }
           echo "OK: config persisted"
 
@@ -170,9 +170,25 @@ jobs:
           [ "$STATUS" = "401" ] || { echo "FAIL: unauthenticated POST should return 401, got $STATUS"; exit 1; }
           echo "OK: unauthenticated POST blocked (401)"
 
+          # Secrets are no longer readable without the token.
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18750/api/config)
+          [ "$STATUS" = "401" ] || { echo "FAIL: anonymous GET /api/config should be 401, got $STATUS"; exit 1; }
+          echo "OK: anonymous GET /api/config blocked (401)"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:18750/api/mobile/info)
+          [ "$STATUS" = "401" ] || { echo "FAIL: anonymous GET /api/mobile/info should be 401, got $STATUS"; exit 1; }
+          echo "OK: anonymous GET /api/mobile/info blocked (401)"
+
+          # A page on another local port is a different origin: it must not
+          # be able to trade its way to the token.
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Origin: http://localhost:3000" http://127.0.0.1:18750/api/bootstrap)
+          [ "$STATUS" = "403" ] || { echo "FAIL: cross-origin bootstrap should be 403, got $STATUS"; exit 1; }
+          echo "OK: cross-origin bootstrap blocked (403)"
+
           R=$(curl -fsS http://127.0.0.1:18750/)
           echo "$R" | grep -q "OpenClaw Portable" || { echo "FAIL: index.html missing brand"; exit 1; }
           echo "OK: index.html served"
+          echo "$R" | grep -q "window.__OC_TOKEN=" || { echo "FAIL: index.html missing injected token"; exit 1; }
+          echo "OK: index.html carries the injected token"
 
           # --path-as-is keeps curl from collapsing '..' before sending,
           # and %2e%2e ensures even pedantic clients pass the literal dots.
@@ -225,7 +241,7 @@ jobs:
             if (-not $v.portable) { throw "version missing" }
             Write-Host "OK: /api/version"
 
-            $c = Invoke-RestMethod "$base/api/config"
+            $c = Invoke-RestMethod "$base/api/config" -Headers $authHeaders
             if (-not $c.gateway) { throw "config missing gateway" }
             Write-Host "OK: /api/config GET"
 
@@ -238,7 +254,7 @@ jobs:
             if (-not $r.ok) { throw "POST /api/config not ok" }
             Write-Host "OK: /api/config POST"
 
-            $c2 = Invoke-RestMethod "$base/api/config"
+            $c2 = Invoke-RestMethod "$base/api/config" -Headers $authHeaders
             if (-not $c2.models.providers.deepseek) { throw "config not persisted" }
             Write-Host "OK: config persisted"
 
@@ -264,6 +280,8 @@ jobs:
             $idx = Invoke-WebRequest "$base/" -UseBasicParsing
             if ($idx.Content -notmatch "OpenClaw Portable") { throw "index.html missing brand" }
             Write-Host "OK: index.html served"
+            if ($idx.Content -notmatch "window.__OC_TOKEN=") { throw "index.html missing injected token" }
+            Write-Host "OK: index.html carries the injected token"
 
             $req = [System.Net.HttpWebRequest]::Create("$base/%2e%2e/server.js")
             $req.Method = "GET"

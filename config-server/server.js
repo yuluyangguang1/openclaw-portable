@@ -804,11 +804,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // CORS: only echo Origin back when it's a localhost origin. We also
-  // allow X-OpenClaw-Token in CORS request headers so the preflight
-  // succeeds for our own UI.
+  // CORS: only echo Origin back when it is exactly our own bound
+  // address. A page served from any other local port (dev server,
+  // Jupyter, another tool's panel) is a different origin and has no
+  // business reading our responses — it used to be allowed, which let it
+  // pull the token out of /api/bootstrap and then drive every write
+  // endpoint. We also allow X-OpenClaw-Token in CORS request headers so
+  // the preflight succeeds for our own UI.
   const origin = req.headers.origin || '';
-  const isLocalOrigin = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
+  const isLocalOrigin = origin === `http://127.0.0.1:${boundPort}` ||
+    origin === `http://localhost:${boundPort}`;
   if (isLocalOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
@@ -829,13 +834,16 @@ const server = http.createServer((req, res) => {
     'GET /api/port',
     'GET /api/version',
     'GET /api/bootstrap',
-    'GET /api/config',            // Read-only; no secrets exposed (API keys are in the config the user already has)
     'GET /api/logs',              // Read-only log tail
     'GET /api/local/scan',        // Read-only local model scan
     'GET /api/update/check',      // Read-only version check
-    'GET /api/mobile/info',       // Read-only LAN IPs for mobile connect
     'GET /api/models/catalog',    // Read-only model catalog (no secrets — base URLs/model names)
   ]);
+  // NOT public, despite being reads: /api/config returns provider API keys
+  // in plaintext (the secret store falls back to inline values when the
+  // openclaw CLI is unavailable) and /api/mobile/info returns the gateway
+  // token, which is full control of the agent. The page gets its token
+  // injected into index.html, so requiring auth here costs it nothing.
 
   const urlPath = (req.url || '').split('?')[0];
   const route = `${req.method} ${urlPath}`;
@@ -1042,8 +1050,10 @@ const server = http.createServer((req, res) => {
         if (rt && rt.gatewayPort) gwPort = rt.gatewayPort;
       }
     } catch (_) {}
-    // Read token from config
-    let token = 'openclaw';
+    // Read token from config. No fallback literal: if the config has no
+    // token the UI must say so rather than print a token that is not
+    // actually in force.
+    let token = '';
     try {
       const { config } = safeReadConfig();
       if (config && config.gateway && config.gateway.auth && config.gateway.auth.token) {
@@ -2462,14 +2472,39 @@ if (req.url === '/api/skills/delete' && req.method === 'POST') {
   if (stat && stat.isFile()) {
     const ext = path.extname(resolved);
     const contentType = {
-      '.html': 'text/html',
-      '.css': 'text/css',
-      '.js': 'application/javascript',
-      '.json': 'application/json',
+      '.html': 'text/html; charset=utf-8',
+      '.css': 'text/css; charset=utf-8',
+      '.js': 'application/javascript; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
       '.svg': 'image/svg+xml',
       '.png': 'image/png',
       '.ico': 'image/x-icon'
-    }[ext] || 'text/plain';
+    }[ext] || 'text/plain; charset=utf-8';
+
+    // index.html carries the auth token inline instead of the page
+    // fetching it from /api/bootstrap. Two reasons: the token is then
+    // available synchronously, so the calls that used to race the
+    // bootstrap round trip (and 401 on first load) cannot, and there is
+    // no token-vending endpoint left for another local page to try.
+    // Never cached — the token changes every time the server restarts.
+    if (resolved === path.resolve(publicDir, 'index.html')) {
+      let html;
+      try {
+        html = fs.readFileSync(resolved, 'utf8');
+      } catch (e) {
+        console.warn('[static] read error for', resolved, ':', e.message);
+        res.writeHead(500);
+        res.end();
+        return;
+      }
+      const inject = `<script>window.__OC_TOKEN=${JSON.stringify(SERVER_TOKEN)};</script>`;
+      html = html.includes('</head>')
+        ? html.replace('</head>', `${inject}\n</head>`)
+        : inject + html;
+      res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
+      res.end(html);
+      return;
+    }
 
     res.writeHead(200, { 'Content-Type': contentType });
     // Bind error handler before pipe — without it, USB yank or
