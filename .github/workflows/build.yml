@@ -241,8 +241,9 @@ jobs:
           mv Windows-Mobile.bat   system/
           # Linux desktop entry
           [ -f OpenClaw.desktop ] && mv OpenClaw.desktop system/
-          # README (users can find it in system/ if needed)
+          # READMEs (users can find them in system/ if needed)
           [ -f README.md ] && mv README.md system/
+          [ -f README.zh-CN.md ] && mv README.zh-CN.md system/
           # Helpers — move the whole lib/ tree instead of a hardcoded file
           # list. A fixed list silently leaves newly added helpers behind
           # (which then makes `rmdir lib` fail and kills the whole build),
