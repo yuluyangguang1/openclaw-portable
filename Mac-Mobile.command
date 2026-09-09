@@ -25,6 +25,21 @@ if [ -d "$APP_DIR/core-mac" ] && [ ! -d "$APP_DIR/core" ]; then
     mv "$APP_DIR/core-mac" "$APP_DIR/core"
 fi
 
+# Tree-kill helper (same as Mac-Start.command): the gateway spawns
+# worker children; a bare `kill $PID` orphans them and the ports stay
+# occupied for the next launch.
+kill_tree() {
+    local pid="$1"
+    [ -z "$pid" ] && return
+    [ "$pid" -le 1 ] 2>/dev/null && return  # never kill init or invalid pids
+    local children
+    children=$(pgrep -P "$pid" 2>/dev/null || true)
+    kill "$pid" 2>/dev/null || true
+    for child in $children; do
+        kill_tree "$child"
+    done
+}
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -128,6 +143,10 @@ export OPENCLAW_CONFIG_PATH="$MOBILE_CONFIG"
 # OpenClaw 2.0: keep its native service supervisor out of the way -
 # the portable wrapper manages the gateway process itself.
 export OPENCLAW_SUPERVISOR_MODE=external
+# Defensive: exFAT 777-permission patch flag (no-op on 2026.9.3, see
+# Mac-Start.command). Bonjour stays ENABLED here on purpose — phones
+# discover the gateway via mDNS.
+export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 
 # Strip host provider credentials inherited from the host machine (雷5):
 # leftover DASHSCOPE/OPENAI/ANTHROPIC/... *_API_KEY vars make OpenClaw treat
@@ -159,7 +178,7 @@ for stale_port in $(seq 18789 18799); do
         for pid in $stale_pid; do
             if ps -p "$pid" -o args= 2>/dev/null | grep -qi "openclaw"; then
                 echo -e "  ${YELLOW}Killing stale OpenClaw on port $stale_port (PID $pid)...${NC}"
-                kill "$pid" 2>/dev/null || true
+                kill_tree "$pid"
             fi
         done
         sleep 1
@@ -200,8 +219,8 @@ fi
 # ---- Cleanup on exit ----
 on_exit_handler() {
     local code=$?
-    [ -n "$GW_PID" ] && kill $GW_PID 2>/dev/null
-    [ -n "$CONFIG_PID" ] && kill $CONFIG_PID 2>/dev/null
+    [ -n "$GW_PID" ] && kill_tree "$GW_PID"
+    [ -n "$CONFIG_PID" ] && kill_tree "$CONFIG_PID"
     cleanup_mobile_config "$MOBILE_CONFIG"
     echo ""
     echo -e "   手机连接模式已停止，配置已恢复。"
@@ -227,9 +246,9 @@ GW_PID=$!
 
 # ---- 12. Wait for gateway, print mobile info ----
 GW_READY=false
-for i in $(seq 1 60); do
+for i in $(seq 1 120); do
     sleep 1
-    if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+    if curl --noproxy '*' -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
         GW_READY=true
         break
     fi

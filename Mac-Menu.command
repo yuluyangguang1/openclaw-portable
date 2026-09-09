@@ -42,6 +42,16 @@ export PATH="$NODE_DIR/bin:$PATH"
 export OPENCLAW_HOME="$DATA_DIR"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_PATH"
+# Keep env parity with Mac-Start.command: menu items (onboard/doctor/
+# plugins) run the same openclaw.mjs and must not register native
+# services, spam Bonjour, or miss the bundled skills dir.
+export OPENCLAW_DISABLE_BONJOUR=1
+export OPENCLAW_SUPERVISOR_MODE=external
+export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/system/skills-zh"
+# Defensive: the exFAT 777-permission patch (applied at build time)
+# honours this flag; upstream 2026.9.3 removed the check so this is a
+# no-op today, but if it returns in a future release we're covered.
+export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 
 # Strip host provider credentials inherited from the host machine (雷5):
 # leftover DASHSCOPE/OPENAI/ANTHROPIC/... *_API_KEY vars make OpenClaw treat
@@ -181,8 +191,8 @@ do_dashboard() {
     "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
     local PID=$!
 
-    for i in $(seq 1 30); do
-        sleep 0.5
+    for i in $(seq 1 120); do
+        sleep 1
         if curl --noproxy '*' -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
             local URL="http://127.0.0.1:$PORT/#token=$TOKEN"
             echo -e "  ${GREEN}控制台: $URL${NC}"

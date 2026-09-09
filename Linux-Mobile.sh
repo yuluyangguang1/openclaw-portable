@@ -18,6 +18,20 @@ CORE_DIR="$APP_DIR/core"
 DATA_DIR="$PORTABLE_DIR/data"
 STATE_DIR="$DATA_DIR/.openclaw"
 CONFIG_FILE="$STATE_DIR/openclaw.json"
+
+# Tree-kill helper (same as Linux-Start.sh): the gateway spawns worker
+# children; a bare `kill $PID` orphans them and the ports stay occupied.
+kill_tree() {
+    local pid="$1"
+    [ -z "$pid" ] && return
+    [ "$pid" -le 1 ] 2>/dev/null && return
+    local children
+    children=$(pgrep -P "$pid" 2>/dev/null || true)
+    kill "$pid" 2>/dev/null || true
+    for child in $children; do
+        kill_tree "$child"
+    done
+}
 MOBILE_CONFIG="$STATE_DIR/.mobile-config.json"
 
 RED='\033[0;31m'
@@ -112,6 +126,10 @@ export OPENCLAW_CONFIG_PATH="$MOBILE_CONFIG"
 # OpenClaw 2.0: keep its native service supervisor out of the way -
 # the portable wrapper manages the gateway process itself.
 export OPENCLAW_SUPERVISOR_MODE=external
+# Defensive: exFAT 777-permission patch flag (no-op on 2026.9.3, see
+# Linux-Start.sh). Bonjour stays ENABLED here on purpose — phones
+# discover the gateway via mDNS.
+export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 
 # Strip host provider credentials inherited from the host machine (雷5):
 # leftover DASHSCOPE/OPENAI/ANTHROPIC/... *_API_KEY vars make OpenClaw treat
@@ -170,8 +188,8 @@ fi
 # ---- Cleanup on exit ----
 on_exit_handler() {
     local code=$?
-    [ -n "$GW_PID" ] && kill $GW_PID 2>/dev/null
-    [ -n "$CONFIG_PID" ] && kill $CONFIG_PID 2>/dev/null
+    [ -n "$GW_PID" ] && kill_tree "$GW_PID"
+    [ -n "$CONFIG_PID" ] && kill_tree "$CONFIG_PID"
     cleanup_mobile_config "$MOBILE_CONFIG"
     echo ""
     echo -e "   手机连接模式已停止，配置已恢复。"
@@ -193,9 +211,9 @@ GW_PID=$!
 
 # ---- 11. Wait for gateway, print mobile info ----
 GW_READY=false
-for i in $(seq 1 60); do
+for i in $(seq 1 120); do
     sleep 1
-    if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+    if curl --noproxy '*' -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
         GW_READY=true
         break
     fi

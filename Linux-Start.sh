@@ -146,6 +146,11 @@ export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/system/skills-zh"
 # OpenClaw 2.0: keep its native service supervisor out of the way -
 # the portable wrapper manages the gateway process itself.
 export OPENCLAW_SUPERVISOR_MODE=external
+# Defensive: the exFAT 777-permission patch (applied at build time)
+# honours this flag; upstream 2026.9.3 removed the check so this is a
+# no-op today, but if it returns in a future release we're covered
+# (exFAT/USB sticks report everything as 0777 on Linux).
+export OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1
 
 # Strip host provider credentials inherited from the host machine (雷5):
 # leftover DASHSCOPE_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY / ... make
@@ -277,9 +282,12 @@ if [ -f "$CONFIG_FILE" ]; then
 fi
 
 # ---- 10. Wait for gateway, then open browser ----
-for i in $(seq 1 30); do
-    sleep 0.5
-    if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+for i in $(seq 1 120); do
+    sleep 1
+    # --noproxy: with http_proxy/https_proxy set (common on CN dev
+    # machines), curl would route the 127.0.0.1 probe through the
+    # proxy and fail — ready loop never fires, browser never opens.
+    if curl --noproxy '*' -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
         # Try common Linux browsers
         if command -v xdg-open >/dev/null 2>&1; then
             xdg-open "http://127.0.0.1:$PORT/#token=$TOKEN" 2>/dev/null &
@@ -365,7 +373,7 @@ if [ "$GW_EXIT" = "143" ] && [ -n "$CONFIG_PID" ] && kill -0 "$CONFIG_PID" 2>/de
     echo ""
     echo -e "  ${CYAN}检测到 /api/restart，等待新 Gateway 上线...${NC}"
     for _ in $(seq 1 60); do
-        if curl -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
+        if curl --noproxy '*' -s -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null; then
             echo -e "  ${GREEN}新 Gateway 已就绪${NC}"
             break
         fi
