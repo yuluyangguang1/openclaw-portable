@@ -155,7 +155,18 @@ if not exist "!STATE_DIR!\openclaw.json" (
         echo   Config migrated
     ) else (
         echo   First run - creating default config...
-        (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"!STATE_DIR!\openclaw.json"
+        REM 网关口令随机生成，见 lib\ensure-config.mjs。固定的 "openclaw"
+        REM 配上一键局域网模式，等于把本机的 AI 代理交给同一个 WiFi 下所有人。
+        set "_ENSURECFG_MJS="
+        if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
+        if not defined _ENSURECFG_MJS (
+            if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
+        )
+        if defined _ENSURECFG_MJS (
+            "!NODE_BIN!" "!_ENSURECFG_MJS!" "!STATE_DIR!\openclaw.json" "!PORTABLE_DIR!system\default-config.json"
+        )
+        set "_ENSURECFG_MJS="
+        if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"!STATE_DIR!\openclaw.json"
         echo   Config created
     )
     echo.

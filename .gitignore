@@ -23,3 +23,7 @@ data/
 # IDE
 .vscode/
 .idea/
+
+# Stale UI snapshots must not ship in the zip (they get served as text/plain
+# and invite a "restore" that silently rolls back hardening).
+*.backup
