@@ -354,6 +354,22 @@ do_update() {
         echo -e "  ${CYAN}重新提升官方 provider 插件为 bundled...${NC}"
         "$NODE_BIN" "$_PROMOTE_MJS" "$CORE_DIR" 2>&1
     fi
+
+    # 内核升级会带来 provider 外部化与路由迁移（codex/* -> openai/*），
+    # doctor --fix 负责兜底。必须带便携 env：少了 SUPERVISOR_MODE 它会以
+    # "could not enter maintenance" 直接退出 1；少了 HOME/STATE_DIR/
+    # CONFIG_PATH 它会去修宿主机的全局配置。--non-interactive 阻止它把
+    # shell 补全写进宿主机 ~/.bashrc。失败不阻断。
+    if [ -f "$CORE_DIR/node_modules/openclaw/openclaw.mjs" ]; then
+        echo -e "  ${CYAN}运行 openclaw doctor --fix（迁移配置，失败不阻断）...${NC}"
+        env OPENCLAW_HOME="$DATA_DIR" \
+            OPENCLAW_STATE_DIR="$STATE_DIR" \
+            OPENCLAW_CONFIG_PATH="$CONFIG_PATH" \
+            OPENCLAW_SUPERVISOR_MODE=external \
+            "$NODE_BIN" "$CORE_DIR/node_modules/openclaw/openclaw.mjs" \
+            doctor --fix --non-interactive >/dev/null 2>&1 \
+            || echo -e "  ${YELLOW}doctor --fix 未通过（已忽略）${NC}"
+    fi
 }
 
 # ── [14] Disk cleanup (P1) ───────────────────────────────────

@@ -321,24 +321,36 @@ if [ -d "$CORE_DIR/node_modules/@tencent-weixin/openclaw-weixin" ]; then
 fi
 [ -d "$CORE_DIR/node_modules/acpx" ] && [ -d "$CORE_DIR/node_modules/@zed-industries/codex-acp" ] && echo -e "  ${GREEN}[ok]${NC} ACP / Codex harness 就绪"
 
-# ---- 4. Install China-optimized skills ----
 # ---- 4. China-optimized skills (zero-copy) ----
-# skills-zh/ is NOT copied into node_modules. The Start launchers inject
-# OPENCLAW_BUNDLED_SKILLS_DIR=<portable>/skills-zh, which OpenClaw resolves
-# natively (env override in resolveBundledSkillsDir(), both 6.11 and 2.0).
-# Zero-copy survives openclaw reinstalls/upgrades and enables true
-# hot-reload on 2.0 (the skills watcher ignores node_modules).
+# skills-zh/ is NOT copied into node_modules. The Start launchers register it
+# in the config as skills.load.extraDirs (lib/sync-skill-dirs.mjs), which is
+# additive to the kernel's own bundled skills and is one of the directories
+# the skills watcher monitors. Zero-copy survives openclaw reinstalls.
 if [ -d "$SCRIPT_DIR/system/skills-zh" ]; then
-    echo -e "  ${GREEN}[ok]${NC} skills-zh 就绪 (零拷贝，启动器经 OPENCLAW_BUNDLED_SKILLS_DIR 加载)"
+    echo -e "  ${GREEN}[ok]${NC} skills-zh 就绪 (零拷贝，启动器写入 skills.load.extraDirs)"
 fi
 
 # ---- 5. Post-install doctor --fix (non-blocking) ----
 # OpenClaw 2.0 externalizes providers (byteplus/volcengine/deepseek/...)
 # and migrates codex/* -> openai/* routes; doctor --fix heals both plus
 # removes stale OpenProse config. Failure must not block setup.
+#
+# The env quartet is mandatory, not cosmetic: without OPENCLAW_SUPERVISOR_MODE
+# doctor refuses with "could not enter maintenance" (exit 1) on every run, and
+# without HOME/STATE_DIR/CONFIG_PATH it would repair the *host's* global config
+# instead of the portable one. --non-interactive keeps doctor from installing
+# shell completion into the host's ~/.bashrc, which would outlive the USB stick.
 if [ -f "$CORE_DIR/node_modules/openclaw/openclaw.mjs" ]; then
     echo -e "  ${CYAN}[v]${NC} 运行 openclaw doctor --fix（自动迁移配置，失败不阻断）..."
-    "$NODE_TARGET/bin/node" "$CORE_DIR/node_modules/openclaw/openclaw.mjs" doctor --fix >/dev/null 2>&1 \
+    _DATA_DIR="$SCRIPT_DIR/data"
+    _STATE_DIR="$_DATA_DIR/.openclaw"
+    mkdir -p "$_STATE_DIR" 2>/dev/null || true
+    env OPENCLAW_HOME="$_DATA_DIR" \
+        OPENCLAW_STATE_DIR="$_STATE_DIR" \
+        OPENCLAW_CONFIG_PATH="$_STATE_DIR/openclaw.json" \
+        OPENCLAW_SUPERVISOR_MODE=external \
+        "$NODE_TARGET/bin/node" "$CORE_DIR/node_modules/openclaw/openclaw.mjs" \
+        doctor --fix --non-interactive >/dev/null 2>&1 \
         || echo -e "  ${YELLOW}[WARN] doctor --fix 未通过（已忽略，可稍后手动执行）${NC}"
 fi
 

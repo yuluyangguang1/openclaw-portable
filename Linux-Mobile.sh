@@ -114,7 +114,20 @@ CFGEOF
 fi
 
 # ---- 6. Load mobile module & create temp config ----
-source "$PORTABLE_DIR/lib/mobile.sh"
+# mobile.sh sits next to the launcher (release zip: system/lib/), with
+# root/lib/ as the dev-tree fallback — same resolution as preflight.
+if [ -f "$_SCRIPT_DIR/lib/mobile.sh" ]; then
+    # shellcheck disable=SC1091
+    source "$_SCRIPT_DIR/lib/mobile.sh"
+elif [ -f "$PORTABLE_DIR/lib/mobile.sh" ]; then
+    # shellcheck disable=SC1091
+    source "$PORTABLE_DIR/lib/mobile.sh"
+else
+    echo -e "  ${RED}手机连接模块缺失: lib/mobile.sh${NC}"
+    echo -e "  ${CYAN}  → 重新下载发布包${NC}"
+    read -p "  按回车关闭..."
+    exit 1
+fi
 
 echo -e "  ${CYAN}生成手机连接配置...${NC}"
 create_mobile_config "$NODE_BIN" "$CONFIG_FILE" "$MOBILE_CONFIG"

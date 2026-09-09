@@ -44,10 +44,11 @@ export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_PATH"
 # Keep env parity with Linux-Start.sh: menu items (onboard/doctor/
 # plugins) run the same openclaw.mjs and must not register native
-# services, spam Bonjour, or miss the bundled skills dir.
+# services or spam Bonjour.
 export OPENCLAW_DISABLE_BONJOUR=1
 export OPENCLAW_SUPERVISOR_MODE=external
-export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/system/skills-zh"
+# skills-zh needs no env here: it is registered in the config itself
+# (skills.load.extraDirs, written by lib/sync-skill-dirs.mjs on start).
 # Defensive: the exFAT 777-permission patch (applied at build time)
 # honours this flag; upstream 2026.9.3 removed the check so this is a
 # no-op today, but if it returns in a future release we're covered.

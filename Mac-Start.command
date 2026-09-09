@@ -167,9 +167,19 @@ export OPENCLAW_HOME="$DATA_DIR"
 export OPENCLAW_STATE_DIR="$STATE_DIR"
 export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 export OPENCLAW_DISABLE_BONJOUR=1
-# Zero-copy bundled skills dir (survives openclaw reinstalls; enables
-# true hot-reload on OpenClaw 2.0 - the watcher ignores node_modules).
-export OPENCLAW_BUNDLED_SKILLS_DIR="$PORTABLE_DIR/system/skills-zh"
+# skills-zh is registered through skills.load.extraDirs (see
+# lib/sync-skill-dirs.mjs), NOT through OPENCLAW_BUNDLED_SKILLS_DIR: that env
+# var replaces the kernel's own bundled skills dir instead of adding to it,
+# which hid ~51 upstream skills. extraDirs is additive and is a watch root.
+_SKILLSYNC_MJS=""
+if [ -f "$_SCRIPT_DIR/lib/sync-skill-dirs.mjs" ]; then
+    _SKILLSYNC_MJS="$_SCRIPT_DIR/lib/sync-skill-dirs.mjs"
+elif [ -f "$PORTABLE_DIR/lib/sync-skill-dirs.mjs" ]; then
+    _SKILLSYNC_MJS="$PORTABLE_DIR/lib/sync-skill-dirs.mjs"
+fi
+if [ -n "$_SKILLSYNC_MJS" ]; then
+    "$NODE_BIN" "$_SKILLSYNC_MJS" "$CONFIG_FILE" "$PORTABLE_DIR/system/skills-zh" || true
+fi
 # OpenClaw 2.0: keep its native service supervisor out of the way -
 # the portable wrapper manages the gateway process itself.
 export OPENCLAW_SUPERVISOR_MODE=external
@@ -254,7 +264,12 @@ done
 # ---- 9. Start Config Server in background ----
 echo -e "  ${CYAN}Starting Config Center...${NC}"
 CONFIG_SERVER="$PORTABLE_DIR/config-server"
-"$NODE_BIN" "$CONFIG_SERVER/server.js" &
+# Redirect to a log file like the Windows launcher does: when started from
+# OpenClaw.app there is no terminal to print to, and mixing its output into
+# the gateway's stream hides startup errors either way.
+CONFIG_LOG="$DATA_DIR/logs/config-server.log"
+mkdir -p "$DATA_DIR/logs" 2>/dev/null || true
+"$NODE_BIN" "$CONFIG_SERVER/server.js" >> "$CONFIG_LOG" 2>&1 &
 CONFIG_PID=$!
 sleep 2
 

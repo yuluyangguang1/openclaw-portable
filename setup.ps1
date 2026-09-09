@@ -348,12 +348,47 @@ if ((Test-Path -Path (Join-Path $coreDir "node_modules\acpx") -PathType Containe
 }
 
 # China-optimized skills (zero-copy): skills-zh\ is NOT copied into
-# node_modules. The Start launchers inject OPENCLAW_BUNDLED_SKILLS_DIR,
-# which OpenClaw resolves natively (env override in
-# resolveBundledSkillsDir(), both 6.11 and 2.0). Zero-copy survives
-# openclaw reinstalls and enables true hot-reload on 2.0.
+# node_modules. The Start launchers register it as skills.load.extraDirs
+# (lib\sync-skill-dirs.mjs), which is additive to the kernel's own bundled
+# skills and is a watch root. Zero-copy survives openclaw reinstalls.
 if (Test-Path -Path (Join-Path $scriptDir "system\skills-zh") -PathType Container) {
-    Write-Step "OK" "skills-zh ready (zero-copy, loaded via OPENCLAW_BUNDLED_SKILLS_DIR)." "Green"
+    Write-Step "OK" "skills-zh ready (zero-copy, registered in skills.load.extraDirs)." "Green"
+}
+
+# Post-install doctor --fix (non-blocking). The env quartet is mandatory:
+# without OPENCLAW_SUPERVISOR_MODE doctor refuses with "could not enter
+# maintenance" on every run, and without HOME/STATE_DIR/CONFIG_PATH it would
+# repair the host's global config instead of the portable one.
+# --non-interactive keeps doctor from writing shell completion outside the
+# portable package.
+$openclawMjs = Join-Path $coreDir "node_modules\openclaw\openclaw.mjs"
+if (Test-Path -Path $openclawMjs -PathType Leaf) {
+    Write-Step "->" "Running openclaw doctor --fix (auto-migrate config, non-blocking)..." "Cyan"
+    $portableData = Join-Path $scriptDir "data"
+    $portableState = Join-Path $portableData ".openclaw"
+    New-Item -ItemType Directory -Force -Path $portableState | Out-Null
+    $saved = @{}
+    foreach ($name in "OPENCLAW_HOME", "OPENCLAW_STATE_DIR", "OPENCLAW_CONFIG_PATH", "OPENCLAW_SUPERVISOR_MODE") {
+        $saved[$name] = [Environment]::GetEnvironmentVariable($name)
+    }
+    try {
+        $env:OPENCLAW_HOME = $portableData
+        $env:OPENCLAW_STATE_DIR = $portableState
+        $env:OPENCLAW_CONFIG_PATH = Join-Path $portableState "openclaw.json"
+        $env:OPENCLAW_SUPERVISOR_MODE = "external"
+        & (Join-Path $windowsNodeTarget "node.exe") $openclawMjs doctor --fix --non-interactive *> $null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Step "!!" "doctor --fix failed (ignored, can run manually later)." "Yellow"
+        }
+    }
+    catch {
+        Write-Step "!!" "doctor --fix failed (ignored, can run manually later)." "Yellow"
+    }
+    finally {
+        foreach ($name in $saved.Keys) {
+            Set-Item -Path "Env:$name" -Value $saved[$name] -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 Write-Host ""
