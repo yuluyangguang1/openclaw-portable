@@ -125,6 +125,11 @@ jobs:
           #    (same cold-reload cost); under concurrent setup.detect
           #    workers on exFAT it exceeded the 180s budget once
           #    (WorkerTaskError: worker task timed out). Bumped to 300s.
+          # 5) The Control UI bundle caps each openclaw.setup.detect
+          #    request at 40s client-side — on slow disks the server
+          #    Worker finishes within 180s but the UI already gave up
+          #    ("gateway request timed out after 40000ms"). Bumped to
+          #    200s in model-setup-page-*.js (no-op on fast disks).
           node system/patch-exfat-identity.js
 
       - name: Lift app shells to zip root

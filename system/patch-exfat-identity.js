@@ -32,6 +32,18 @@
  *      （不共享主线程 ESM 模块缓存，需从磁盘重载整图），慢盘（exFAT U 盘）
  *      上仅模块加载即 67s（冷）/热缓存全程仍 ~54s → 30s 必超时，重试同败。
  *      提到 180s 后实测热缓存 ~54s 成功返回（beta.9 现场，探针复现）。
+ *   G) plugin-skills 符号链接 → 递归复制兜底：
+ *      exFAT 卷不支持任何 reparse point（symlink/junction 均报 EISDIR，
+ *      真机探针复现）→ publishPluginSkills 全部失败，插件技能对 agent
+ *      不可见。symlink 失败即 fs.cpSync 递归复制；上游
+ *      isGeneratedPluginSkillEntry 已把 win32 真目录视为托管条目，兼容。
+ *   H) 模型目录 Worker 超时（PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS
+ *      18e4 → 3e5）：models.list 同样走独立 Worker 重载模块图，exFAT 上
+ *      与 setup.detect 并发时曾超 180s；预热后 80ms。
+ *   I) Control UI 前端 setup.detect 请求上限（model-setup-page bundle
+ *      4e4 → 2e5）：UI 侧 40s 即放弃并报 "gateway request timed out
+ *      after 40000ms"，服务端 Worker 180s 能完成但 UI 等不到。提到 200s
+ *      盖住服务端 180s + 余量（NTFS 毫秒级完成，此值无所谓）。
  *
  * 覆盖范围：openclaw/dist 捆绑副本 + node_modules/@openclaw/fs-safe 包本体
  * （运行时真正的 atomic 写路径走包本体，beta.8 只补了捆绑副本所以仍翻车）。
@@ -91,6 +103,11 @@ function __ocPluginSkillLink(target, linkPath, type) {
 const H_FILE = /^prepared-model-catalog-worker-[\w-]*\.mjs$/;
 const RE_H = /const\s+PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS\s*=\s*18e4\s*;/;
 const SUB_H = "const PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS = 3e5;";
+// 形态 I：Control UI 前端 setup.detect 请求上限 40s → 200s。
+//   限定文件名 model-setup-page-*.js；timing 常量四连组 Xe=4e4,Ze=15e4,Qe=48e4（变量名不定）。
+const I_FILE = /^model-setup-page-[\w-]*\.js$/;
+const RE_I = /(\w+)=4e4,(\w+)=15e4,(\w+)=48e4/;
+const SUB_I = "$1=2e5,$2=15e4,$3=48e4";
 
 function findDistRoots() {
   const roots = [];
@@ -161,11 +178,16 @@ for (const root of roots) {
     const base = path.basename(f);
     const isG = G_FILE.test(base) && text.includes("failed to create plugin skill symlink");
     const isH = H_FILE.test(base) && text.includes("PREPARED_MODEL_CATALOG_WORKER_TIMEOUT_MS");
-    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS") && !isG && !isH) continue;
+    const isI = I_FILE.test(base) && /=4e4,/.test(text);
+    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS") && !isG && !isH && !isI) continue;
     scanned++;
     let changed = false;
     if (RE_F.test(text)) {
       text = text.replace(RE_F, SUB_F);
+      changed = true;
+    }
+    if (isI && RE_I.test(text)) {
+      text = text.replace(RE_I, SUB_I);
       changed = true;
     }
     if (isG && RE_G.test(text)) {
