@@ -1497,20 +1497,28 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 </div>
 <script>
 // ===== AUTH BOOTSTRAP =====
-// The config server requires X-OpenClaw-Token on all write endpoints
-// to prevent CSRF and local-process abuse. We fetch the token once at
-// page load from /api/bootstrap (which only responds to same-origin).
-var _serverToken = '';
-// Resolves once /api/bootstrap settles (token attached). API calls that
-// need the token (e.g. /api/skills) must wait on this — firing them in
-// parallel with bootstrap races it and 401s on first page load.
-var _bootReady = null;
+// The config server requires X-OpenClaw-Token on every API endpoint that
+// writes, or that reads secrets (/api/config, /api/mobile/info). The
+// server injects the token into this page (see the index.html branch of
+// its static handler), so it is available synchronously and nothing can
+// race it. The /api/bootstrap fetch in init() is only a fallback for a
+// page that was not served by the config server.
+var _serverToken = (typeof window !== 'undefined' && typeof window.__OC_TOKEN === 'string')
+ ? window.__OC_TOKEN : '';
+// Resolves once the token is known. Call sites that need the token wait
+// on it; with the injected token it is already settled at parse time.
+var _bootReady = _serverToken ? Promise.resolve() : null;
 
 // Wrapper: automatically attaches the auth token to API calls and
 // applies a default 30s timeout via AbortController. A bare fetch
 // has no timeout — if the server hangs (slow USB, file lock, OS
 // pause), every UI action would hang forever.
 function apiFetch(url, opts) {
+ // Token not in hand yet (bootstrap fallback path): wait for it rather
+ // than firing an unauthenticated request that comes back 401.
+ if (!_serverToken && _bootReady) {
+ return _bootReady.then(function(){ return apiFetch(url, opts); });
+ }
  opts = opts || {};
  if (!opts.headers) opts.headers = {};
  if (_serverToken) opts.headers['X-OpenClaw-Token'] = _serverToken;
@@ -1633,10 +1641,45 @@ let selectedBase = '';
 let selectedModel = '';
 let currentStep = 1;
 let gatewayPort = null;
-// Gateway auth token. Read from openclaw.json on load (loadConfig
-// below). Defaults to 'openclaw' if user hasn't customized it.
-let _gatewayToken = 'openclaw';
+// Gateway auth token, read from openclaw.json on load (loadConfig below).
+// Deliberately starts empty: it used to default to 'openclaw', and since
+// buildConfig() writes the whole gateway block on every save, that default
+// silently overwrote the random token the launcher generates on first run —
+// re-publishing a guessable credential to anyone on the LAN the moment the
+// user saved a provider. gatewayAuthBlock() below is the only writer.
+let _gatewayToken = '';
 let configData = null;
+
+// The tokens that mean "nobody has set a real one yet".
+const WEAK_GATEWAY_TOKENS = ['openclaw', '__GENERATED_AT_FIRST_RUN__'];
+function isWeakGatewayToken(t) { return !t || WEAK_GATEWAY_TOKENS.indexOf(t) !== -1; }
+
+// Auth block for every config we write. Order matters: whatever is
+// already in force wins, then whatever the last /api/config read saw,
+// and only if the config genuinely has no token do we mint one.
+function gatewayAuthBlock() {
+ var token = _gatewayToken ||
+ (configData && configData.gateway && configData.gateway.auth && configData.gateway.auth.token) ||
+ '';
+ if (!token) token = newGatewayToken();
+ _gatewayToken = token;
+ return { mode: 'token', token: token };
+}
+
+function newGatewayToken() {
+ try {
+ var bytes = new Uint8Array(24);
+ window.crypto.getRandomValues(bytes);
+ return Array.prototype.map.call(bytes, function(b){
+ return ('0' + b.toString(16)).slice(-2);
+ }).join('');
+ } catch (e) {
+ // No crypto (ancient browser / insecure context): better a known-weak
+ // token than an empty one, which would lock the user out of the gateway.
+ console.warn('[auth] crypto.getRandomValues unavailable, falling back to the default token');
+ return 'openclaw';
+ }
+}
 
 // ===== RENDER PROVIDERS =====
 // Global state for provider filtering. The default filter shows
@@ -2501,7 +2544,7 @@ function highlightCurrentProvider(cfg) {
 // ===== BUILD CONFIG =====
 function buildConfig(provider, base, model, apiKey) {
  var bc = {
-  gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}},
+  gateway:{mode:'local',auth:gatewayAuthBlock()},
   // NOTE: never put `commands.ownerDisplay` here. In 2026.8.2 it is a
   // deprecated doctor-only legacy key (see CommandsConfig in openclaw's own
   // types) that the RUNTIME schema rejects: the gateway logs
@@ -2652,7 +2695,7 @@ function resetConfig() {
 
 function doReset() {
  closeModal();
- var defaultCfg = {gateway:{mode:'local',auth:{mode:'token',token:'openclaw'}}};
+ var defaultCfg = {gateway:{mode:'local',auth:gatewayAuthBlock()}};
  apiFetch('/api/config', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(defaultCfg)}).then(function(r){return r.json();}).then(function(data) {
  if (data.ok) {
  showToast('\u5df2\u91cd\u7f6e\uff0c\u91cd\u542f Gateway...', 'success');
@@ -2985,13 +3028,43 @@ function doImport(event) {
  reader.readAsText(file);
 }
 
+// Deep copy with every credential replaced by a fixed mask. Keys are
+// matched by name, so a provider the UI has never heard of is masked too.
+// The list mirrors what the server refuses to write back (see the masked-
+// value guard in server.js), so a masked view can never round-trip.
+const SECRET_KEY_RE = /(^|_|\.)(apikey|api_key|token|secret|password|passwd|credential|authorization)($|_|\.)/i;
+function redactSecrets(value) {
+ if (Array.isArray(value)) return value.map(redactSecrets);
+ if (value && typeof value === 'object') {
+ const out = {};
+ for (const k of Object.keys(value)) {
+ const v = value[k];
+ out[k] = (typeof v === 'string' && v && SECRET_KEY_RE.test(k))
+ ? (v.length > 8 ? v.slice(0, 3) + '••••••' + v.slice(-2) : '••••••')
+ : redactSecrets(v);
+ }
+ return out;
+ }
+ return value;
+}
+
 function viewConfig() {
  apiFetch('/api/config').then(r => r.json()).then(data => {
- const json = JSON.stringify(data, null, 2);
- showModal('\u5f53\u524d\u914d\u7f6e', '<pre style="background:#0d1117;padding:12px;border-radius:8px;overflow:auto;max-height:400px;color:#e6edf3;font-size:12px;">' + json.replace(/</g,'&lt;') + '</pre>', [
+ // Default to the masked rendering: this button gets pressed during
+ // screen shares and remote-help sessions, and the plaintext view puts
+ // every provider key on screen (and, when copied, in the clipboard).
+ let revealed = false;
+ const render = () => {
+ const json = JSON.stringify(revealed ? data : redactSecrets(data), null, 2);
+ showModal('\u5f53\u524d\u914d\u7f6e' + (revealed ? '（明文）' : '（密钥已打码）'),
+ '<pre id="cfgJsonPre" style="background:#0d1117;padding:12px;border-radius:8px;overflow:auto;max-height:400px;color:#e6edf3;font-size:12px;"></pre>', [
  {text:'\u5173\u95ed',cls:'btn',action:'closeModal'},
- // handler closure captures `json` directly — no eval, no string
- // interpolation of attacker-controlled data. (B22-03)
+ {text: revealed ? '\u9690\u85cf\u660e\u6587' : '\u663e\u793a\u660e\u6587', cls:'btn', handler: function() {
+ revealed = !revealed;
+ render();
+ }},
+ // handler closure captures the currently shown text — copying gives
+ // you exactly what is on screen, masked unless you asked to reveal.
  {text:'\u590d\u5236', cls:'btn btn-primary', handler: function() {
  var p = navigator.clipboard && navigator.clipboard.writeText
  ? navigator.clipboard.writeText(json)
@@ -3001,6 +3074,11 @@ function viewConfig() {
  .catch(function(e){ showToast('\u590d\u5236\u5931\u8d25: '+(e && e.message || e),'error'); });
  }}
  ]);
+ // textContent, not innerHTML: config values are user-controlled.
+ var pre = document.getElementById('cfgJsonPre');
+ if (pre) pre.textContent = json;
+ };
+ render();
  }).catch(err => showToast('\u7f51\u7edc\u9519\u8bef', 'error'));
 }
 
@@ -3205,7 +3283,7 @@ function applyLocalRuntime(runtimeId, port) {
  };
  var ref = providerKey + '/' + modelName;
  var cfg = {
-  gateway: { mode: 'local', auth: { mode: 'token', token: 'openclaw' } },
+  gateway: { mode: 'local', auth: gatewayAuthBlock() },
   // Same rule as buildConfig(): `ownerDisplay` is a deprecated doctor-only
   // legacy key in 2026.8.2 and makes the whole config invalid at runtime.
   commands: { native: 'auto', nativeSkills: 'auto', restart: true },
@@ -3267,10 +3345,10 @@ function showLocalModelHints() {
 
 // ===== INIT =====
 (function init() {
- // Bootstrap auth token from server (required for write endpoints).
- // This is a same-origin GET that only responds to localhost requests.
- // Timeout: if server is unreachable at boot, fail fast and let GET
- // calls succeed without a token (they're public anyway).
+ // The token normally arrives inline (window.__OC_TOKEN) with the page.
+ // Only fall back to /api/bootstrap when it did not — e.g. the file was
+ // opened from a copy rather than served by the config server.
+ if (!_serverToken) {
  var bootCtrl = new AbortController();
  var bootTimer = setTimeout(function(){ bootCtrl.abort(); }, 5000);
  _bootReady = fetch('/api/bootstrap', { signal: bootCtrl.signal }).then(function(r) {
@@ -3280,9 +3358,11 @@ function showLocalModelHints() {
  if (data && data.token) _serverToken = data.token;
  }).catch(function() {
  clearTimeout(bootTimer);
- // If bootstrap fails, writes will get 401 — user sees error toast.
- console.warn('[auth] bootstrap failed, write operations will be rejected');
+ // Without a token every API call now fails — surface it instead of
+ // letting each button fail on its own.
+ console.warn('[auth] bootstrap failed, API calls will be rejected');
  });
+ }
 
  loadDailyPoem();
  loadAlmanac();
@@ -3483,19 +3563,48 @@ function showMobileInfo(cfg) {
 function showMobileInfoFromData(data) {
  var info = document.getElementById('mobileInfo');
  info.style.display = 'block';
- var html = '';
- var token = data.token || 'openclaw';
- var port = data.port || 18789;
+ var token = data.token || '';
+ var port = parseInt(data.port, 10) || 18789;
+ var box = document.getElementById('mobileUrls');
+ box.textContent = '';
+
+ // Built as DOM nodes, not markup. Both values come out of openclaw.json,
+ // which the user can replace wholesale through 「导入配置」, so a token of
+ // `"><img src=x onerror=...>` used to run as script in this very page —
+ // the page that holds the config-server token and can install skills.
  for (var i = 0; i < data.lanIps.length; i++) {
- var ip = data.lanIps[i];
- html += '<div style="margin-bottom:4px;">';
- html += '浏览器: <a href="http://'+ip+':'+port+'/#token='+token+'" target="_blank" style="color:var(--emerald);">http://'+ip+':'+port+'/</a>';
- html += '</div>';
- html += '<div style="margin-bottom:4px;color:var(--fg-muted);">';
- html += 'App: '+ip+':'+port+' · Token: '+token;
- html += '</div>';
+ var ip = String(data.lanIps[i]);
+ var row = document.createElement('div');
+ row.style.marginBottom = '4px';
+ row.appendChild(document.createTextNode('浏览器: '));
+ var a = document.createElement('a');
+ a.href = 'http://' + encodeURIComponent(ip) + ':' + port + '/#token=' + encodeURIComponent(token);
+ a.target = '_blank';
+ a.rel = 'noopener';
+ a.style.color = 'var(--emerald)';
+ a.textContent = 'http://' + ip + ':' + port + '/';
+ row.appendChild(a);
+ box.appendChild(row);
+
+ var meta = document.createElement('div');
+ meta.style.marginBottom = '4px';
+ meta.style.color = 'var(--fg-muted)';
+ meta.textContent = 'App: ' + ip + ':' + port + (token ? ' · Token: ' + token : ' · 未设置口令');
+ box.appendChild(meta);
  }
- document.getElementById('mobileUrls').innerHTML = html;
+
+ // A default token plus LAN binding means every device on this WiFi can
+ // take the agent over with a URL it already knows. Say so where the
+ // switch is, not in a document nobody reads.
+ if (isWeakGatewayToken(token)) {
+ var warn = document.createElement('div');
+ warn.style.marginTop = '8px';
+ warn.style.color = 'var(--warning)';
+ warn.textContent = token
+ ? '⚠ 当前网关口令还是默认值，局域网内任何人都能用它接管本机的 AI 代理。建议在 openclaw.json 里改成随机值后重启网关。'
+ : '⚠ 配置里没有网关口令，手机端无法连接。请重新配置或重启一次启动器。';
+ box.appendChild(warn);
+ }
 }
 
 </script>
