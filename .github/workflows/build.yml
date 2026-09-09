@@ -95,17 +95,25 @@ jobs:
             echo "WARNING: Patch did not apply cleanly"
           fi
 
-      - name: Patch fs-safe strict file identity for exFAT/FAT32
+      - name: Patch fs-safe identity + setup detection timeout for slow disks
         run: |
           set -e
-          # @openclaw/fs-safe 0.8.5 verifies file identity via stat dev/ino
-          # (bigint) and requires ino != 0n on win32. exFAT/FAT32 report a
-          # zero file index → "FsSafeError: file identity changed or could
-          # not be verified" on first boot from a USB stick (beta.7 field
-          # report). The checks exist in 4 shapes across formatted and
-          # minified chunks (see system/patch-exfat-identity.js); the
-          # script neutralises them only for the ino===0n case, so
-          # NTFS/APFS behaviour is unchanged.
+          # Two field-tested fixes ship via system/patch-exfat-identity.js:
+          # 1) @openclaw/fs-safe 0.8.5 verifies file identity via stat
+          #    dev/ino (bigint) and requires ino != 0n on win32. exFAT/FAT32
+          #    report a zero file index → "FsSafeError: file identity
+          #    changed or could not be verified" on first boot from a USB
+          #    stick (beta.7/beta.8 field reports). Neutralised for the
+          #    ino===0n case only, so NTFS/APFS behaviour is unchanged.
+          # 2) Control UI "connect verified AI models" detection runs in a
+          #    Worker thread that does NOT share the main thread's ESM
+          #    module cache and reloads the whole dist graph from disk.
+          #    On slow disks (exFAT USB) that alone takes ~67s cold and a
+          #    full detection still needs ~54s warm → the hardcoded 30s
+          #    SETUP_INFERENCE_DETECTION_TIMEOUT_MS always fires
+          #    (SetupInferenceDetectionTimeoutError, beta.9 field report).
+          #    Bumped to 180s; verified ~76s end-to-end success on the
+          #    affected machine.
           node system/patch-exfat-identity.js
 
       - name: Lift app shells to zip root

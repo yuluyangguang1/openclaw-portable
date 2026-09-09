@@ -27,6 +27,11 @@
  *      仅记录新值、不判死（POSIX 保持严格）；真实内容一致性由原子写的
  *      哈希校验兜底。实测堆栈：replaceFileAtomicSync → assertPublished →
  *      assertCurrent → identityCheck（beta.8 U 盘现场，探针复现）。
+ *   F) setup 检测超时（SETUP_INFERENCE_DETECTION_TIMEOUT_MS 3e4 → 18e4）：
+ *      Control UI「连接已验证的 AI 模型」检测跑在独立 Worker 线程
+ *      （不共享主线程 ESM 模块缓存，需从磁盘重载整图），慢盘（exFAT U 盘）
+ *      上仅模块加载即 67s（冷）/热缓存全程仍 ~54s → 30s 必超时，重试同败。
+ *      提到 180s 后实测热缓存 ~54s 成功返回（beta.9 现场，探针复现）。
  *
  * 覆盖范围：openclaw/dist 捆绑副本 + node_modules/@openclaw/fs-safe 包本体
  * （运行时真正的 atomic 写路径走包本体，beta.8 只补了捆绑副本所以仍翻车）。
@@ -66,6 +71,9 @@ const SUB_E = 'if (platform !== "win32" && known[field] !== undefined && known[f
 // 形态 E2：同上（minified，变量名不定）—— if(X[Y]!==void 0&&X[Y]!==Z)throw identityMismatch();
 const RE_E2 = /if\((\w+)\[(\w+)\]!==void 0&&\1\[\2\]!==(\w+)\)throw identityMismatch\(\);/g;
 const SUB_E2 = 'if($1[$2]!==void 0&&$1[$2]!==$3&&process.platform!=="win32")throw identityMismatch();';
+// 形态 F：setup 推断检测超时 30s → 180s（慢盘 Worker 线程需重载 ESM 全图，30s 必超时）
+const RE_F = /const\s+SETUP_INFERENCE_DETECTION_TIMEOUT_MS\s*=\s*3e4\s*;/;
+const SUB_F = "const SETUP_INFERENCE_DETECTION_TIMEOUT_MS = 18e4;";
 
 function findDistRoots() {
   const roots = [];
@@ -133,9 +141,13 @@ for (const root of roots) {
     } catch {
       continue;
     }
-    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text)) continue;
+    if (!text.includes("value === 0n") && !/===0n/.test(text) && !RE_E.test(text) && !text.includes("SETUP_INFERENCE_DETECTION_TIMEOUT_MS")) continue;
     scanned++;
     let changed = false;
+    if (RE_F.test(text)) {
+      text = text.replace(RE_F, SUB_F);
+      changed = true;
+    }
     if (RE_A.test(text) || text.includes(OLD)) {
       text = text.replace(RE_A, SUB_A).split(OLD).join(NEW);
       changed = true;
