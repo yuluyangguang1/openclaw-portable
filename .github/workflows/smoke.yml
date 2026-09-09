@@ -34,6 +34,30 @@ jobs:
         run: |
           node --check config-server/server.js
           echo "OK: server.js parses"
+          # The launcher helpers are ESM and are invoked from six shell
+          # scripts and three .bat files, where a syntax error only shows
+          # up as a silent "not applied" at someone's first run.
+          for f in lib/*.mjs; do
+            node --check "$f" && echo "OK: $f parses"
+          done
+
+      - name: Windows launcher encoding
+        run: |
+          # The .bat files must stay GBK-decodable with no BOM: cmd.exe reads
+          # them as the system ANSI code page on a Chinese Windows, so a stray
+          # UTF-8 byte turns the Chinese prompts into mojibake or breaks
+          # parsing outright. build.yml adds CRLF + BOM at package time; the
+          # repo copy must not have them, and every hand edit has to preserve
+          # this (it is byte-level surgery, not a normal text edit).
+          set -e
+          for f in *.bat; do
+            if [ "$(head -c 3 "$f" | od -An -tx1 | tr -d ' \n')" = "efbbbf" ]; then
+              echo "FAIL: $f has a UTF-8 BOM"
+              exit 1
+            fi
+            iconv -f GBK -t UTF-8 "$f" > /dev/null || { echo "FAIL: $f is not GBK-decodable"; exit 1; }
+            echo "OK: $f (GBK, no BOM)"
+          done
 
       - name: Bash syntax check
         run: |
@@ -41,8 +65,8 @@ jobs:
           # Previously only checked 4 files, missing preflight.sh, Menu,
           # Diagnose — a syntax error in any of those would have shipped.
           for f in \
-              Mac-Start.command Mac-Menu.command Mac-Diagnose.command \
-              Linux-Start.sh Linux-Menu.sh Linux-Diagnose.sh \
+              Mac-Start.command Mac-Menu.command Mac-Diagnose.command Mac-Mobile.command \
+              Linux-Start.sh Linux-Menu.sh Linux-Diagnose.sh Linux-Mobile.sh \
               setup.sh lib/maintain.sh lib/preflight.sh; do
             bash -n "$f" && echo "OK: $f"
           done
