@@ -117,9 +117,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
     if [ -f "$DATA_DIR/config.json" ]; then
         cp "$DATA_DIR/config.json" "$CONFIG_FILE"
     else
-        # 网关口令随机生成，见 lib/ensure-config.mjs：固定的 "openclaw" 加上
-        # 一键局域网模式，等于把这台机器的 AI 代理交给同一个 WiFi 下的所有人。
-        # 已存在的配置不会被改动（老包照常工作，配过的手机也不用重配）。
+        # 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
+        # Control UI/手机连接反复 token_mismatch 无法登录）。见 lib/ensure-config.mjs。
+        # 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
+        # 已存在的配置不会被改动（仅缺 gateway.auth 块时自愈补写）。
         _ENSURECFG_MJS=""
         if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
             _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
@@ -135,7 +136,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 {
   "gateway": {
     "mode": "local",
-    "auth": { "token": "openclaw" }
+    "auth": { "token": "yuai" }
   }
 }
 CFGEOF

@@ -92,7 +92,7 @@ if not exist "!CONFIG_FILE!" (
         "!NODE_BIN!" "!_ENSURECFG_MJS!" "!CONFIG_FILE!" "!PORTABLE_DIR!system\default-config.json"
     )
     set "_ENSURECFG_MJS="
-    if not exist "!CONFIG_FILE!" echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}} > "!CONFIG_FILE!"
+    if not exist "!CONFIG_FILE!" echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}} > "!CONFIG_FILE!"
 )
 
 REM Generate mobile config (inject LAN mode + autoApprove)

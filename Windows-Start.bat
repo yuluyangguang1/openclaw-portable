@@ -155,8 +155,10 @@ if not exist "!STATE_DIR!\openclaw.json" (
         echo   Config migrated
     ) else (
         echo   First run - creating default config...
-        REM 网关口令随机生成，见 lib\ensure-config.mjs。固定的 "openclaw"
-        REM 配上一键局域网模式，等于把本机的 AI 代理交给同一个 WiFi 下所有人。
+        REM 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
+        REM Control UI/手机连接反复 token_mismatch 无法登录）。见 lib\ensure-config.mjs。
+        REM 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
+        REM 已存在的配置不会被改动（仅缺 gateway.auth 块时自愈补写）。
         set "_ENSURECFG_MJS="
         if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
         if not defined _ENSURECFG_MJS (
@@ -166,7 +168,7 @@ if not exist "!STATE_DIR!\openclaw.json" (
             "!NODE_BIN!" "!_ENSURECFG_MJS!" "!STATE_DIR!\openclaw.json" "!PORTABLE_DIR!system\default-config.json"
         )
         set "_ENSURECFG_MJS="
-        if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"!STATE_DIR!\openclaw.json"
+        if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"!STATE_DIR!\openclaw.json"
         echo   Config created
     )
     echo.

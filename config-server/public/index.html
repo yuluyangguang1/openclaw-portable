@@ -1644,7 +1644,7 @@ let gatewayPort = null;
 // Gateway auth token, read from openclaw.json on load (loadConfig below).
 // Deliberately starts empty: it used to default to 'openclaw', and since
 // buildConfig() writes the whole gateway block on every save, that default
-// silently overwrote the random token the launcher generates on first run —
+// silently overwrote the fixed token the launcher stamps on first run —
 // re-publishing a guessable credential to anyone on the LAN the moment the
 // user saved a provider. gatewayAuthBlock() below is the only writer.
 let _gatewayToken = '';
@@ -1656,7 +1656,7 @@ function isWeakGatewayToken(t) { return !t || WEAK_GATEWAY_TOKENS.indexOf(t) !==
 
 // Auth block for every config we write. Order matters: whatever is
 // already in force wins, then whatever the last /api/config read saw,
-// and only if the config genuinely has no token do we mint one.
+// and only if the config genuinely has no token do we stamp the fixed one.
 function gatewayAuthBlock() {
  var token = _gatewayToken ||
  (configData && configData.gateway && configData.gateway.auth && configData.gateway.auth.token) ||
@@ -1666,19 +1666,13 @@ function gatewayAuthBlock() {
  return { mode: 'token', token: token };
 }
 
+// Owner decision (2026-09-10): the gateway token is the fixed value "yuai",
+// matching lib/ensure-config.mjs. A random token minted here was invisible
+// to the user and caused token_mismatch lockouts after every save/restart.
+// Trade-off (accepted by the owner): with the one-click LAN switch, a fixed
+// published token lets anyone on the same WiFi take over the agent.
 function newGatewayToken() {
- try {
- var bytes = new Uint8Array(24);
- window.crypto.getRandomValues(bytes);
- return Array.prototype.map.call(bytes, function(b){
- return ('0' + b.toString(16)).slice(-2);
- }).join('');
- } catch (e) {
- // No crypto (ancient browser / insecure context): better a known-weak
- // token than an empty one, which would lock the user out of the gateway.
- console.warn('[auth] crypto.getRandomValues unavailable, falling back to the default token');
- return 'openclaw';
- }
+ return 'yuai';
 }
 
 // ===== RENDER PROVIDERS =====
