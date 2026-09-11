@@ -66,12 +66,15 @@ jobs:
           # bundled discovery module to respect our own env var:
           # OPENCLAW_SKIP_PLUGIN_PERMISSION_CHECK=1 (set by all launchers).
           #
-          # 2026.9.3 status: the `path_world_writable` check was REMOVED
-          # upstream (verified against the 9.3 dist — no mode-bit plugin
-          # check remains in any discovery/plugin module), so this step
-          # finds nothing and soft-skips. Kept defensively: if a future
-          # release reintroduces the check, the patch re-applies
-          # automatically via the dynamic grep below.
+          # 2026.9.4 status: the `path_world_writable` check is BACK
+          # upstream (present in discovery-*.mjs and worker/worker.mjs of
+          # the 9.4 dist), so this step patches it again on every build —
+          # exactly the "future release reintroduces the check" case this
+          # dynamic grep was kept for. system/patch-exfat-identity.js form
+          # M additionally covers the worker/ copy (hit-rate precheck
+          # against the pristine 9.4 tgz: 16 files, all forms matched).
+          # 2026.9.3 had it removed (soft-skip); 2026.9.2 and earlier
+          # always needed this patch.
           #
           # The patch clears the world-writable bit from the mode check
           # when the env var is set, making the check pass. On NTFS/APFS
