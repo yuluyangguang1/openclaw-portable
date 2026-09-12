@@ -309,6 +309,23 @@ OPENCLAW_MJS="$CORE_DIR/node_modules/openclaw/openclaw.mjs"
 # Persist the actual gateway port so the config-server's /api/restart
 # endpoint can re-launch on the same port instead of the hardcoded default.
 "$NODE_BIN" -e "var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}" "$RUNTIME_JSON" "$PORT" 2>/dev/null || true
+# 上次非正常退出（关窗口 / 直接拔 U 盘）会留下网关锁，下次启动就报
+# "Gateway failed to start: gateway already running (pid N); lock timeout"。
+# `openclaw gateway stop` 管不了它（那只停受监督的服务，不是前台 gateway run），
+# 启动器的重试也只是重复同一个必然失败的启动。
+# 该助手只在「网关口没人应答 且 锁里的 pid 已死」时才清锁；网关在跑时什么都不做。
+_LOCKFIX_MJS=""
+if [ -f "$_SCRIPT_DIR/lib/fix-stale-gateway-lock.mjs" ]; then
+    _LOCKFIX_MJS="$_SCRIPT_DIR/lib/fix-stale-gateway-lock.mjs"
+elif [ -f "$PORTABLE_DIR/lib/fix-stale-gateway-lock.mjs" ]; then
+    _LOCKFIX_MJS="$PORTABLE_DIR/lib/fix-stale-gateway-lock.mjs"
+elif [ -f "$PORTABLE_DIR/system/lib/fix-stale-gateway-lock.mjs" ]; then
+    _LOCKFIX_MJS="$PORTABLE_DIR/system/lib/fix-stale-gateway-lock.mjs"
+fi
+if [ -n "$_LOCKFIX_MJS" ]; then
+    "$NODE_BIN" --disable-warning=ExperimentalWarning "$_LOCKFIX_MJS" "$STATE_DIR" "$PORT" || true
+fi
+_LOCKFIX_MJS=""
 "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --port $PORT &
 GW_PID=$!
 

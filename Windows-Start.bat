@@ -393,6 +393,24 @@ REM                detached replacement). Restarting from here would race
 REM                the replacement and crash on port 18789 already in use.
 set /a GW_RESTARTS=0
 :gw_loop
+REM 上次非正常退出（关窗口 / 任务管理器结束 / 直接拔 U 盘）会留下网关锁，
+REM 于是下次启动就报 "Gateway failed to start: gateway already running (pid N);
+REM lock timeout"。`openclaw gateway stop` 管不了它（那只停受监督的服务，不是
+REM 前台 gateway run），启动器的重试也只是重复同一个必然失败的启动。
+REM 该助手只在「网关口没人应答 且 锁里的 pid 已死」时才清锁；网关在跑时什么都不做。
+set "_LOCKFIX_MJS="
+if exist "!_SCRIPT_DIR!\lib\fix-stale-gateway-lock.mjs" (
+    set "_LOCKFIX_MJS=!_SCRIPT_DIR!\lib\fix-stale-gateway-lock.mjs"
+) else (
+    if exist "!PORTABLE_DIR!lib\fix-stale-gateway-lock.mjs" set "_LOCKFIX_MJS=!PORTABLE_DIR!lib\fix-stale-gateway-lock.mjs"
+)
+if not defined _LOCKFIX_MJS (
+    if exist "!PORTABLE_DIR!system\lib\fix-stale-gateway-lock.mjs" set "_LOCKFIX_MJS=!PORTABLE_DIR!system\lib\fix-stale-gateway-lock.mjs"
+)
+if defined _LOCKFIX_MJS (
+    "!NODE_BIN!" --disable-warning=ExperimentalWarning "!_LOCKFIX_MJS!" "!STATE_DIR!" !PORT!
+)
+set "_LOCKFIX_MJS="
 "!NODE_BIN!" "!OPENCLAW_MJS!" gateway run --allow-unconfigured --force --port !PORT!
 set GW_EXIT=!errorlevel!
 if !GW_EXIT! equ 0 goto gw_done
