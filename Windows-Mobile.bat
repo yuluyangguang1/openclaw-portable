@@ -116,8 +116,8 @@ if !errorlevel! equ 0 (
 )
 
 REM Read token
-set "TOKEN=openclaw"
-for /f "tokens=*" %%t in ('"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "!CONFIG_FILE!"') do set "TOKEN=%%t"
+set "TOKEN=yuai"
+for /f "tokens=*" %%t in ('"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "!CONFIG_FILE!"') do set "TOKEN=%%t"
 
 REM Get LAN IP
 set "LAN_IP="

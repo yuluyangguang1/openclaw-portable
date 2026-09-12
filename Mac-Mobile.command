@@ -225,9 +225,9 @@ while lsof -i :$PORT >/dev/null 2>&1; do
 done
 
 # ---- 9. Read token ----
-TOKEN="openclaw"
+TOKEN="yuai"
 if [ -f "$CONFIG_FILE" ]; then
-    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
+    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
     [ -n "$DETECTED_TOKEN" ] && TOKEN="$DETECTED_TOKEN"
 fi
 

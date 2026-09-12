@@ -146,11 +146,11 @@ if not exist "%STATE_DIR%\openclaw.json" (
 )
 
 REM Read token from config (encoding-safe: temp .js file pattern from P7)
-set "TOKEN=openclaw"
+set "TOKEN=yuai"
 if exist "%STATE_DIR%\openclaw.json" (
     set "_JS=%TEMP%\oc-menu-token-%RANDOM%.js"
     set "_OUT=%TEMP%\oc-menu-token-%RANDOM%.out"
-    >"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
+    >"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'yuai')}catch(e){console.log('openclaw')}
     "!NODE_BIN!" "!_JS!" "%STATE_DIR%\openclaw.json" >"!_OUT!" 2>nul
     if exist "!_OUT!" (
         set /p TOKEN=<"!_OUT!"
@@ -348,7 +348,7 @@ echo.
 if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     set "_JS=%TEMP%\oc-sysver-%RANDOM%.js"
     set "_OUT=%TEMP%\oc-sysver-%RANDOM%.out"
-    >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('unknown')}
+    >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8')).version)}catch(e){console.log('unknown')}
     "!NODE_BIN!" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
     if exist "!_OUT!" (
         set /p _OC_VER=<"!_OUT!"
@@ -536,7 +536,7 @@ REM Read current version (encoding-safe temp .js pattern)
 set "CUR_VER=unknown"
 set "_JS=%TEMP%\oc-curver-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-curver-%RANDOM%.out"
->"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('unknown')}
+>"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8')).version)}catch(e){console.log('unknown')}
 "!NODE_BIN!" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
 if exist "!_OUT!" ( set /p CUR_VER=<"!_OUT!" )
 del "!_JS!" 2>nul & del "!_OUT!" 2>nul
@@ -586,7 +586,7 @@ call "%NPM_BIN%" install openclaw@latest --registry=https://registry.npmmirror.c
 set "NEW_VER=unknown"
 set "_JS=%TEMP%\oc-newver-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-newver-%RANDOM%.out"
->"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('unknown')}
+>"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8')).version)}catch(e){console.log('unknown')}
 "!NODE_BIN!" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
 if exist "!_OUT!" ( set /p NEW_VER=<"!_OUT!" )
 del "!_JS!" 2>nul & del "!_OUT!" 2>nul

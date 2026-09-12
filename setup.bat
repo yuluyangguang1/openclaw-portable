@@ -136,7 +136,7 @@ REM Always regenerate package.json so OPENCLAW_VERSION takes effect
 REM even on re-run / upgrade. Include both deps so the file matches
 REM the post-install state and avoids dropping qqbot.
 set "_JS=%TEMP%\oc-pkg-%RANDOM%.js"
->"!_JS!" echo var fs=require('fs');var V=process.argv[1];var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:V,'@openclaw/arcee-provider':V,'@openclaw/cerebras-provider':V,'@openclaw/cohere-provider':V,'@openclaw/deepinfra-provider':V,'@openclaw/deepseek-provider':V,'@openclaw/fireworks-provider':V,'@openclaw/gmi-provider':V,'@openclaw/groq-provider':V,'@openclaw/kilocode-provider':V,'@openclaw/kimi-provider':V,'@openclaw/longcat-provider':V,'@openclaw/qwen-provider':V,'@openclaw/stepfun-provider':V,'@openclaw/zai-provider':V,'@openclaw/byteplus-provider':V,'@openclaw/mistral-provider':V,'@openclaw/novita-provider':V,'@openclaw/tencent-provider':V,'@openclaw/xiaomi-provider':V}};fs.writeFileSync(process.argv[2],JSON.stringify(pkg,null,2));
+>"!_JS!" echo var fs=require('fs');var V=process.argv[process.argv.length-2];var pkg={name:'openclaw-portable-core',version:'1.0.0',private:true,dependencies:{'@sliverp/qqbot':'^1.6.1','@zed-industries/codex-acp':'^0.14.0',acpx:'^0.8.0',openclaw:V,'@openclaw/arcee-provider':V,'@openclaw/cerebras-provider':V,'@openclaw/cohere-provider':V,'@openclaw/deepinfra-provider':V,'@openclaw/deepseek-provider':V,'@openclaw/fireworks-provider':V,'@openclaw/gmi-provider':V,'@openclaw/groq-provider':V,'@openclaw/kilocode-provider':V,'@openclaw/kimi-provider':V,'@openclaw/longcat-provider':V,'@openclaw/qwen-provider':V,'@openclaw/stepfun-provider':V,'@openclaw/zai-provider':V,'@openclaw/byteplus-provider':V,'@openclaw/mistral-provider':V,'@openclaw/novita-provider':V,'@openclaw/tencent-provider':V,'@openclaw/xiaomi-provider':V}};fs.writeFileSync(process.argv[process.argv.length-1],JSON.stringify(pkg,null,2));
 "%NODE_TARGET%\node.exe" "!_JS!" "%OPENCLAW_VERSION%" "%CORE_DIR%\package.json"
 del "!_JS!" 2>nul
 
@@ -145,7 +145,7 @@ set "NEED_INSTALL=1"
 if exist "%CORE_DIR%\node_modules\openclaw\package.json" (
     set "_JS=%TEMP%\oc-ver-%RANDOM%.js"
     set "_OUT=%TEMP%\oc-ver-%RANDOM%.out"
-    >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).version)}catch(e){console.log('')}
+    >"!_JS!" echo try{console.log(JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8')).version)}catch(e){console.log('')}
     "%NODE_TARGET%\node.exe" "!_JS!" "%CORE_DIR%\node_modules\openclaw\package.json" >"!_OUT!" 2>nul
     REM Clear before set /p ¡ª if _OUT is empty (node failed), set /p
     REM leaves INSTALLED_VER unchanged, which would make a stale value

@@ -180,12 +180,12 @@ do_dashboard() {
 
     # Read token from config — prefer node (always present in portable),
     # fall back to python3 only as a defensive last resort.
-    local TOKEN="openclaw"
+    local TOKEN="yuai"
     if [ -f "$CONFIG_PATH" ]; then
         if [ -x "$NODE_BIN" ]; then
-            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_PATH" 2>/dev/null || echo "openclaw")
+            TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "$CONFIG_PATH" 2>/dev/null || echo "openclaw")
         elif command -v python3 >/dev/null 2>&1; then
-            TOKEN=$(python3 -c "import json,sys,os; p=sys.argv[1]; d=json.load(open(p)) if os.path.exists(p) else {}; print(d.get('gateway',{}).get('auth',{}).get('token','openclaw'))" "$CONFIG_PATH" 2>/dev/null || echo "openclaw")
+            TOKEN=$(python3 -c "import json,sys,os; p=sys.argv[1]; d=json.load(open(p)) if os.path.exists(p) else {}; print(d.get('gateway',{}).get('auth',{}).get('token','yuai'))" "$CONFIG_PATH" 2>/dev/null || echo "openclaw")
         fi
     fi
 

@@ -122,22 +122,35 @@ if [ ! -f "$CONFIG_FILE" ]; then
         echo -e "  ${GREEN}Config migrated${NC}"
     else
         echo -e "  ${YELLOW}First run - creating default config...${NC}"
-        # 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
-        # Control UI/手机连接反复 token_mismatch 无法登录）。见 lib/ensure-config.mjs。
-        # 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
-        # 已存在的配置不会被改动（仅缺 gateway.auth 块时自愈补写）。
-        _ENSURECFG_MJS=""
-        if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
-            _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
-        elif [ -f "$PORTABLE_DIR/lib/ensure-config.mjs" ]; then
-            _ENSURECFG_MJS="$PORTABLE_DIR/lib/ensure-config.mjs"
-        fi
-        if [ -n "$_ENSURECFG_MJS" ]; then
-            "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_FILE" "$PORTABLE_DIR/system/default-config.json"
-        fi
-        if [ ! -f "$CONFIG_FILE" ]; then
-            # 兜底：helper 缺失或 node 异常时也要有一个能用的配置
-            cat > "$CONFIG_FILE" << 'CFGEOF'
+    fi
+    echo ""
+fi
+
+# 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致 Control UI /
+# 手机连接反复 token_mismatch 无法登录）。见 lib/ensure-config.mjs。
+# 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
+#
+# 这一步必须【每次启动】都跑，不能只放在上面的"首次运行"分支里。
+# ensure-config.mjs 是幂等的：只在缺 gateway.auth（或值是占位符）时补写，
+# 已有可用 token 的配置一个字节都不动。而它唯一要修的场景恰恰是"配置已存在但
+# 丢了 gateway.auth"——放进"文件不存在"分支等于让自愈永远不可达。配置一旦丢了
+# gateway.auth，网关就会每次启动现铸一个 runtime token，Control UI 永久
+# token_mismatch；而启动器那边只会印出一个兜底口令，用户怎么试都进不去。
+_ENSURECFG_MJS=""
+if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
+    _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
+elif [ -f "$PORTABLE_DIR/lib/ensure-config.mjs" ]; then
+    _ENSURECFG_MJS="$PORTABLE_DIR/lib/ensure-config.mjs"
+elif [ -f "$PORTABLE_DIR/system/lib/ensure-config.mjs" ]; then
+    _ENSURECFG_MJS="$PORTABLE_DIR/system/lib/ensure-config.mjs"
+fi
+if [ -n "$_ENSURECFG_MJS" ]; then
+    "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_FILE" "$PORTABLE_DIR/system/default-config.json"
+fi
+_ENSURECFG_MJS=""
+# 兜底：helper 缺失或 node 异常时也要有一个能用的配置
+if [ ! -f "$CONFIG_FILE" ]; then
+    cat > "$CONFIG_FILE" << 'CFGEOF'
 {
   "gateway": {
     "mode": "local",
@@ -145,10 +158,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
   }
 }
 CFGEOF
-        fi
-        echo -e "  ${GREEN}Config created${NC}"
-    fi
-    echo ""
 fi
 
 # ---- 5. Set environment (portable mode) ----
@@ -306,9 +315,9 @@ GW_PID=$!
 # Read gateway token from config (fallback: openclaw). Detected before
 # the readiness loop so the post-loop banner always prints the right
 # URL even if the gateway never came up within 15s.
-TOKEN="openclaw"
+TOKEN="yuai"
 if [ -f "$CONFIG_FILE" ]; then
-    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
+    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
     [ -n "$DETECTED_TOKEN" ] && TOKEN="$DETECTED_TOKEN"
 fi
 

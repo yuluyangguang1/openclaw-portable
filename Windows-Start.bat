@@ -155,22 +155,37 @@ if not exist "!STATE_DIR!\openclaw.json" (
         echo   Config migrated
     ) else (
         echo   First run - creating default config...
-        REM 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
-        REM Control UI/手机连接反复 token_mismatch 无法登录）。见 lib\ensure-config.mjs。
-        REM 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
-        REM 已存在的配置不会被改动（仅缺 gateway.auth 块时自愈补写）。
-        set "_ENSURECFG_MJS="
-        if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
-        if not defined _ENSURECFG_MJS (
-            if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
-        )
-        if defined _ENSURECFG_MJS (
-            "!NODE_BIN!" "!_ENSURECFG_MJS!" "!STATE_DIR!\openclaw.json" "!PORTABLE_DIR!system\default-config.json"
-        )
-        set "_ENSURECFG_MJS="
-        if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"!STATE_DIR!\openclaw.json"
-        echo   Config created
     )
+    echo.
+)
+
+REM 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
+REM Control UI/手机连接反复 token_mismatch 无法登录）。见 lib\ensure-config.mjs。
+REM 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
+REM
+REM 这一步必须【每次启动】都跑，不能只放在上面的"首次运行"分支里。
+REM ensure-config.mjs 是幂等的：只在缺 gateway.auth（或值是占位符）时补写，
+REM 已有可用 token 的配置一个字节都不动。而它唯一要修的场景恰恰是"配置已存在但
+REM 丢了 gateway.auth"——放进"文件不存在"分支等于让自愈永远不可达。配置一旦丢了
+REM gateway.auth，网关就会每次启动现铸一个 runtime token，Control UI 永久
+REM token_mismatch；而启动器那边只会印出一个兜底口令，用户怎么试都进不去。
+set "_ENSURECFG_MJS="
+if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
+if not defined _ENSURECFG_MJS (
+    if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
+)
+if not defined _ENSURECFG_MJS (
+    if exist "!PORTABLE_DIR!system\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!system\lib\ensure-config.mjs"
+)
+if defined _ENSURECFG_MJS (
+    "!NODE_BIN!" "!_ENSURECFG_MJS!" "!STATE_DIR!\openclaw.json" "!PORTABLE_DIR!system\default-config.json"
+)
+set "_ENSURECFG_MJS="
+REM 兜底：helper 缺失或 node 异常时也要有一个能用的配置
+if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"!STATE_DIR!\openclaw.json"
+if not exist "!STATE_DIR!\openclaw.json" (
+    echo.
+    echo   [WARN] 配置文件创建失败，请运行 Windows-Diagnose.bat
     echo.
 )
 
@@ -287,7 +302,7 @@ REM      temp file and read it with set /p — this is encoding-invariant.
 set "CONFIG_PORT=18750"
 set "_JS=%TEMP%\oc-read-port-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-read-port-%RANDOM%.out"
->"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[1],'utf8');var v=JSON.parse(d).configServerPort;console.log(v?v:18750)}catch(e){console.log(18750)}
+>"!_JS!" echo try{var d=require('fs').readFileSync(process.argv[process.argv.length-1],'utf8');var v=JSON.parse(d).configServerPort;console.log(v?v:18750)}catch(e){console.log(18750)}
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" >"!_OUT!" 2>nul
 if exist "!_OUT!" (
     set /p CONFIG_PORT=<"!_OUT!"
@@ -300,10 +315,10 @@ echo   Opening Dashboard and Config Center...
 timeout /t 1 /nobreak >nul
 
 REM Read gateway token from config (same encoding-safe pattern as above)
-set "TOKEN=openclaw"
+set "TOKEN=yuai"
 set "_JS=%TEMP%\oc-read-token-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-read-token-%RANDOM%.out"
->"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
+>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'yuai')}catch(e){console.log('openclaw')}
 "!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json" >"!_OUT!" 2>nul
 if exist "!_OUT!" (
     set /p TOKEN=<"!_OUT!"
@@ -323,7 +338,7 @@ set "OPENCLAW_MJS=!CORE_DIR!\node_modules\openclaw\openclaw.mjs"
 REM Persist the actual gateway port so /api/restart re-launches on the
 REM same port instead of the hardcoded default.
 set "_JS=%TEMP%\oc-write-port-%RANDOM%.js"
->"!_JS!" echo var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}
+>"!_JS!" echo var fs=require('fs'),p=process.argv[process.argv.length-2];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[process.argv.length-1]);d.gatewayUpdatedAt=new Date().toISOString();fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}
 "!NODE_BIN!" "!_JS!" "!RUNTIME_JSON!" !PORT! >nul 2>&1
 del "!_JS!" 2>nul
 
