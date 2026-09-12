@@ -1282,8 +1282,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  <!-- 一键预设 (推荐配置快速入口) -->
  <div id="presetArea" style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
  <button class="io-btn" onclick="applyPreset('deepseek','deepseek-chat')" tabindex="0">一键 DeepSeek</button>
- <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-4.6')" tabindex="0">一键 OpenRouter</button>
- <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash')" tabindex="0">一键 Gemini (免费)</button>
+ <button class="io-btn" onclick="applyPreset('openrouter','anthropic/claude-sonnet-5')" tabindex="0">一键 OpenRouter</button>
+ <button class="io-btn" onclick="applyPreset('gemini','gemini-3-flash-preview')" tabindex="0">一键 Gemini (免费)</button>
  </div>
 
  <!-- 本地模型自动检测 (auto-discovery) -->
@@ -1676,11 +1676,13 @@ function newGatewayToken() {
 }
 
 // ===== RENDER PROVIDERS =====
-// Global state for provider filtering. The default filter shows
-// only providers tagged 'hot' so first-time users see ~5 cards
-// instead of a wall of 28. Users can click chips or search to
-// reveal more.
-var providerFilter = 'hot';
+// Search state only. renderProviders() filters through _matchProvider(), which
+// looks at the search box and nothing else — there is no tag-chip UI and no
+// default filter, so every provider is listed on the first paint.
+// A `var providerFilter = 'hot'` used to sit here under a comment promising
+// "~5 cards instead of a wall of 28". Nothing ever read the variable, so the
+// promise never held and the comment described behaviour that did not exist.
+// (F-16)
 var providerSearchQuery = '';
 
 function _matchProvider(p) {
@@ -1985,6 +1987,37 @@ function resetCatalog() {
 }
 
 // ===== TOGGLE PROVIDER =====
+// Collapse every provider card. Was inlined in toggleProvider() twice over;
+// openProviderCard() needs the same thing.
+function closeAllProviderCards() {
+ const grid = document.getElementById('providerGrid');
+ if (!grid) return;
+ grid.querySelectorAll('.provider-card').forEach(c => {
+ c.classList.remove('selected');
+ const ex = c.querySelector('.provider-expand');
+ if (ex) ex.classList.remove('open');
+ });
+}
+
+// Open ONE card and close the rest — deliberately without the event guard in
+// toggleProvider(). That guard treats an event whose target is a <button> as
+// "the user clicked something inside the card, don't toggle", and the 一键预设
+// buttons ARE buttons, so applyPreset()'s 展开对应卡片 step silently did nothing
+// and the preset wrote into a collapsed, invisible form. (F-06)
+function openProviderCard(card, id) {
+ const expand = card.querySelector('.provider-expand');
+ if (!expand) return;
+ closeAllProviderCards();
+ card.classList.add('selected');
+ expand.classList.add('open');
+ selectedProvider = id;
+ const p = PROVIDERS.find(x => x.id === id);
+ selectedBase = p ? p.base : '';
+ // Scroll into view
+ setTimeout(() => card.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+ updateSaveBtn();
+}
+
 function toggleProvider(card, id) {
  // Don't toggle if user clicked on an input, select, button, or link inside the expand
  var evt = window.event || arguments[2];
@@ -1993,32 +2026,18 @@ function toggleProvider(card, id) {
  if (tag === 'input' || tag === 'select' || tag === 'button' || tag === 'a' || tag === 'option' || tag === 'textarea') return;
  if (evt.target.closest && evt.target.closest('.provider-expand')) return;
  }
- const grid = document.getElementById('providerGrid');
- const allCards = grid.querySelectorAll('.provider-card');
  const expand = card.querySelector('.provider-expand');
  const isOpen = expand && expand.classList.contains('open');
 
- // Close all
- allCards.forEach(c => {
- c.classList.remove('selected');
- const ex = c.querySelector('.provider-expand');
- if (ex) ex.classList.remove('open');
- });
-
- if (!isOpen && expand) {
- card.classList.add('selected');
- expand.classList.add('open');
- selectedProvider = id;
- const p = PROVIDERS.find(x => x.id === id);
- selectedBase = p ? p.base : '';
- // Scroll into view
- setTimeout(() => card.scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+ if (!isOpen) {
+ openProviderCard(card, id);
  } else {
+ closeAllProviderCards();
  selectedProvider = null;
  selectedBase = '';
  selectedModel = '';
- }
  updateSaveBtn();
+ }
 }
 
 // ===== UPDATE SAVE BUTTON (no-op) =====
@@ -2107,32 +2126,66 @@ function testKey(providerId) {
 }
 
 // ===== PRESETS =====
+// The three one-click buttons sit right on the "pick a platform → paste a key"
+// path, so every branch has to report what actually happened.
+// The old version only acted when BOTH the card existed AND the model id was in
+// the <select>, yet it toasted 「已选择 … 请填写 API Key」 unconditionally. Two of
+// the three presets named model ids the catalog no longer carries, so clicking
+// them left the select sitting on "-- 选择模型 --" while claiming the model had
+// been chosen; the next save then failed with 「请选择或输入模型」. And for
+// official-managed platforms (OpenRouter / OpenAI / Anthropic / …) the card has
+// no form at all, so "please fill in your API key" was never achievable. (F-06)
 function applyPreset(providerId, modelName) {
  // 展开对应卡片
  var card = document.querySelector('.provider-card[data-id="'+providerId+'"]');
- if (card) {
- toggleProvider(card, providerId);
+ if (!card) {
+ showToast('没有找到 ' + providerId + ' 的平台卡片，请在下方的平台列表里手动选择', 'error');
+ return;
+ }
+ openProviderCard(card, providerId);
  // 等 DOM 更新后填充
  setTimeout(function(){
  var c = document.querySelector('.provider-card[data-id="'+providerId+'"]');
  if (!c) return;
- // 选择模型
- var sel = c.querySelector('[data-field="model"]');
+
+ // 官方托管平台（OpenRouter / OpenAI / Anthropic …）的 Key 只能在 OpenClaw
+ // 官方界面填写，卡片里没有任何可预填的表单，所以这里不宣称"请填写 API Key"。
+ if (c.getAttribute('data-managed') === '1') {
+ showToast(providerId + ' 由 OpenClaw 官方扩展内置，请点卡片里的「前往官方界面配置」填写 Key', 'warning');
+ return;
+ }
+
+ // 普通平台是 <select>，自定义 / 本地平台是文本框。
+ var sel = c.querySelector('select[data-field="model"]');
+ var modelInput = c.querySelector('input[data-field="model"]');
  if (sel) {
+ var hit = false;
  for (var i = 0; i < sel.options.length; i++) {
- if (sel.options[i].value === modelName) { sel.selectedIndex = i; break; }
+ if (sel.options[i].value === modelName) { sel.selectedIndex = i; hit = true; break; }
  }
+ if (!hit) {
+ // 预设里的 model id 是写死的，而模型目录是热更新的：目录一变，预设就可能
+ // 落到已不存在的 id 上。这时必须说出来，不能让用户对着一个仍显示
+ // "-- 选择模型 --" 的下拉框去点保存。
+ showToast('模型目录里已没有 ' + providerId + '/' + modelName + '，请在下拉框里重新选择', 'error');
+ sel.focus();
+ return;
  }
+ } else if (modelInput && !modelInput.value) {
+ modelInput.value = modelName;
+ }
+
  // 聚焦 API Key 输入框
- var keyInput = c.querySelector('[data-field="apikey"]');
+ var keyInput = c.querySelector('input[data-field="apikey"]');
  if (keyInput) {
  keyInput.focus();
  keyInput.placeholder = '粘贴你的 ' + providerId + ' API Key';
+ showToast('已选择 ' + providerId + '/' + modelName + '，请填写 API Key', 'info');
+ } else {
+ showToast('已选择 ' + providerId + '/' + modelName, 'info');
  }
  updateSaveBtn();
- showToast('已选择 ' + providerId + '/' + modelName + '，请填写 API Key', 'info');
  }, 200);
- }
 }
 
 // ===== MODEL REF SCHEMA COMPAT (OpenClaw 2.0) =====
