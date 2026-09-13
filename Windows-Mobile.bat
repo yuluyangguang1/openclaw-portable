@@ -81,7 +81,7 @@ if not exist "!STATE_DIR!" mkdir "!STATE_DIR!"
 if not exist "!DATA_DIR!\memory" mkdir "!DATA_DIR!\memory"
 if not exist "!DATA_DIR!\logs" mkdir "!DATA_DIR!\logs"
 
-REM 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
+REM 网关口令为固定值 "openclaw"（2026-09-12 所有者决定：随机 token 导致
 REM Control UI/手机连接反复 token_mismatch 无法登录）。见 lib\ensure-config.mjs。
 REM 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
 REM
@@ -104,7 +104,7 @@ if defined _ENSURECFG_MJS (
 )
 set "_ENSURECFG_MJS="
 REM 兜底：helper 缺失或 node 异常时也要有一个能用的配置
-if not exist "!CONFIG_FILE!" (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"!CONFIG_FILE!"
+if not exist "!CONFIG_FILE!" (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"!CONFIG_FILE!"
 if not exist "!CONFIG_FILE!" (
     echo.
     echo   [WARN] 配置文件创建失败，请运行 Windows-Diagnose.bat
@@ -132,8 +132,8 @@ if !errorlevel! equ 0 (
 )
 
 REM Read token
-set "TOKEN=yuai"
-for /f "tokens=*" %%t in ('"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('yuai')}" "!CONFIG_FILE!"') do set "TOKEN=%%t"
+set "TOKEN=openclaw"
+for /f "tokens=*" %%t in ('"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "!CONFIG_FILE!"') do set "TOKEN=%%t"
 
 REM Get LAN IP
 set "LAN_IP="

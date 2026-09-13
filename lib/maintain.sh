@@ -213,7 +213,7 @@ do_factory_reset() {
 {
   "gateway": {
     "mode": "local",
-    "auth": { "token": "yuai" }
+    "auth": { "token": "openclaw" }
   }
 }
 CFGEOF

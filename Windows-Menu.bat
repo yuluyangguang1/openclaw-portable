@@ -134,7 +134,7 @@ if !errorlevel!==0 (
 )
 cd /d "%CORE_DIR%"
 if not exist "%STATE_DIR%\openclaw.json" (
-    REM 网关口令为固定值 "yuai"（所有者决定），见 lib\ensure-config.mjs
+    REM 网关口令为固定值 "openclaw"（所有者决定），见 lib\ensure-config.mjs
     if exist "%PORTABLE_DIR%lib\ensure-config.mjs" (
         "%NODE_BIN%" "%PORTABLE_DIR%lib\ensure-config.mjs" "%STATE_DIR%\openclaw.json" "%PORTABLE_DIR%system\default-config.json"
     ) else if exist "%PORTABLE_DIR%system\lib\ensure-config.mjs" (
@@ -142,15 +142,15 @@ if not exist "%STATE_DIR%\openclaw.json" (
     )
 )
 if not exist "%STATE_DIR%\openclaw.json" (
-    (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"%STATE_DIR%\openclaw.json"
+    (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )
 
 REM Read token from config (encoding-safe: temp .js file pattern from P7)
-set "TOKEN=yuai"
+set "TOKEN=openclaw"
 if exist "%STATE_DIR%\openclaw.json" (
     set "_JS=%TEMP%\oc-menu-token-%RANDOM%.js"
     set "_OUT=%TEMP%\oc-menu-token-%RANDOM%.out"
-    >"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'yuai')}catch(e){console.log('openclaw')}
+    >"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
     "!NODE_BIN!" "!_JS!" "%STATE_DIR%\openclaw.json" >"!_OUT!" 2>nul
     if exist "!_OUT!" (
         set /p TOKEN=<"!_OUT!"
@@ -487,7 +487,7 @@ if defined _ENSURECFG_MJS (
 ) else if exist "%PORTABLE_DIR%system\default-config.json" (
     copy "%PORTABLE_DIR%system\default-config.json" "%STATE_DIR%\openclaw.json" >nul
 ) else (
-    (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"%STATE_DIR%\openclaw.json"
+    (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
 )
 set "_ENSURECFG_MJS="
 echo.

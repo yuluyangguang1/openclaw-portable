@@ -1650,8 +1650,9 @@ let gatewayPort = null;
 let _gatewayToken = '';
 let configData = null;
 
-// The tokens that mean "nobody has set a real one yet".
-const WEAK_GATEWAY_TOKENS = ['openclaw', '__GENERATED_AT_FIRST_RUN__'];
+// The tokens that mean "nobody has set a real one yet" (or the value predates
+// the 2026-09-12 unification): the current fixed value "openclaw" is valid.
+const WEAK_GATEWAY_TOKENS = ['yuai', '__GENERATED_AT_FIRST_RUN__'];
 function isWeakGatewayToken(t) { return !t || WEAK_GATEWAY_TOKENS.indexOf(t) !== -1; }
 
 // Auth block for every config we write. Order matters: whatever is
@@ -1666,13 +1667,14 @@ function gatewayAuthBlock() {
  return { mode: 'token', token: token };
 }
 
-// Owner decision (2026-09-10): the gateway token is the fixed value "yuai",
-// matching lib/ensure-config.mjs. A random token minted here was invisible
+// Owner decision (2026-09-12): the gateway token is the fixed value "openclaw"
+// (changed back from 2026-09-10's "yuai"), matching lib/ensure-config.mjs. A
+// random token minted here was invisible
 // to the user and caused token_mismatch lockouts after every save/restart.
 // Trade-off (accepted by the owner): with the one-click LAN switch, a fixed
 // published token lets anyone on the same WiFi take over the agent.
 function newGatewayToken() {
- return 'yuai';
+ return 'openclaw';
 }
 
 // ===== RENDER PROVIDERS =====

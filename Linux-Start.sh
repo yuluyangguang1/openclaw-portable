@@ -126,7 +126,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
     echo ""
 fi
 
-# 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致 Control UI /
+# 网关口令为固定值 "openclaw"（2026-09-12 所有者指示改回：随机 token 导致 Control UI /
 # 手机连接反复 token_mismatch 无法登录）。见 lib/ensure-config.mjs。
 # 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
 #
@@ -154,7 +154,7 @@ if [ ! -f "$CONFIG_FILE" ]; then
 {
   "gateway": {
     "mode": "local",
-    "auth": { "token": "yuai" }
+    "auth": { "token": "openclaw" }
   }
 }
 CFGEOF
@@ -332,9 +332,9 @@ GW_PID=$!
 # Read gateway token from config (fallback: openclaw). Detected before
 # the readiness loop so the post-loop banner always prints the right
 # URL even if the gateway never came up within 15s.
-TOKEN="yuai"
+TOKEN="openclaw"
 if [ -f "$CONFIG_FILE" ]; then
-    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
+    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'openclaw')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
     [ -n "$DETECTED_TOKEN" ] && TOKEN="$DETECTED_TOKEN"
 fi
 

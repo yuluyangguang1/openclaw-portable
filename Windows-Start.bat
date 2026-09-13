@@ -159,7 +159,7 @@ if not exist "!STATE_DIR!\openclaw.json" (
     echo.
 )
 
-REM 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
+REM 网关口令为固定值 "openclaw"（2026-09-12 所有者决定：随机 token 导致
 REM Control UI/手机连接反复 token_mismatch 无法登录）。见 lib\ensure-config.mjs。
 REM 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
 REM
@@ -182,7 +182,7 @@ if defined _ENSURECFG_MJS (
 )
 set "_ENSURECFG_MJS="
 REM 兜底：helper 缺失或 node 异常时也要有一个能用的配置
-if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"!STATE_DIR!\openclaw.json"
+if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"!STATE_DIR!\openclaw.json"
 if not exist "!STATE_DIR!\openclaw.json" (
     echo.
     echo   [WARN] 配置文件创建失败，请运行 Windows-Diagnose.bat
@@ -315,10 +315,10 @@ echo   Opening Dashboard and Config Center...
 timeout /t 1 /nobreak >nul
 
 REM Read gateway token from config (same encoding-safe pattern as above)
-set "TOKEN=yuai"
+set "TOKEN=openclaw"
 set "_JS=%TEMP%\oc-read-token-%RANDOM%.js"
 set "_OUT=%TEMP%\oc-read-token-%RANDOM%.out"
->"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'yuai')}catch(e){console.log('openclaw')}
+>"!_JS!" echo try{var c=JSON.parse(require('fs').readFileSync(process.argv[process.argv.length-1],'utf8'));var g=c.gateway?c.gateway:{};var a=g.auth?g.auth:{};console.log(a.token?a.token:'openclaw')}catch(e){console.log('openclaw')}
 "!NODE_BIN!" "!_JS!" "!STATE_DIR!\openclaw.json" >"!_OUT!" 2>nul
 if exist "!_OUT!" (
     set /p TOKEN=<"!_OUT!"
