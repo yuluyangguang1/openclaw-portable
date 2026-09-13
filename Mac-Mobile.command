@@ -112,27 +112,39 @@ echo ""
 # ---- 5. Init data directories ----
 mkdir -p "$STATE_DIR" "$DATA_DIR/memory" "$DATA_DIR/backups" "$DATA_DIR/logs"
 
-# ---- 6. Ensure base config exists ----
+# ---- 6. Ensure base config ----
+# Legacy migration: old layouts kept the config at data/config.json.
+if [ ! -f "$CONFIG_FILE" ] && [ -f "$DATA_DIR/config.json" ]; then
+    echo -e "  ${YELLOW}Migrating legacy config...${NC}"
+    cp "$DATA_DIR/config.json" "$CONFIG_FILE"
+    echo -e "  ${GREEN}Config migrated${NC}"
+fi
+
+# 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致 Control UI /
+# 手机连接反复 token_mismatch 无法登录）。见 lib/ensure-config.mjs。
+# 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
+#
+# 这一步必须【每次启动】都跑，不能只放在上面的"首次运行"分支里。
+# ensure-config.mjs 是幂等的：只在缺 gateway.auth（或值是占位符）时补写，
+# 已有可用 token 的配置一个字节都不动。而它唯一要修的场景恰恰是"配置已存在但
+# 丢了 gateway.auth"——放进"文件不存在"分支等于让自愈永远不可达。配置一旦丢了
+# gateway.auth，网关就会每次启动现铸一个 runtime token，Control UI 永久
+# token_mismatch；而启动器那边只会印出一个兜底口令，用户怎么试都进不去。
+_ENSURECFG_MJS=""
+if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
+    _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
+elif [ -f "$PORTABLE_DIR/lib/ensure-config.mjs" ]; then
+    _ENSURECFG_MJS="$PORTABLE_DIR/lib/ensure-config.mjs"
+elif [ -f "$PORTABLE_DIR/system/lib/ensure-config.mjs" ]; then
+    _ENSURECFG_MJS="$PORTABLE_DIR/system/lib/ensure-config.mjs"
+fi
+if [ -n "$_ENSURECFG_MJS" ]; then
+    "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_FILE" "$PORTABLE_DIR/system/default-config.json"
+fi
+_ENSURECFG_MJS=""
+# 兜底：helper 缺失或 node 异常时也要有一个能用的配置
 if [ ! -f "$CONFIG_FILE" ]; then
-    if [ -f "$DATA_DIR/config.json" ]; then
-        cp "$DATA_DIR/config.json" "$CONFIG_FILE"
-    else
-        # 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
-        # Control UI/手机连接反复 token_mismatch 无法登录）。见 lib/ensure-config.mjs。
-        # 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
-        # 已存在的配置不会被改动（仅缺 gateway.auth 块时自愈补写）。
-        _ENSURECFG_MJS=""
-        if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
-            _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
-        elif [ -f "$PORTABLE_DIR/lib/ensure-config.mjs" ]; then
-            _ENSURECFG_MJS="$PORTABLE_DIR/lib/ensure-config.mjs"
-        fi
-        if [ -n "$_ENSURECFG_MJS" ]; then
-            "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_FILE" "$PORTABLE_DIR/system/default-config.json"
-        fi
-        if [ ! -f "$CONFIG_FILE" ]; then
-            # 兜底：helper 缺失或 node 异常时也要有一个能用的配置
-            cat > "$CONFIG_FILE" << 'CFGEOF'
+    cat > "$CONFIG_FILE" << 'CFGEOF'
 {
   "gateway": {
     "mode": "local",
@@ -140,8 +152,6 @@ if [ ! -f "$CONFIG_FILE" ]; then
   }
 }
 CFGEOF
-        fi
-    fi
 fi
 
 # ---- 7. Load mobile module & create temp config ----
@@ -227,7 +237,7 @@ done
 # ---- 9. Read token ----
 TOKEN="yuai"
 if [ -f "$CONFIG_FILE" ]; then
-    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "$CONFIG_FILE" 2>/dev/null)
+    DETECTED_TOKEN=$("$NODE_BIN" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('yuai')}" "$CONFIG_FILE" 2>/dev/null)
     [ -n "$DETECTED_TOKEN" ] && TOKEN="$DETECTED_TOKEN"
 fi
 
@@ -269,6 +279,24 @@ cd "$CORE_DIR"
 OPENCLAW_MJS="$CORE_DIR/node_modules/openclaw/openclaw.mjs"
 
 "$NODE_BIN" -e "var fs=require('fs'),p=process.argv[1];try{var d=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,'utf8')):{};d.gatewayPort=parseInt(process.argv[2]);d.gatewayUpdatedAt=new Date().toISOString();d.mobileMode=true;fs.writeFileSync(p,JSON.stringify(d,null,2));}catch(e){}" "$RUNTIME_JSON" "$PORT" 2>/dev/null || true
+
+# 上次非正常退出（关窗口 / 直接拔 U 盘）会留下网关锁，下次启动就报
+# "Gateway failed to start: gateway already running (pid N); lock timeout"。
+# `openclaw gateway stop` 管不了它（那只停受监督的服务，不是前台 gateway run），
+# 启动器的重试也只是重复同一个必然失败的启动。
+# 该助手只在「网关口没人应答 且 锁里的 pid 已死」时才清锁；网关在跑时什么都不做。
+_LOCKFIX_MJS=""
+if [ -f "$_SCRIPT_DIR/lib/fix-stale-gateway-lock.mjs" ]; then
+    _LOCKFIX_MJS="$_SCRIPT_DIR/lib/fix-stale-gateway-lock.mjs"
+elif [ -f "$PORTABLE_DIR/lib/fix-stale-gateway-lock.mjs" ]; then
+    _LOCKFIX_MJS="$PORTABLE_DIR/lib/fix-stale-gateway-lock.mjs"
+elif [ -f "$PORTABLE_DIR/system/lib/fix-stale-gateway-lock.mjs" ]; then
+    _LOCKFIX_MJS="$PORTABLE_DIR/system/lib/fix-stale-gateway-lock.mjs"
+fi
+if [ -n "$_LOCKFIX_MJS" ]; then
+    "$NODE_BIN" --disable-warning=ExperimentalWarning "$_LOCKFIX_MJS" "$STATE_DIR" "$PORT" || true
+fi
+_LOCKFIX_MJS=""
 
 "$NODE_BIN" "$OPENCLAW_MJS" gateway run --allow-unconfigured --force --bind lan --port $PORT &
 GW_PID=$!

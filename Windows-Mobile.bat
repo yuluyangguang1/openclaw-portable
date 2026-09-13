@@ -81,18 +81,34 @@ if not exist "!STATE_DIR!" mkdir "!STATE_DIR!"
 if not exist "!DATA_DIR!\memory" mkdir "!DATA_DIR!\memory"
 if not exist "!DATA_DIR!\logs" mkdir "!DATA_DIR!\logs"
 
-REM Ensure base config
+REM 网关口令为固定值 "yuai"（2026-09-10 所有者决定：随机 token 导致
+REM Control UI/手机连接反复 token_mismatch 无法登录）。见 lib\ensure-config.mjs。
+REM 注意：一键局域网模式下，固定口令等于同 WiFi 内知道该值的人可接管代理。
+REM
+REM 这一步必须【每次启动】都跑，不能只放在上面的"首次运行"分支里。
+REM ensure-config.mjs 是幂等的：只在缺 gateway.auth（或值是占位符）时补写，
+REM 已有可用 token 的配置一个字节都不动。而它唯一要修的场景恰恰是"配置已存在但
+REM 丢了 gateway.auth"——放进"文件不存在"分支等于让自愈永远不可达。配置一旦丢了
+REM gateway.auth，网关就会每次启动现铸一个 runtime token，Control UI 永久
+REM token_mismatch；而启动器那边只会印出一个兜底口令，用户怎么试都进不去。
+set "_ENSURECFG_MJS="
+if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
+if not defined _ENSURECFG_MJS (
+    if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
+)
+if not defined _ENSURECFG_MJS (
+    if exist "!PORTABLE_DIR!system\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!system\lib\ensure-config.mjs"
+)
+if defined _ENSURECFG_MJS (
+    "!NODE_BIN!" "!_ENSURECFG_MJS!" "!CONFIG_FILE!" "!PORTABLE_DIR!system\default-config.json"
+)
+set "_ENSURECFG_MJS="
+REM 兜底：helper 缺失或 node 异常时也要有一个能用的配置
+if not exist "!CONFIG_FILE!" (echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}})>"!CONFIG_FILE!"
 if not exist "!CONFIG_FILE!" (
-    set "_ENSURECFG_MJS="
-    if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
-    if not defined _ENSURECFG_MJS (
-        if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
-    )
-    if defined _ENSURECFG_MJS (
-        "!NODE_BIN!" "!_ENSURECFG_MJS!" "!CONFIG_FILE!" "!PORTABLE_DIR!system\default-config.json"
-    )
-    set "_ENSURECFG_MJS="
-    if not exist "!CONFIG_FILE!" echo {"gateway":{"mode":"local","auth":{"token":"yuai"}}} > "!CONFIG_FILE!"
+    echo.
+    echo   [WARN] 配置文件创建失败，请运行 Windows-Diagnose.bat
+    echo.
 )
 
 REM Generate mobile config (inject LAN mode + autoApprove)
@@ -117,7 +133,7 @@ if !errorlevel! equ 0 (
 
 REM Read token
 set "TOKEN=yuai"
-for /f "tokens=*" %%t in ('"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('openclaw')}" "!CONFIG_FILE!"') do set "TOKEN=%%t"
+for /f "tokens=*" %%t in ('"!NODE_BIN!" -e "try{const c=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'));console.log((c.gateway&&c.gateway.auth&&c.gateway.auth.token)||'yuai')}catch(e){console.log('yuai')}" "!CONFIG_FILE!"') do set "TOKEN=%%t"
 
 REM Get LAN IP
 set "LAN_IP="
@@ -189,6 +205,24 @@ if defined _STRIP_MJS (
 set "_STRIP_MJS="
 
 echo   Starting gateway...
+REM 上次非正常退出（关窗口 / 任务管理器结束 / 直接拔 U 盘）会留下网关锁，
+REM 于是下次启动就报 "Gateway failed to start: gateway already running (pid N);
+REM lock timeout"。`openclaw gateway stop` 管不了它（那只停受监督的服务，不是
+REM 前台 gateway run），启动器的重试也只是重复同一个必然失败的启动。
+REM 该助手只在「网关口没人应答 且 锁里的 pid 已死」时才清锁；网关在跑时什么都不做。
+set "_LOCKFIX_MJS="
+if exist "!_SCRIPT_DIR!\lib\fix-stale-gateway-lock.mjs" (
+    set "_LOCKFIX_MJS=!_SCRIPT_DIR!\lib\fix-stale-gateway-lock.mjs"
+) else (
+    if exist "!PORTABLE_DIR!lib\fix-stale-gateway-lock.mjs" set "_LOCKFIX_MJS=!PORTABLE_DIR!lib\fix-stale-gateway-lock.mjs"
+)
+if not defined _LOCKFIX_MJS (
+    if exist "!PORTABLE_DIR!system\lib\fix-stale-gateway-lock.mjs" set "_LOCKFIX_MJS=!PORTABLE_DIR!system\lib\fix-stale-gateway-lock.mjs"
+)
+if defined _LOCKFIX_MJS (
+    "!NODE_BIN!" --disable-warning=ExperimentalWarning "!_LOCKFIX_MJS!" "!STATE_DIR!" !PORT!
+)
+set "_LOCKFIX_MJS="
 "!NODE_BIN!" "!OPENCLAW_MJS!" gateway run --allow-unconfigured --force --bind lan --port !PORT!
 
 REM Cleanup on exit
