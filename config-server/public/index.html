@@ -3142,12 +3142,40 @@ function toggleLogs() {
  }
 }
 
+// Kernel file logs are JSONL: the readable text sits in `message`, the level
+// in `_meta.logLevelName`, and the subsystem inside the stringified
+// `_meta.name`. Raw lines are a wall of escaped JSON nobody can read, so
+// flatten them (44.7-③). Anything that is not a kernel record (plain-text
+// logs, the server's own "not found" line) passes through unchanged.
+function flattenLogLine(line) {
+ if (typeof line !== 'string' || line.charAt(0) !== '{') return line;
+ var rec;
+ try { rec = JSON.parse(line); } catch (e) { return line; }
+ if (!rec || typeof rec !== 'object' || typeof rec.message !== 'string') return line;
+ var ts = typeof rec.time === 'string' ? rec.time : '';
+ var tm = ts.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})/);
+ if (tm) ts = tm[1] + ' ' + tm[2];
+ var lvl = (rec._meta && typeof rec._meta.logLevelName === 'string') ? rec._meta.logLevelName : '';
+ var sub = '';
+ try {
+  var nm = (rec._meta && typeof rec._meta.name === 'string' && rec._meta.name.charAt(0) === '{')
+    ? JSON.parse(rec._meta.name) : null;
+  if (nm && typeof nm.subsystem === 'string') sub = nm.subsystem;
+ } catch (e) {}
+ var parts = [];
+ if (ts) parts.push(ts);
+ if (lvl) parts.push(lvl);
+ if (sub) parts.push(sub);
+ parts.push(rec.message);
+ return parts.join(' ');
+}
+
 function refreshLogs() {
  var el = document.getElementById('logContent');
  el.textContent = '加载中...';
  apiFetch('/api/logs').then(function(r){return r.json();}).then(function(data){
  if (data.lines && data.lines.length) {
- el.textContent = data.lines.join('\n');
+ el.textContent = data.lines.map(flattenLogLine).join('\n');
  el.scrollTop = el.scrollHeight;
  } else {
  el.textContent = '暂无日志';
