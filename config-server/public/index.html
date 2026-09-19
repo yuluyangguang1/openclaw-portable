@@ -2619,13 +2619,13 @@ function highlightCurrentProvider(cfg) {
 function buildConfig(provider, base, model, apiKey) {
  var bc = {
   gateway:{mode:'local',auth:gatewayAuthBlock()},
-  // NOTE: never put `commands.ownerDisplay` here. In 2026.8.2 it is a
-  // deprecated doctor-only legacy key (see CommandsConfig in openclaw's own
-  // types) that the RUNTIME schema rejects: the gateway logs
-  // `[reload] config reload skipped (invalid config): commands: Unrecognized
-  // key: "ownerDisplay"`, the save silently does not apply, and the follow-up
-  // /api/restart then hangs for 30s until it times out.
-  commands:{native:'auto',nativeSkills:'auto',restart:true},
+  // NOTE: never send `commands` (nor `commands.ownerDisplay`) from this UI.
+  // mergeSave keeps whatever is on disk when the POST omits the key; the
+  // previously hardcoded {native:'auto',nativeSkills:'auto',restart:true}
+  // silently flipped `restart` (e.g. false→true for users upgrading from an
+  // older package) on every save — a boot-time-only diff, so the server
+  // reported needsRestart even for pure model switches (2026-09-19, beta.18).
+  // `ownerDisplay` additionally invalidates the whole runtime config.
 
  };
  var pn = provider || 'myProvider';
@@ -3395,9 +3395,8 @@ function applyLocalRuntime(runtimeId, port) {
  var ref = providerKey + '/' + modelName;
  var cfg = {
   gateway: { mode: 'local', auth: gatewayAuthBlock() },
-  // Same rule as buildConfig(): `ownerDisplay` is a deprecated doctor-only
-  // legacy key in 2026.8.2 and makes the whole config invalid at runtime.
-  commands: { native: 'auto', nativeSkills: 'auto', restart: true },
+  // Same rule as buildConfig(): no `commands` — mergeSave preserves the
+  // on-disk block (hardcoding it here caused spurious restart diffs).
   models: { mode: 'merge', providers: providers },
   // Write BOTH legacy + 2.0 scoped model refs (buildConfig does the same) so
   // a 2.0 gateway doesn't keep its old agents.entries.main.model (schema drift).

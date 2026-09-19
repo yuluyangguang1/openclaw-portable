@@ -1307,6 +1307,7 @@ const server = http.createServer((req, res) => {
             'Expand-Archive -Force -Path $env:_OC_ZIP -DestinationPath $env:_OC_DST'
           ], {
             timeout: 60000,
+            windowsHide: true,
             env: { ...process.env, _OC_ZIP: tmpZip, _OC_DST: extractDir }
           });
         } else {
@@ -1411,8 +1412,13 @@ const server = http.createServer((req, res) => {
           let spawned = false;
           try {
             const { spawn } = require('child_process');
+            // Same Windows rule as the /api/restart gateway respawn: attached,
+            // not detached. A detached self-replacement has no console, and
+            // every console command it runs later (netstat/taskkill/powershell
+            // in /api/restart, Expand-Archive in the updater) pops its own
+            // black window. POSIX keeps detached (setsid) to survive the exit.
             const child = spawn(process.execPath, [__filename], {
-              detached: true,
+              detached: process.platform !== 'win32',
               stdio: 'ignore',
               cwd: __dirname,
               env: process.env,
@@ -1510,7 +1516,7 @@ const server = http.createServer((req, res) => {
         // while the UI had already answered {ok:true} (B-04 part 2).
         let out = '';
         try {
-          out = execSync(`netstat -ano | findstr ":${p} " | findstr "LISTENING"`, {encoding:'utf8', timeout:5000}).trim();
+          out = execSync(`netstat -ano | findstr ":${p} " | findstr "LISTENING"`, {encoding:'utf8', timeout:5000, windowsHide: true}).trim();
         } catch(e) { continue; }
         const lines = out.split('\n').filter(Boolean);
         for (const line of lines) {
@@ -1529,9 +1535,13 @@ const server = http.createServer((req, res) => {
               const cmdLine = execFileSync('powershell', [
                 '-NoProfile', '-NonInteractive', '-Command',
                 `(Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CommandLine`
-              ], {encoding:'utf8', timeout:10000}).trim();
+              ], {encoding:'utf8', timeout:10000, windowsHide: true}).trim();
               if (cmdLine && cmdLine.includes('openclaw.mjs')) {
-                try { execSync(`taskkill /PID ${pid} /F`, {timeout:5000}); } catch(e) {}
+                // /T = kill the whole tree. Without it the gateway's console
+                // children (spawned by the gateway at runtime) survive as
+                // orphans holding the port/lock. The .bat stale-kill uses /T
+                // for the same reason.
+                try { execSync(`taskkill /PID ${pid} /F /T`, {timeout:5000, windowsHide: true}); } catch(e) {}
               }
             } catch(e) {
               // PowerShell failed — don't risk killing anything
@@ -1604,10 +1614,19 @@ const server = http.createServer((req, res) => {
         if (!env.OPENCLAW_STATE_DIR) env.OPENCLAW_STATE_DIR = OPENCLAW_DIR;
         if (!env.OPENCLAW_CONFIG_PATH) env.OPENCLAW_CONFIG_PATH = CONFIG_PATH;
         if (!env.OPENCLAW_DISABLE_BONJOUR) env.OPENCLAW_DISABLE_BONJOUR = '1';
+        // Windows: keep the gateway ATTACHED to this console (the launcher's).
+        // A detached child has NO console, so every console command the gateway
+        // later runs (netstat, git, bash, Expand-Archive, …) each allocated its
+        // own visible window — the "保存后重启还跳了很多黑框" report (beta.18,
+        // 2026-09-19; reproduced locally: detached → every grandchild pops a
+        // box; attached → zero). Attached also means the gateway dies together
+        // with the launcher window, exactly like the foreground gateway the
+        // .bat started — no orphaned gateway holding the port/lock afterwards.
+        // POSIX: detached (setsid) as before, so it survives parent exit.
         const child = spawn(nodeBin, [openclawMjs, 'gateway', 'run', '--allow-unconfigured', '--force', '--port', gwPort], {
           cwd: coreDir,
           env,
-          detached: true,
+          detached: process.platform !== 'win32',
           stdio: 'ignore',
         });
         // spawn() can fail asynchronously (e.g. ENOENT for nodeBin on
@@ -2024,22 +2043,20 @@ function writeUserCatalog(catalog, source) {
   return toWrite;
 }
 
-// GET — current catalog with precedence: user cache > shipped > none
-// (frontend keeps its embedded hardcoded list when `providers` is empty).
-if (req.url === '/api/models/catalog' && req.method === 'GET') {
-  const userCat = readCatalogFile(MODEL_CATALOG_USER);
-  const shipCat = readCatalogFile(MODEL_CATALOG_SHIPPED);
-  const cat = userCat || shipCat;
-  const fetchedAt = userCat ? Date.parse(userCat.fetchedAt || '') || 0 : 0;
-  res.writeHead(200, { 'Content-Type': 'application/json' });
-  if (!cat) {
-    res.end(JSON.stringify({ ok: true, source: 'embedded', providers: [], managedProviders: [] }));
-    return;
-  }
-  // DIRECTION-A: annotate each provider with whether OpenClaw's own built-in
-  // extension owns it (→ must be configured in the official UI). Computed at
-  // read time from the installed openclaw core; never written to the catalog
-  // file. Local runtimes (ollama/lmstudio) are excluded → stay editable.
+// DIRECTION-A annotation, applied to EVERY response that carries catalog
+// providers (GET catalog, POST refresh, manual import, POST reset). Computed
+// at read time from the installed openclaw core; never written to the catalog
+// file. This used to live only in the GET handler — the POSTs returned RAW
+// providers, and since the UI applies any of them to PROVIDERS, a refresh
+// (including the silent background one on stale cache) dropped
+// hasOfficialCatalog/modelMeta; the next save then injected a synthetic
+// models[] row for providers whose models are owned by a bundled extension
+// (wrong labels/context/cost, duplicated rows — the exact regression the
+// MODEL-LIST OWNERSHIP comment in buildConfig documents).
+function annotateCatalogProviders(cat) {
+  // Each provider gets `builtIn: true` when OpenClaw's own built-in extension
+  // owns it (→ must be configured in the official UI). Local runtimes
+  // (ollama/lmstudio) are excluded → stay editable.
   const managed = new Set();
   const builtinIds = discoverBuiltinProviderIds();
   const officialModels = getOfficialModelCatalog();
@@ -2074,14 +2091,30 @@ if (req.url === '/api/models/catalog' && req.method === 'GET') {
     }
     return out;
   });
+  return { providers, managedProviders: Array.from(managed) };
+}
+
+// GET — current catalog with precedence: user cache > shipped > none
+// (frontend keeps its embedded hardcoded list when `providers` is empty).
+if (req.url === '/api/models/catalog' && req.method === 'GET') {
+  const userCat = readCatalogFile(MODEL_CATALOG_USER);
+  const shipCat = readCatalogFile(MODEL_CATALOG_SHIPPED);
+  const cat = userCat || shipCat;
+  const fetchedAt = userCat ? Date.parse(userCat.fetchedAt || '') || 0 : 0;
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  if (!cat) {
+    res.end(JSON.stringify({ ok: true, source: 'embedded', providers: [], managedProviders: [] }));
+    return;
+  }
+  const annotated = annotateCatalogProviders(cat);
   res.end(JSON.stringify({
     ok: true,
     source: userCat ? 'cache' : 'built-in',
     version: cat.version || '',
     updatedAt: cat.updatedAt || '',
     stale: userCat ? (Date.now() - fetchedAt > MODEL_CATALOG_STALE_MS) : true,
-    providers,
-    managedProviders: Array.from(managed),
+    providers: annotated.providers,
+    managedProviders: annotated.managedProviders,
   }));
   return;
 }
@@ -2114,7 +2147,7 @@ if (req.url === '/api/models/refresh' && req.method === 'POST') {
             res.end(JSON.stringify({
               ok: true, updated: true, version: written.version,
               updatedAt: written.updatedAt, source: url,
-              providers: written.providers,
+              providers: annotateCatalogProviders(written).providers,
             }));
           }
           return;
@@ -2153,7 +2186,7 @@ if (req.url === '/api/models/catalog' && req.method === 'POST') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({
         ok: true, version: written.version, updatedAt: written.updatedAt,
-        source: 'manual', providers: written.providers,
+        source: 'manual', providers: annotateCatalogProviders(written).providers,
       }));
     } catch (err) {
       if (!res.headersSent) {
@@ -2177,7 +2210,7 @@ if (req.url === '/api/models/reset' && req.method === 'POST') {
       res.end(JSON.stringify({
         ok: true, source: 'built-in',
         version: shipCat ? shipCat.version : '',
-        providers: shipCat ? shipCat.providers : [],
+        providers: shipCat ? annotateCatalogProviders(shipCat).providers : [],
       }));
     } catch (err) {
       if (!res.headersSent) {
@@ -2290,7 +2323,7 @@ function extractSkillArchive(zipPath, destDir) {
   if (process.platform === 'win32') {
     const q = (p) => p.replace(/'/g, "''");
     const r = cp.spawnSync('powershell', ['-NoProfile', '-NonInteractive', '-Command',
-      "Expand-Archive -LiteralPath '" + q(zipPath) + "' -DestinationPath '" + q(destDir) + "' -Force"], { timeout: 120000 });
+      "Expand-Archive -LiteralPath '" + q(zipPath) + "' -DestinationPath '" + q(destDir) + "' -Force"], { timeout: 120000, windowsHide: true });
     if (r.status === 0) return null;
     return 'Expand-Archive failed: ' + (r.stderr && r.stderr.toString().slice(0, 300) || ('exit ' + r.status));
   }
