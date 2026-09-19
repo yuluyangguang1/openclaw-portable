@@ -2715,15 +2715,24 @@ function saveConfig() {
  }).then(function(r) { return r.json(); }).then(function(data) {
  _saveConfigBusy = false;
  if (data.ok) {
- showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
- kSaveSet(25); kSaveLabel('重启 Gateway…');
- try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
- goStep(2);
- // 显示配置摘要
- showConfigSummary(cfg);
- populateQuickSwitch(cfg);
- // 自动重启 Gateway 使新配置生效
- apiFetch('/api/restart', {method:'POST'}).then(function(){
+  try { localStorage.setItem('oc-config-updated', String(Date.now())); } catch(e) {}
+  goStep(2);
+  // 显示配置摘要
+  showConfigSummary(cfg);
+  populateQuickSwitch(cfg);
+  if (data.needsRestart === false) {
+   // 服务端 diff 判定：本次只改了网关 9.2+ 文件监视器即时生效的路径
+   // (models / agents.entries / agents.defaults / plugins.entries)，
+   // 热加载 <1s，零停机 —— 跳过 /api/restart，稍候刷新网关状态即可。
+   showToast('配置已保存，网关自动热加载生效', 'success');
+   kSaveSet(60); kSaveLabel('网关热加载…');
+   setTimeout(function(){ kSaveDone(); checkGateway(); }, 1500);
+   return;
+  }
+  showToast('\u914d\u7f6e\u5df2\u4fdd\u5b58\uff0c\u6b63\u5728\u91cd\u542f Gateway...', 'success');
+  kSaveSet(25); kSaveLabel('重启 Gateway…');
+  // 自动重启 Gateway 使新配置生效（本次改动含启动期字段，热加载覆盖不了）
+  apiFetch('/api/restart', {method:'POST'}).then(function(){
  showToast('Gateway \u91cd\u542f\u4e2d\uff0c\u7a0d\u5019\u53ef\u7528...', 'info');
  kSaveSet(40); kSaveLabel('等待网关就绪…');
  var waitCount = 0;
@@ -3401,9 +3410,15 @@ function applyLocalRuntime(runtimeId, port) {
  body: JSON.stringify(cfg)
  }).then(function(r){return r.json();}).then(function(data){
  if (data.ok) {
- showToast('\u672c\u5730\u6a21\u578b \u5df2\u8bbe\u7f6e: ' + modelName + '\uff0c\u91cd\u542f\u4e2d...', 'success');
  goStep(2);
  showConfigSummary(cfg);
+ if (data.needsRestart === false) {
+  // 同 saveConfig()：只改了热加载路径，无需重启网关
+  showToast('本地模型 已设置: ' + modelName + '，网关热加载生效', 'success');
+  setTimeout(checkGateway, 1500);
+  return;
+ }
+ showToast('\u672c\u5730\u6a21\u578b \u5df2\u8bbe\u7f6e: ' + modelName + '\uff0c\u91cd\u542f\u4e2d...', 'success');
  apiFetch('/api/restart', { method: 'POST' }).then(function(){
  var waitCount = 0;
  var waitReady = setInterval(function(){

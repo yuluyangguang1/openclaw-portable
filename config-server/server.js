@@ -776,6 +776,37 @@ function mergeSave(existing, incoming) {
   return base;
 }
 
+// Which config paths the gateway's file watcher applies without a restart
+// (observed live: `[reload] config hot reload applied (plugins.entries.*,
+// agents.entries.*, agents.defaults.*, models)`). Everything else —
+// gateway.port/bind/auth, logging.file, channels, commands, … — is read at
+// boot, so a save that touches those still needs /api/restart. Reported to
+// the Control UI on save so it can skip the restart (zero downtime) when
+// only hot-reload paths changed. Unknown/edited-elsewhere keys are treated
+// conservatively: if we cannot prove a changed key is hot-reloadable, say
+// restart.
+function configDiffNeedsRestart(before, after) {
+  const keys = new Set([...Object.keys(before || {}), ...Object.keys(after || {})]);
+  for (const key of keys) {
+    const a = (before || {})[key];
+    const b = (after || {})[key];
+    if (JSON.stringify(a) === JSON.stringify(b)) continue;
+    if (key === 'models') continue;                // whole block hot-reloads
+    if (key === 'plugins' || key === 'agents') {   // only entries/defaults do
+      const subs = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
+      let hotOnly = true;
+      for (const k of subs) {
+        if (JSON.stringify((a || {})[k]) === JSON.stringify((b || {})[k])) continue;
+        const hot = key === 'plugins' ? k === 'entries' : (k === 'entries' || k === 'defaults');
+        if (!hot) { hotOnly = false; break; }
+      }
+      if (hotOnly) continue;
+    }
+    return true;
+  }
+  return false;
+}
+
 
 const server = http.createServer((req, res) => {
   // ── Security: defense in depth against CSRF / DNS-rebinding / local
@@ -971,17 +1002,23 @@ const server = http.createServer((req, res) => {
 
         // DIRECTION-A merge save: read what OpenClaw's own UI wrote, overlay
         // ONLY this change, and write back — never clobber official config.
+        // `existing` stays in scope after the merge: the restart decision
+        // (below) must diff the real on-disk config vs what we are about to
+        // write, not whatever page-load snapshot the client believed.
         let merged;
+        let existing = null;
         try {
-          const { config: existing } = safeReadConfig();
+          ({ config: existing } = safeReadConfig());
           merged = mergeSave(existing, config);
         } catch (_) {
           merged = config; // existing unreadable → best-effort plain write
         }
+        const needsRestart = configDiffNeedsRestart(existing, merged);
         atomicWriteConfig(merged);
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           ok: true,
+          needsRestart,
           renamedProviders: renamed,
           ignoredManaged: strippedManaged,       // ids stripped from providers
           managedNotConfigured: managedOnDisk,   // …and absent on disk → go official UI
