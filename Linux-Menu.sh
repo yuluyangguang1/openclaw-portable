@@ -185,6 +185,52 @@ do_dashboard() {
         fi
     done
 
+    # ---- Self-heal chain (same wiring as Linux-Start; Menu was the blind spot, §52.4-N1) ----
+    # ensure-config must run on EVERY launch, not only on first run: it is
+    # idempotent and the one scenario it fixes ("config exists but lost
+    # gateway.auth / logging.file") is mutually exclusive with first-run.
+    _ENSURECFG_MJS=""
+    if [ -f "$_SCRIPT_DIR/lib/ensure-config.mjs" ]; then
+        _ENSURECFG_MJS="$_SCRIPT_DIR/lib/ensure-config.mjs"
+    elif [ -f "$PORTABLE_DIR/lib/ensure-config.mjs" ]; then
+        _ENSURECFG_MJS="$PORTABLE_DIR/lib/ensure-config.mjs"
+    elif [ -f "$PORTABLE_DIR/system/lib/ensure-config.mjs" ]; then
+        _ENSURECFG_MJS="$PORTABLE_DIR/system/lib/ensure-config.mjs"
+    fi
+    if [ -n "$_ENSURECFG_MJS" ]; then
+        "$NODE_BIN" "$_ENSURECFG_MJS" "$CONFIG_PATH" "$PORTABLE_DIR/system/default-config.json"
+    fi
+    _ENSURECFG_MJS=""
+    # Fallback: still need a usable config if the helper is missing
+    if [ ! -f "$CONFIG_PATH" ]; then
+        cat > "$CONFIG_PATH" << 'CFGEOF'
+{
+  "gateway": {
+    "mode": "local",
+    "auth": { "token": "openclaw" }
+  }
+}
+CFGEOF
+    fi
+
+    # Stale-lock self-heal: an unclean shutdown (closing the window /
+    # pulling the USB stick) leaves the gateway lock behind and the next
+    # start dies on "lock timeout". The helper only acts when the port is
+    # unanswered AND the pid inside the lock is dead — a running gateway is
+    # never touched. Must run after PORT selection, before gateway run.
+    _LOCKFIX_MJS=""
+    if [ -f "$_SCRIPT_DIR/lib/fix-stale-gateway-lock.mjs" ]; then
+        _LOCKFIX_MJS="$_SCRIPT_DIR/lib/fix-stale-gateway-lock.mjs"
+    elif [ -f "$PORTABLE_DIR/lib/fix-stale-gateway-lock.mjs" ]; then
+        _LOCKFIX_MJS="$PORTABLE_DIR/lib/fix-stale-gateway-lock.mjs"
+    elif [ -f "$PORTABLE_DIR/system/lib/fix-stale-gateway-lock.mjs" ]; then
+        _LOCKFIX_MJS="$PORTABLE_DIR/system/lib/fix-stale-gateway-lock.mjs"
+    fi
+    if [ -n "$_LOCKFIX_MJS" ]; then
+        "$NODE_BIN" --disable-warning=ExperimentalWarning "$_LOCKFIX_MJS" "$STATE_DIR" "$PORT" || true
+    fi
+    _LOCKFIX_MJS=""
+
     # Read token from config — prefer node (always present in portable),
     # fall back to python3 (system Python may not exist on Alpine etc.)
     local TOKEN="openclaw"

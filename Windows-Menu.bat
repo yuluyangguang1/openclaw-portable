@@ -133,17 +133,26 @@ if !errorlevel!==0 (
     goto :find_port
 )
 cd /d "%CORE_DIR%"
-if not exist "%STATE_DIR%\openclaw.json" (
-    REM 网关口令为固定值 "openclaw"（所有者决定），见 lib\ensure-config.mjs
-    if exist "%PORTABLE_DIR%lib\ensure-config.mjs" (
-        "%NODE_BIN%" "%PORTABLE_DIR%lib\ensure-config.mjs" "%STATE_DIR%\openclaw.json" "%PORTABLE_DIR%system\default-config.json"
-    ) else if exist "%PORTABLE_DIR%system\lib\ensure-config.mjs" (
-        "%NODE_BIN%" "%PORTABLE_DIR%system\lib\ensure-config.mjs" "%STATE_DIR%\openclaw.json" "%PORTABLE_DIR%system\default-config.json"
-    )
+REM Self-heal chain, same wiring as Windows-Start (Menu was the blind spot,
+REM report S52.4-N1). ensure-config must run on EVERY launch: it is idempotent
+REM and only writes back when gateway.auth is missing or holds a placeholder;
+REM putting it inside the "file does not exist" branch makes self-heal
+REM unreachable (config exists but lost gateway.auth -> runtime token ->
+REM Control UI permanently token_mismatch).
+set "_ENSURECFG_MJS="
+if exist "!_SCRIPT_DIR!\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!_SCRIPT_DIR!\lib\ensure-config.mjs"
+if not defined _ENSURECFG_MJS (
+    if exist "!PORTABLE_DIR!lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!lib\ensure-config.mjs"
 )
-if not exist "%STATE_DIR%\openclaw.json" (
-    (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"%STATE_DIR%\openclaw.json"
+if not defined _ENSURECFG_MJS (
+    if exist "!PORTABLE_DIR!system\lib\ensure-config.mjs" set "_ENSURECFG_MJS=!PORTABLE_DIR!system\lib\ensure-config.mjs"
 )
+if defined _ENSURECFG_MJS (
+    "!NODE_BIN!" "!_ENSURECFG_MJS!" "!STATE_DIR!\openclaw.json" "!PORTABLE_DIR!system\default-config.json"
+)
+set "_ENSURECFG_MJS="
+REM Fallback: still need a usable config if the helper is missing
+if not exist "!STATE_DIR!\openclaw.json" (echo {"gateway":{"mode":"local","auth":{"token":"openclaw"}}})>"!STATE_DIR!\openclaw.json"
 
 REM Read token from config (encoding-safe: temp .js file pattern from P7)
 set "TOKEN=openclaw"
@@ -182,6 +191,26 @@ if defined _STRIP_MJS (
 )
 set "_STRIP_MJS="
 
+
+REM Stale-lock self-heal, same wiring as Windows-Start: an unclean shutdown
+REM (closing the window / killing the process / pulling the USB stick) leaves
+REM the gateway lock behind and the next start dies on lock timeout. The
+REM helper only acts when the port is unanswered AND the pid inside the lock
+REM is dead - a running gateway is never touched. Must run after PORT
+REM selection, before gateway run.
+set "_LOCKFIX_MJS="
+if exist "!_SCRIPT_DIR!\lib\fix-stale-gateway-lock.mjs" (
+    set "_LOCKFIX_MJS=!_SCRIPT_DIR!\lib\fix-stale-gateway-lock.mjs"
+) else (
+    if exist "!PORTABLE_DIR!lib\fix-stale-gateway-lock.mjs" set "_LOCKFIX_MJS=!PORTABLE_DIR!lib\fix-stale-gateway-lock.mjs"
+)
+if not defined _LOCKFIX_MJS (
+    if exist "!PORTABLE_DIR!system\lib\fix-stale-gateway-lock.mjs" set "_LOCKFIX_MJS=!PORTABLE_DIR!system\lib\fix-stale-gateway-lock.mjs"
+)
+if defined _LOCKFIX_MJS (
+    "!NODE_BIN!" --disable-warning=ExperimentalWarning "!_LOCKFIX_MJS!" "!STATE_DIR!" !PORT!
+)
+set "_LOCKFIX_MJS="
 start /B "" cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:!PORT!/#token=!TOKEN!"
 "%NODE_BIN%" "%OPENCLAW_MJS%" gateway run --allow-unconfigured --force --port !PORT!
 pause

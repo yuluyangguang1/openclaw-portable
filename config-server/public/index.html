@@ -1171,13 +1171,38 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
  [data-theme="light"] .picon-mono { filter: none; }
  @media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) .picon-mono { filter: none; } }
  </style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css" />
+<!-- F-02: the LXGW WenKai webfont is progressive enhancement, never a
+     first-paint dependency. A static <link rel=stylesheet> here made the
+     U-disk/offline scenario sit on a white screen for as long as the CDN
+     request took to time out. Inject the stylesheet from JS only when
+     online: a dynamically created link never blocks rendering, so even a
+     false-positive navigator.onLine degrades to the --font-serif fallback
+     stack (Georgia / Noto Serif SC / serif) instead of a blank page. -->
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<script>
+(function () {
+  if (!navigator.onLine) return;
+  var l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://cdn.jsdelivr.net/npm/lxgw-wenkai-webfont@1.7.0/style.css';
+  document.head.appendChild(l);
+})();
+</script>
 </head>
 <body>
 
-<div class="bg-i" aria-hidden="true"><img alt="" src="https://yuai-r.cn/egret-ink.jpg" width="1920" height="1080" loading="lazy" decoding="async" onerror="this.parentNode.style.display='none'"></div>
+<!-- F-11: the ink-wash bg layer is pure decoration (opacity .06). By owner
+     decision it must not be fetched at all when offline — the U-disk first
+     run would otherwise hold a network request open for the timeout. src is
+     assigned by the script below only when online; the onerror guard still
+     hides the frame when the host is unreachable while "online". -->
+<div class="bg-i" aria-hidden="true"><img alt="" id="bg-ink" width="1920" height="1080" loading="lazy" decoding="async" onerror="this.parentNode.style.display='none'"></div>
+<script>
+(function () {
+  if (navigator.onLine) document.getElementById('bg-ink').src = 'https://yuai-r.cn/egret-ink.jpg';
+})();
+</script>
 <div class="bg-n" aria-hidden="true"></div>
 <div class="bg-g" aria-hidden="true"></div>
 

@@ -91,6 +91,33 @@ jobs:
           print(f"OK: {op}/{cl} divs balanced, {len(declared)} ids declared, {len(onclicks)} onclicks resolved")
           PY
 
+      - name: Inline JS syntax check
+        run: |
+          # index.html carries ~101KB of inline JavaScript; a single stray
+          # character (broken template literal, unbalanced brace) blanks the
+          # whole config UI, and the structural checks above cannot see it.
+          # Extract every <script> body (skip src= includes) and let node
+          # parse each one. (N-2, §48.4)
+          python3 - <<'PY'
+          import re, io, subprocess, tempfile, os
+          P = "config-server/public/index.html"
+          s = io.open(P, "r", encoding="utf-8").read()
+          blocks = re.findall(r"<script(?![^>]*\bsrc=)[^>]*>(.*?)</script>", s, re.S)
+          assert blocks, "no inline script blocks found"
+          for i, b in enumerate(blocks):
+              with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as f:
+                  f.write(b)
+                  name = f.name
+              try:
+                  r = subprocess.run(["node", "--check", name], capture_output=True, text=True)
+                  if r.returncode != 0:
+                      print(f"FAIL: inline script block #{i} does not parse:\n{r.stderr[:2000]}")
+                      raise SystemExit(1)
+              finally:
+                  os.unlink(name)
+          print(f"OK: {len(blocks)} inline script blocks parse")
+          PY
+
       - name: JSON validity
         run: |
           node -e "JSON.parse(require('fs').readFileSync('system/default-config.json','utf8'))" && echo "OK: system/default-config.json"

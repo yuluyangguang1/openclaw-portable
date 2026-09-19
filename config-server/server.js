@@ -1462,59 +1462,72 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ok: true, message: 'Restarting gateway...'}));
 
     // Find and kill gateway processes on ports 18789-18799
-    const { execSync } = require('child_process');
+    const { execSync, execFileSync } = require('child_process');
     const isWin = process.platform === 'win32';
-    try {
-      for (let p = 18789; p <= 18799; p++) {
-        if (isWin) {
-          // netstat + taskkill
-          const out = execSync(`netstat -ano | findstr ":${p} " | findstr "LISTENING"`, {encoding:'utf8', timeout:5000}).trim();
-          const lines = out.split('\n').filter(Boolean);
-          for (const line of lines) {
-            const pid = line.trim().split(/\s+/).pop();
-            if (pid && /^\d+$/.test(pid) && pid !== '0') {
-              // Verify the process is actually OpenClaw before killing.
-              // Without this check, any process listening on 18789-18799
-              // gets force-killed (e.g., user's other Node services on
-              // these ports). Use wmic to inspect CommandLine.
-              try {
-                const cmdLine = execSync(`wmic process where "ProcessId=${pid}" get CommandLine /value`, {encoding:'utf8', timeout:3000}).trim();
-                if (cmdLine && cmdLine.includes('openclaw.mjs')) {
-                  try { execSync(`taskkill /PID ${pid} /F`, {timeout:5000}); } catch(e) {}
-                }
-              } catch(e) {
-                // wmic failed — don't risk killing anything
+    for (let p = 18789; p <= 18799; p++) {
+      if (isWin) {
+        // netstat + taskkill. findstr exits 1 when the port has no listener
+        // (the common case), which makes execSync throw — so the try/catch
+        // must live INSIDE the loop. When it wrapped the whole loop, the
+        // scan aborted at the first empty port and restart killed nothing
+        // while the UI had already answered {ok:true} (B-04 part 2).
+        let out = '';
+        try {
+          out = execSync(`netstat -ano | findstr ":${p} " | findstr "LISTENING"`, {encoding:'utf8', timeout:5000}).trim();
+        } catch(e) { continue; }
+        const lines = out.split('\n').filter(Boolean);
+        for (const line of lines) {
+          const pid = line.trim().split(/\s+/).pop();
+          if (pid && /^\d+$/.test(pid) && pid !== '0') {
+            // Verify the process is actually OpenClaw before killing.
+            // Without this check, any process listening on 18789-18799
+            // gets force-killed (e.g., user's other Node services on
+            // these ports). wmic was removed on Win11 24H2+ — the old
+            // call silently threw, the old gateway survived, and the
+            // re-spawn landed on the same port (double gateway, B-04
+            // part 1). PowerShell Get-CimInstance replaces it; pid is
+            // pure digits here, so the interpolated filter is injection-
+            // safe, and argv-array form avoids cmd quoting entirely.
+            try {
+              const cmdLine = execFileSync('powershell', [
+                '-NoProfile', '-NonInteractive', '-Command',
+                `(Get-CimInstance Win32_Process -Filter 'ProcessId=${pid}').CommandLine`
+              ], {encoding:'utf8', timeout:10000}).trim();
+              if (cmdLine && cmdLine.includes('openclaw.mjs')) {
+                try { execSync(`taskkill /PID ${pid} /F`, {timeout:5000}); } catch(e) {}
               }
+            } catch(e) {
+              // PowerShell failed — don't risk killing anything
             }
           }
-        } else {
-          // lsof or ss
-          try {
-            const pids = execSync(`lsof -ti :${p} 2>/dev/null || ss -tlnp 2>/dev/null | grep ":${p} " | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p'`, {encoding:'utf8', timeout:5000}).trim();
-            for (const pid of pids.split('\n').filter(Boolean)) {
-              // Defense in depth: even though lsof -ti and our sed only
-              // emit digits, refuse to interpolate anything non-numeric
-              // into the next shell call. Future regression in upstream
-              // tools (or a hypothetical bypass) would otherwise reach
-              // `ps -p ${pid}` with attacker-controlled text. (B23-01)
-              if (!/^\d+$/.test(pid)) continue;
-              // Only kill processes whose command contains 'openclaw.mjs'.
-              // Plain 'node' or 'openclaw' is too lax — would also kill
-              // unrelated Node services or even our own config-server
-              // if it ever bound to one of these ports.
-              try {
-                const cmd = execSync(`ps -p ${pid} -o command= 2>/dev/null`, {encoding:'utf8', timeout:2000});
-                if (cmd && cmd.includes('openclaw.mjs')) {
-                  process.kill(parseInt(pid), 'SIGTERM');
-                }
-              } catch(e) {
-                // ps failed — don't risk killing anything
-              }
-            }
-          } catch(e) {}
         }
+      } else {
+        // lsof or ss
+        try {
+          const pids = execSync(`lsof -ti :${p} 2>/dev/null || ss -tlnp 2>/dev/null | grep ":${p} " | sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p'`, {encoding:'utf8', timeout:5000}).trim();
+          for (const pid of pids.split('\n').filter(Boolean)) {
+            // Defense in depth: even though lsof -ti and our sed only
+            // emit digits, refuse to interpolate anything non-numeric
+            // into the next shell call. Future regression in upstream
+            // tools (or a hypothetical bypass) would otherwise reach
+            // `ps -p ${pid}` with attacker-controlled text. (B23-01)
+            if (!/^\d+$/.test(pid)) continue;
+            // Only kill processes whose command contains 'openclaw.mjs'.
+            // Plain 'node' or 'openclaw' is too lax — would also kill
+            // unrelated Node services or even our own config-server
+            // if it ever bound to one of these ports.
+            try {
+              const cmd = execSync(`ps -p ${pid} -o command= 2>/dev/null`, {encoding:'utf8', timeout:2000});
+              if (cmd && cmd.includes('openclaw.mjs')) {
+                process.kill(parseInt(pid), 'SIGTERM');
+              }
+            } catch(e) {
+              // ps failed — don't risk killing anything
+            }
+          }
+        } catch(e) {}
       }
-    } catch(e) { /* best effort */ }
+    }
 
     // Re-launch gateway after a short delay (let ports release).
     // Wrap the entire spawn path in try/catch — a thrown exception
