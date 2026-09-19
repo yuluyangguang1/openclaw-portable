@@ -241,11 +241,13 @@ for /l %%p in (18789,1,18799) do (
     for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":%%p " ^| findstr "LISTENING"') do (
         if not "%%a"=="0" (
             REM Verify the PID is actually an OpenClaw process before killing.
-            REM wmic returns CommandLine=... ; we grep for "openclaw" or "node"
-            REM pointing at openclaw.mjs. Quote ProcessId to avoid wmic parse
-            REM issues with PIDs that contain leading zeros.
-            for /f "usebackq tokens=*" %%c in (`wmic process where "ProcessId=%%a" get CommandLine /value 2^>nul ^| findstr "CommandLine"`) do (
-                echo %%c | findstr /i "openclaw" >nul 2>&1 && (
+            REM wmic is GONE on Win11 24H2+ (report B-04/N-3): since its removal
+            REM this block was a silent no-op there and stale gateways were
+            REM never cleaned. Use PowerShell Get-CimInstance instead, and do
+            REM the "openclaw" match INSIDE PowerShell so the (possibly
+            REM non-ASCII) command line never has to cross the pipe.
+            for /f "usebackq delims=" %%c in (`powershell -NoProfile -NonInteractive -Command "$c=Get-CimInstance Win32_Process -Filter 'ProcessId=%%a'; if($c.CommandLine -match 'openclaw'){'oc'}" 2^>nul`) do (
+                if /i "%%c"=="oc" (
                     echo   Killing stale OpenClaw on port %%p ^(PID %%a^)...
                     REM /T = kill child processes too (taskkill's tree-kill).
                     REM Without /T, gateway worker processes survive as orphans.
@@ -412,6 +414,10 @@ if defined _LOCKFIX_MJS (
 )
 set "_LOCKFIX_MJS="
 "!NODE_BIN!" "!OPENCLAW_MJS!" gateway run --allow-unconfigured --force --port !PORT!
+REM N-4 (mojibake): while the gateway runs, a Windows command it spawned
+REM can switch this console to UTF-8; our echo lines below are GBK bytes,
+REM so re-assert 936 before printing or they garble.
+chcp 936 >nul 2>&1
 set GW_EXIT=!errorlevel!
 if !GW_EXIT! equ 0 goto gw_done
 if !GW_EXIT! equ 130 goto gw_done
@@ -455,11 +461,13 @@ set /a HANDOFF_TRIES=0
 ping -n 1 -w 500 127.0.0.1 >nul
 powershell -NoProfile -Command "try { (Invoke-WebRequest -Uri 'http://127.0.0.1:!PORT!/' -TimeoutSec 1 -UseBasicParsing).StatusCode | Out-Null; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! equ 0 (
+    chcp 936 >nul 2>&1
     echo   新 Gateway 已就绪，继续运行
     goto handoff_wait_config
 )
 set /a HANDOFF_TRIES+=1
 if !HANDOFF_TRIES! geq 60 (
+    chcp 936 >nul 2>&1
     echo   等待新 Gateway 超时（30s），停止
     goto stopconfig
 )
@@ -480,8 +488,9 @@ REM Find PIDs listening on CONFIG_PORT, but verify each is actually
 REM our config-server before killing. Without this filter, any user
 REM process listening on 18750 would be force-killed.
 for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":!CONFIG_PORT! " ^| findstr "LISTENING"') do (
-    for /f "usebackq tokens=*" %%c in (`wmic process where "ProcessId=%%a" get CommandLine /value 2^>nul ^| findstr "CommandLine"`) do (
-        echo %%c | findstr /i "config-server\\server.js" >nul 2>&1 && taskkill /PID %%a /F /T >nul 2>&1
+    REM wmic is GONE on Win11 24H2+ (report B-04/N-3) - PowerShell instead.
+    for /f "usebackq delims=" %%c in (`powershell -NoProfile -NonInteractive -Command "$c=Get-CimInstance Win32_Process -Filter 'ProcessId=%%a'; if($c.CommandLine -match 'config-server\\server\.js'){'oc'}" 2^>nul`) do (
+        if /i "%%c"=="oc" taskkill /PID %%a /F /T >nul 2>&1
     )
 )
 echo   OpenClaw stopped.

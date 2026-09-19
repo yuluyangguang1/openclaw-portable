@@ -229,5 +229,8 @@ REM Cleanup on exit
 echo.
 echo   Cleaning up mobile config...
 if exist "!MOBILE_CONFIG!" del /f /q "!MOBILE_CONFIG!" 2>nul
+REM N-4 (mojibake): the gateway session may have switched this console to
+REM UTF-8; re-assert 936 because our echo lines are GBK bytes.
+chcp 936 >nul 2>&1
 echo   手机连接模式已停止，配置已恢复。
 pause
